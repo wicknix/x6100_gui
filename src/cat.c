@@ -6,7 +6,7 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-/* 
+/*
  * X6100 protocol implementation (Mfg 3087)
  */
 
@@ -90,6 +90,15 @@
 #define S_SUB_SEL       0xd2    /* Read/Set Main/Sub selection */
 #define S_FRONTWIN      0xe0    /* Select front window */
 
+// modes
+#define M_LSB           0x00
+#define M_USB           0x01
+#define M_AM            0x02
+#define M_CW            0x03
+#define M_NFM           0x05
+#define M_CWR           0x07
+
+
 static int      fd;
 
 static uint8_t  frame[256];
@@ -97,19 +106,19 @@ static uint8_t  frame[256];
 static uint16_t frame_get() {
     uint16_t    len = 0;
     uint8_t     c;
-    
+
     memset(frame, 0, sizeof(frame));
-    
+
     while (true) {
         int res = read(fd, &c, 1);
-        
+
         if (res > 0) {
             frame[len++] = c;
-        
+
             if (c == FRAME_END) {
                 return len;
             }
-        
+
             if (len >= sizeof(frame)) {
                 return 0;
             }
@@ -117,8 +126,14 @@ static uint16_t frame_get() {
             usleep(10000);
         }
     }
-    
+
     return 0;
+}
+
+static void prepare_answer() {
+    // set dst address from sender, src address is fixed - 0xA4
+    frame[2] = frame[3];
+    frame[3] = 0xA4;
 }
 
 static void send_frame(uint16_t len) {
@@ -140,15 +155,95 @@ static void set_freq(uint64_t freq) {
     event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
 }
 
+static uint8_t get_mode() {
+    switch (params_band.vfo_x[params_band.vfo].mode)
+    {
+    case x6100_mode_lsb:
+    case x6100_mode_lsb_dig:
+        return M_LSB;
+        break;
+    case x6100_mode_usb:
+    case x6100_mode_usb_dig:
+        return M_USB;
+        break;
+    case  x6100_mode_cw:
+        return M_CW;
+        break;
+    case  x6100_mode_cwr:
+        return M_CWR;
+        break;
+    case  x6100_mode_am:
+        return M_AM;
+        break;
+    case  x6100_mode_nfm:
+        return M_NFM;
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
+static void set_mode(uint8_t mode) {
+    x6100_mode_t r_mode;
+    switch (mode)
+    {
+    case M_LSB:
+        r_mode = x6100_mode_lsb;
+        break;
+    case M_USB:
+        r_mode = x6100_mode_usb;
+        break;
+    case M_AM:
+        r_mode = x6100_mode_am;
+        break;
+    case M_CW:
+        r_mode = x6100_mode_cw;
+        break;
+    case M_NFM:
+        r_mode = x6100_mode_nfm;
+        break;
+    case M_CWR:
+        r_mode = x6100_mode_cwr;
+        break;
+    default:
+        break;
+    }
+    radio_set_mode(params_band.vfo, r_mode);
+    event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
+}
+
+static bool set_vfo(uint8_t vfo) {
+    switch (vfo) {
+    case S_VFOA:
+        radio_set_vfo(X6100_VFO_A);
+        return true;
+        break;
+
+    case S_VFOB:
+        radio_set_vfo(X6100_VFO_B);
+        return true;
+        break;
+
+    default:
+        return false;
+        break;
+    }
+}
+
 static void frame_parse(uint16_t len) {
     if (frame[0] != FRAME_PRE && frame[1] != FRAME_PRE) {
         LV_LOG_ERROR("Incorrect frame");
         return;
     }
-    
+
 #if 0
     LV_LOG_WARN("Cmd %02X:%02X (Len %i)", frame[4], frame[5], len);
 #endif
+
+    // echo input frame
+    send_frame(len);
+    prepare_answer();
 
     switch (frame[4]) {
         case C_RD_FREQ:
@@ -156,10 +251,11 @@ static void frame_parse(uint16_t len) {
             send_frame(11);
             break;
 
-        case C_RD_MODE:
-            /* TODO */
-            frame[5] = 0;
-            frame[6] = 0;
+        case C_RD_MODE: ;
+            uint8_t v = get_mode();
+
+            frame[5] = v;
+            frame[6] = v;
             send_frame(8);
             break;
 
@@ -167,12 +263,12 @@ static void frame_parse(uint16_t len) {
             set_freq(from_bcd(&frame[5], 10));
             send_code(CODE_OK);
             break;
-            
+
         case C_SET_MODE:
-            /* TODO */
+            set_mode(frame[5]);
             send_code(CODE_OK);
             break;
-            
+
         case C_CTL_PTT:
             if (frame[5] == 0x00) {
                 if (frame[6] == FRAME_END) {
@@ -182,44 +278,31 @@ static void frame_parse(uint16_t len) {
                     switch (frame[6]) {
                         case 0:
                             radio_set_ptt(false);
-                            frame[6] = CODE_OK;
-                            send_frame(8);
                             break;
-                            
+
                         case 1:
                             radio_set_ptt(true);
-                            frame[6] = CODE_OK;
-                            send_frame(8);
                             break;
                     }
+                    frame[6] = CODE_OK;
+                    send_frame(8);
                 }
             }
             break;
 
         case C_SET_VFO:
-            switch (frame[5]) {
-                case S_VFOA:
-                    radio_set_vfo(X6100_VFO_A);
-                    event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
-                    send_code(CODE_OK);
-                    break;
-
-                case S_VFOB:
-                    radio_set_vfo(X6100_VFO_B);
-                    event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
-                    send_code(CODE_OK);
-                    break;
-                    
-                default:
-                    send_code(CODE_NG);
-                    break;
+            if (set_vfo(frame[5])) {
+                event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
+                send_code(CODE_OK);
+            } else {
+                send_code(CODE_NG);
             }
             break;
 
         case C_SEND_SEL_FREQ:
             if (frame[6] == FRAME_END) {
                 uint64_t freq;
-                
+
                 if (frame[5] == 0x00) {
                     freq = params_band.vfo_x[X6100_VFO_A].freq;
                 } else {
@@ -229,16 +312,16 @@ static void frame_parse(uint16_t len) {
                 send_frame(12);
             } else {
                 uint64_t freq = from_bcd(&frame[6], 10);
-                
+
                 if (frame[5] == 0x00) {
                     params_band.vfo_x[X6100_VFO_A].freq = freq;
-                    
+
                     if (params_band.vfo == X6100_VFO_A) {
                         set_freq(freq);
                     }
                 } else {
                     params_band.vfo_x[X6100_VFO_B].freq = freq;
-                    
+
                     if (params_band.vfo == X6100_VFO_B) {
                         set_freq(freq);
                     }
@@ -256,39 +339,39 @@ static void frame_parse(uint16_t len) {
                 send_frame(10);
             } else {
                 x6100_mode_t mode;
-                
+
                 switch (frame[6]) {
                     case 0:
                         switch (frame[7]) {
                             case 0:
                                 mode = x6100_mode_lsb;
                                 break;
-                                
+
                             case 1:
                                 mode = x6100_mode_lsb_dig;
                                 break;
                         }
                         break;
-                        
+
                     case 1:
                         switch (frame[7]) {
                             case 0:
                                 mode = x6100_mode_usb;
                                 break;
-                                
+
                             case 1:
                                 mode = x6100_mode_usb_dig;
                                 break;
                         }
                         break;
                 }
-                
+
                 if (frame[5] == 0x00) {
                     radio_set_mode(X6100_VFO_A, mode);
                 } else {
                     radio_set_mode(X6100_VFO_B, mode);
                 }
-                
+
                 send_code(CODE_OK);
                 event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
             }
@@ -304,7 +387,7 @@ static void frame_parse(uint16_t len) {
 static void * cat_thread(void *arg) {
     while (true) {
         uint16_t len = frame_get();
-        
+
         if (len >= 0) {
             frame_parse(len);
         }
@@ -317,7 +400,7 @@ void cat_init() {
     x6100_gpio_set(x6100_pin_usb, 1);  /* USB -> CAT */
 
     fd = open("/dev/ttyS2", O_RDWR | O_NONBLOCK | O_NOCTTY);
-    
+
     if (fd > 0) {
         struct termios attr;
 
@@ -326,7 +409,7 @@ void cat_init() {
         cfsetispeed(&attr, B19200);
         cfsetospeed(&attr, B19200);
         cfmakeraw(&attr);
-        
+
         if (tcsetattr(fd, 0, &attr) < 0) {
             close(fd);
             LV_LOG_ERROR("UART set speed");
