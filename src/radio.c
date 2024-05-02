@@ -506,6 +506,7 @@ void radio_filter_get(int32_t *from_freq, int32_t *to_freq) {
 }
 
 void radio_set_mode(x6100_vfo_t vfo,  x6100_mode_t mode) {
+    params_lock();
     params_band.vfo_x[vfo].mode = mode;
     params_unlock(&params_band.vfo_x[vfo].durty.mode);
 
