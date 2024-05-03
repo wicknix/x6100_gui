@@ -528,7 +528,6 @@ void radio_restore_mode(x6100_mode_t mode) {
 }
 
 void radio_change_mode(radio_mode_t select) {
-    params_lock();
 
     x6100_mode_t    mode = radio_current_mode();
 
