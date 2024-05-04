@@ -155,8 +155,38 @@ static void set_freq(uint64_t freq) {
     event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
 }
 
-static uint8_t get_mode() {
-    switch (params_band.vfo_x[params_band.vfo].mode)
+
+static x6100_mode_t ci_mode_2_x_mode(uint8_t mode, uint8_t *dig_mode) {
+    x6100_mode_t r_mode;
+    bool data_mode = (dig_mode != NULL) && *dig_mode;
+    switch (mode)
+    {
+    case M_LSB:
+        r_mode = data_mode ? x6100_mode_lsb_dig : x6100_mode_lsb;
+        break;
+    case M_USB:
+        r_mode = data_mode ? x6100_mode_usb_dig : x6100_mode_usb;
+        break;
+    case M_AM:
+        r_mode = x6100_mode_am;
+        break;
+    case M_CW:
+        r_mode = x6100_mode_cw;
+        break;
+    case M_NFM:
+        r_mode = x6100_mode_nfm;
+        break;
+    case M_CWR:
+        r_mode = x6100_mode_cwr;
+        break;
+    default:
+        break;
+    }
+    return r_mode;
+}
+
+static uint8_t x_mode_2_ci_mode(x6100_mode_t mode) {
+    switch (mode)
     {
     case x6100_mode_lsb:
     case x6100_mode_lsb_dig:
@@ -182,35 +212,6 @@ static uint8_t get_mode() {
         return 0;
         break;
     }
-}
-
-static void set_mode(uint8_t mode) {
-    x6100_mode_t r_mode;
-    switch (mode)
-    {
-    case M_LSB:
-        r_mode = x6100_mode_lsb;
-        break;
-    case M_USB:
-        r_mode = x6100_mode_usb;
-        break;
-    case M_AM:
-        r_mode = x6100_mode_am;
-        break;
-    case M_CW:
-        r_mode = x6100_mode_cw;
-        break;
-    case M_NFM:
-        r_mode = x6100_mode_nfm;
-        break;
-    case M_CWR:
-        r_mode = x6100_mode_cwr;
-        break;
-    default:
-        break;
-    }
-    radio_set_mode(params_band.vfo, r_mode);
-    event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
 }
 
 static bool set_vfo(uint8_t vfo) {
@@ -252,7 +253,7 @@ static void frame_parse(uint16_t len) {
             break;
 
         case C_RD_MODE: ;
-            uint8_t v = get_mode();
+            uint8_t v = x_mode_2_ci_mode(params_band.vfo_x[params_band.vfo].mode);
 
             frame[5] = v;
             frame[6] = v;
@@ -265,7 +266,8 @@ static void frame_parse(uint16_t len) {
             break;
 
         case C_SET_MODE:
-            set_mode(frame[5]);
+            radio_set_mode(params_band.vfo, ci_mode_2_x_mode(frame[5], NULL));
+            event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
             send_code(CODE_OK);
             break;
 
@@ -338,42 +340,16 @@ static void frame_parse(uint16_t len) {
                 frame[8] = CODE_OK;
                 send_frame(10);
             } else {
-                x6100_mode_t mode;
+                x6100_vfo_t vfo = params_band.vfo;
 
-                switch (frame[6]) {
-                    case 0:
-                        switch (frame[7]) {
-                            case 0:
-                                mode = x6100_mode_lsb;
-                                break;
-
-                            case 1:
-                                mode = x6100_mode_lsb_dig;
-                                break;
-                        }
-                        break;
-
-                    case 1:
-                        switch (frame[7]) {
-                            case 0:
-                                mode = x6100_mode_usb;
-                                break;
-
-                            case 1:
-                                mode = x6100_mode_usb_dig;
-                                break;
-                        }
-                        break;
+                // TODO: Add filters applying
+                if (frame[5])
+                {
+                    vfo = (params_band.vfo == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A;
                 }
-
-                if (frame[5] == 0x00) {
-                    radio_set_mode(X6100_VFO_A, mode);
-                } else {
-                    radio_set_mode(X6100_VFO_B, mode);
-                }
-
-                send_code(CODE_OK);
+                radio_set_mode(vfo, ci_mode_2_x_mode(frame[6], &frame[7]));
                 event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
+                send_code(CODE_OK);
             }
             break;
 
