@@ -61,15 +61,17 @@ typedef struct {
     bool            split;
     int16_t         grid_min;
     int16_t         grid_max;
+    int16_t         rfg;
     char            label[64];
 
     /* durty flags */
-    
+
     struct {
         bool    vfo;
         bool    split;
         bool    grid_min;
         bool    grid_max;
+        bool    rfg;
         bool    label;
     } durty;
 } params_band_t;
@@ -188,7 +190,6 @@ typedef struct {
     
     int16_t             band;
     int16_t             vol;
-    int16_t             rfg;
     uint8_t             sql;
     bool                atu;
     bool                atu_loaded;
@@ -344,7 +345,6 @@ typedef struct {
         
         bool    band;
         bool    vol;
-        bool    rfg;
         bool    sql;
         bool    atu;
         bool    ant;
