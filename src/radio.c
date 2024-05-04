@@ -625,15 +625,15 @@ uint32_t radio_change_filter_low(int32_t df) {
     }
 
     x6100_mode_t    mode = radio_current_mode();
-    
+
     if (mode == x6100_mode_am || mode == x6100_mode_nfm) {
         return 0;
     }
 
     params_lock();
 
-    params_mode.filter_low = align_int(params_mode.filter_low + df * 50, 50);
-    
+    params_mode.filter_low = align_int(params_mode.filter_low + df * 10, 10);
+
     if (params_mode.filter_low < 0) {
         params_mode.filter_low = 0;
     } else if (params_mode.filter_low > 6000) {
