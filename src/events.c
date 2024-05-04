@@ -68,6 +68,7 @@ void event_obj_check() {
         queue_read = (queue_read + 1) % QUEUE_SIZE;
         
         item_t *item = queue[queue_read];
+        queue[queue_read] = NULL;
         pthread_mutex_unlock(&queue_mux);
         
         if (item) {
@@ -79,16 +80,11 @@ void event_obj_check() {
                 lv_event_send(item->obj, item->event_code, item->param);
             }
 
-            pthread_mutex_lock(&queue_mux);
-
             if (item->param != NULL) {
                 free(item->param);
             }
-        
-            free(item);
-            queue[queue_read] = NULL;
 
-            pthread_mutex_unlock(&queue_mux);
+            free(item);
         }
     }
 }
