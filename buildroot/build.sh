@@ -1,11 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 
 source ./conf.sh
 
 PATH=${BUILDROOT}/host/bin:${PATH}
 
+mkdir build
+
+cd build
+
 cmake \
-    .. \
+    ../../ \
     -G"Unix Makefiles" \
     -DCMAKE_TOOLCHAIN_FILE=${BUILDROOT}/host/share/buildroot/toolchainfile.cmake \
     -DCMAKE_INSTALL_PREFIX="/usr" \
@@ -22,3 +26,7 @@ cmake \
     -DBUILD_SHARED_LIB=ON \
     -DLV_CONF_BUILD_DISABLE_EXAMPLES=ON \
     -DLV_CONF_BUILD_DISABLE_DEMOS=ON
+
+make -j$((`nproc`))
+
+cd -
