@@ -50,7 +50,6 @@ params_t params = {
     .clock_tx_timeout       = 1,
 
     .vol                    = 20,
-    .rfg                    = 63,
     .ant                    = 1,
     .pwr                    = 5.0f,
     .mic                    = x6100_mic_auto,
@@ -166,6 +165,7 @@ params_band_t params_band = {
     .split              = false,
     .grid_min           = -121,
     .grid_max           = -73,
+    .rfg                = 63,
 };
 
 params_mode_t params_mode = {
@@ -335,6 +335,8 @@ static void params_mb_load(sqlite3_stmt *stmt) {
             params_band.grid_max = sqlite3_column_int(stmt, 1);
         } else if (strcmp(name, "label") == 0) {
             strncpy(params_band.label, sqlite3_column_text(stmt, 1), sizeof(params_band.label) - 1);
+        } else if (strcmp(name, "rfg") == 0) {
+            params_band.rfg = sqlite3_column_int64(stmt, 1);
         }
     }
 
@@ -404,7 +406,8 @@ void params_memory_save(uint16_t id) {
     
     params_band.durty.grid_min = true;
     params_band.durty.grid_max = true;
-    
+    params_band.durty.rfg = true;
+
     params_mb_save(id);
     sqlite3_finalize(write_mb_stmt);
 }
@@ -448,6 +451,9 @@ static bool params_mb_save(uint16_t id) {
         
     if (params_band.durty.grid_max)
         params_mb_write_int(id, "grid_max", params_band.grid_max, &params_band.durty.grid_max);
+
+    if (params_band.durty.rfg)
+        params_mb_write_int(id, "rfg", params_band.rfg, &params_band.durty.rfg);
 
     if (!params_exec("COMMIT")) {
         return false;
@@ -517,8 +523,6 @@ static bool params_load() {
             params_band_load();
         } else if (strcmp(name, "vol") == 0) {
             params.vol = i;
-        } else if (strcmp(name, "rfg") == 0) {
-            params.rfg = i;
         } else if (strcmp(name, "sql") == 0) {
             params.sql = i;
         } else if (strcmp(name, "atu") == 0) {
@@ -775,7 +779,6 @@ static void params_save() {
 
     if (params.durty.band)                  params_write_int("band", params.band, &params.durty.band);
     if (params.durty.vol)                   params_write_int("vol", params.vol, &params.durty.vol);
-    if (params.durty.rfg)                   params_write_int("rfg", params.rfg, &params.durty.rfg);
     if (params.durty.sql)                   params_write_int("sql", params.sql, &params.durty.sql);
     if (params.durty.atu)                   params_write_int("atu", params.atu, &params.durty.atu);
     if (params.durty.pwr)                   params_write_int("pwr", params.pwr * 10, &params.durty.pwr);
