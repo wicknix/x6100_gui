@@ -10,3 +10,8 @@ add_subdirectory(lvgl)
 add_subdirectory(lv_drivers)
 add_subdirectory(src)
 add_subdirectory(sql)
+
+install(TARGETS ${PROJECT_NAME} DESTINATION sbin)
+install(DIRECTORY rootfs/ DESTINATION target/)
+install(DIRECTORY images DESTINATION share/x6100)
+install(FILES buildroot/build/params.db DESTINATION share/x6100 RENAME params.default.db)

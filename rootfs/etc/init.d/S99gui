@@ -12,6 +12,7 @@ PIDFILE="/var/run/$DAEMON.pid"
 start() {
 	printf 'Starting %s: ' "$DAEMON"
 	echo 0 > /sys/class/graphics/fbcon/cursor_blink
+	[ ! -f /mnt/params.db ] && cp /usr/share/x6100/params.default.db /mnt/params.db
 	# shellcheck disable=SC2086 # we need the word splitting
 	start-stop-daemon -S -b -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON"
 	status=$?
@@ -33,6 +34,7 @@ stop() {
 	else
 		echo "FAIL"
 	fi
+	killall x6100_gui
 	return "$status"
 }
 

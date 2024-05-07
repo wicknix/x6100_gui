@@ -121,7 +121,8 @@ static bool create_file() {
     file = sf_open(filename, SFM_WRITE, &sfinfo);
     
     if (file == NULL) {
-        LV_LOG_ERROR("Problem with create file");
+        char* err = sf_strerror(NULL);
+        LV_LOG_ERROR("Problem with create file: %s", err);
         return false;
     }
 
