@@ -163,6 +163,7 @@ void fbdev_init(void)
 
 void fbdev_exit(void)
 {
+    munmap(fbp, screensize);
     close(fbfd);
 }
 
