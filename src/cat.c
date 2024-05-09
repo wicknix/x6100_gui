@@ -98,6 +98,10 @@
 #define M_NFM           0x05
 #define M_CWR           0x07
 
+// memory/bank/rig control
+#define MEM_BS_REG      0x01    /* Get band stacking register */
+#define MEM_IF_FW       0x03    /* Get IF filter width */
+#define MEM_DM_FG       0x06    /* Get data mode switch and filter group */
 
 static int      fd;
 
@@ -215,6 +219,11 @@ static uint8_t x_mode_2_ci_mode(x6100_mode_t mode) {
 }
 
 static bool set_vfo(uint8_t vfo) {
+    if (params_band.vfo == vfo)
+    {
+        return true;
+    }
+
     switch (vfo) {
     case S_VFOA:
         radio_set_vfo(X6100_VFO_A);
@@ -228,6 +237,34 @@ static bool set_vfo(uint8_t vfo) {
 
     default:
         return false;
+        break;
+    }
+}
+
+static uint8_t get_if_bandwidth() {
+    int32_t bw;
+    switch (params_band.vfo_x[params_band.vfo].mode)
+    {
+    case x6100_mode_cw:
+    case x6100_mode_cwr:
+    case x6100_mode_lsb:
+    case x6100_mode_lsb_dig:
+    case x6100_mode_usb:
+    case x6100_mode_usb_dig:
+        bw = params_mode.filter_high - params_mode.filter_low;
+        if (bw <= 500)
+        {
+            return (bw - 25) / 50;
+        } else {
+            return (bw - 50) / 100 + 5;
+        }
+        break;
+    case x6100_mode_am:
+    case x6100_mode_nfm:
+        bw = params_mode.filter_high  * 2;
+        return (bw - 100) / 200;
+    default:
+        return 31;
         break;
     }
 }
@@ -260,8 +297,13 @@ static void frame_parse(uint16_t len) {
             send_frame(8);
             break;
 
-        case C_SET_FREQ:
-            set_freq(from_bcd(&frame[5], 10));
+        case C_SET_FREQ: ;
+            uint64_t new_freq = from_bcd(&frame[5], 10);
+            if (new_freq != params_band.vfo_x[params_band.vfo].freq)
+            {
+                set_freq(new_freq);
+            }
+            
             send_code(CODE_OK);
             break;
 
@@ -316,17 +358,23 @@ static void frame_parse(uint16_t len) {
                 uint64_t freq = from_bcd(&frame[6], 10);
 
                 if (frame[5] == 0x00) {
-                    params_band.vfo_x[X6100_VFO_A].freq = freq;
+                    if (params_band.vfo_x[X6100_VFO_A].freq != freq){
+                        params_band.vfo_x[X6100_VFO_A].freq = freq;
 
-                    if (params_band.vfo == X6100_VFO_A) {
-                        set_freq(freq);
+                        if (params_band.vfo == X6100_VFO_A) {
+                            set_freq(freq);
+                        }
                     }
                 } else {
-                    params_band.vfo_x[X6100_VFO_B].freq = freq;
+                    if (params_band.vfo_x[X6100_VFO_B].freq != freq)
+                    {
+                        params_band.vfo_x[X6100_VFO_B].freq = freq;
 
-                    if (params_band.vfo == X6100_VFO_B) {
-                        set_freq(freq);
+                        if (params_band.vfo == X6100_VFO_B) {
+                            set_freq(freq);
+                        }
                     }
+                    
                 }
                 send_code(CODE_OK);
             }
@@ -350,6 +398,26 @@ static void frame_parse(uint16_t len) {
                 radio_set_mode(vfo, ci_mode_2_x_mode(frame[6], &frame[7]));
                 event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
                 send_code(CODE_OK);
+            }
+            break;
+
+        case C_CTL_MEM:
+            // TODO: Implement another options
+            if (frame[6] == FRAME_END) {
+                switch (frame[5])
+                {
+                case MEM_IF_FW:
+                    frame[6] = get_if_bandwidth();
+                    send_frame(8);
+                    break;
+
+                default:
+                    send_code(CODE_NG);
+                    break;
+                }
+            } else {
+                LV_LOG_WARN("Unsuported %02X:%02X (Len %i)", frame[4], frame[5], len);
+                send_code(CODE_NG);
             }
             break;
 
