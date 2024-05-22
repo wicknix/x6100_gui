@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <time.h>
+#include <liquid/liquid.h>
 #include "util.h"
 
 uint64_t get_time() {
@@ -67,6 +68,12 @@ float sqr(float x) {
 
 void lpf(float *x, float current, float beta) {
     *x = *x * beta + current * (1.0f - beta);
+}
+
+void lpf_block(float *x, float *current, float beta, unsigned int count) {
+    liquid_vectorf_mulscalar(current, count, (1.0f - beta), current);
+    liquid_vectorf_mulscalar(x, count, beta, x);
+    liquid_vectorf_add(x, current, count, x);
 }
 
 void to_bcd(uint8_t bcd_data[], uint64_t data, uint8_t len) {
@@ -137,4 +144,8 @@ int loop_modes(int16_t dir, int mode, uint64_t modes, int max_val) {
         }
     }
     return mode;
+}
+
+int sign(int x) {
+    return (x > 0) - (x < 0);
 }
