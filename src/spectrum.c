@@ -31,7 +31,7 @@ static int              grid_max = -40;
 static int32_t          width_hz = 100000;
 static int16_t          visor_height = 100;
 
-static uint16_t         spectrum_size = 400;
+static uint16_t         spectrum_size = 800;
 static float            *spectrum_buf = NULL;
 
 static int16_t          delta_surplus = 0;
@@ -60,7 +60,7 @@ static void spectrum_draw_cb(lv_event_t * e) {
     lv_draw_line_dsc_init(&main_line_dsc);
 
     main_line_dsc.color = lv_color_hex(0xAAAAAA);
-    main_line_dsc.width = 2;
+    main_line_dsc.width = 1;
 
     lv_draw_line_dsc_init(&peak_line_dsc);
 

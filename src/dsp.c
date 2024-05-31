@@ -24,7 +24,7 @@
 #include "dialog_msg_voice.h"
 #include "recorder.h"
 
-static int32_t          nfft = 400;
+static int32_t          nfft = 800;
 static iirfilt_cccf     dc_block;
 
 static pthread_mutex_t  spectrum_mux;
