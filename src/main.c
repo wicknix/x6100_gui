@@ -45,31 +45,33 @@ static lv_color_t           buf[DISP_BUF_SIZE];
 static lv_disp_draw_buf_t   disp_buf;
 static lv_disp_drv_t        disp_drv;
 
+void * tick_thread (void *args);
+
 int main(void) {
     lv_init();
     lv_png_init();
-    
+
     fbdev_init();
     audio_init();
     event_init();
-    
+
     lv_disp_draw_buf_init(&disp_buf, buf, NULL, DISP_BUF_SIZE);
     lv_disp_drv_init(&disp_drv);
-    
+
     disp_drv.draw_buf   = &disp_buf;
     disp_drv.flush_cb   = fbdev_flush;
     disp_drv.hor_res    = 480;
     disp_drv.ver_res    = 800;
     disp_drv.sw_rotate  = 1;
     disp_drv.rotated    = LV_DISP_ROT_90;
-    
+
     lv_disp_drv_register(&disp_drv);
 
     lv_disp_set_bg_color(lv_disp_get_default(), lv_color_black());
     lv_disp_set_bg_opa(lv_disp_get_default(), LV_OPA_COVER);
 
     lv_timer_t *timer = _lv_disp_get_refr_timer(lv_disp_get_default());
-    
+
     lv_timer_set_period(timer, 15);
 
     keyboard_init();
@@ -87,12 +89,12 @@ int main(void) {
 
     vol->left[VOL_SELECT] = KEY_VOL_LEFT_SELECT;
     vol->right[VOL_SELECT] = KEY_VOL_RIGHT_SELECT;
-    
+
     params_init();
     mfk_change_mode(0);
     vol_change_mode(0);
     styles_init();
-    
+
     lv_obj_t *main_obj = main_screen();
 
     cw_init();
@@ -104,9 +106,11 @@ int main(void) {
     pannel_visible();
     gps_init();
 
-    uint64_t prev_time = get_time();
+    pthread_t thread;
+    pthread_create(&thread, NULL, tick_thread, NULL);
+    pthread_detach(thread);
 
-#if 0    
+#if 0
     lv_obj_set_style_bg_opa(lv_scr_act(), LV_OPA_0, 0);
     lv_scr_load_anim(main_obj, LV_SCR_LOAD_ANIM_FADE_IN, 250, 0, false);
 #else
@@ -116,13 +120,15 @@ int main(void) {
     while (1) {
         lv_timer_handler();
         event_obj_check();
-        
-        usleep(1000);
-        
-        uint64_t now = get_time();
-        lv_tick_inc(now - prev_time);
-        prev_time = now;
+        usleep(5 * 1000);
     }
-
     return 0;
+}
+
+void * tick_thread (void *args)
+{
+      while(1) {
+        usleep(5 * 1000);    /*Sleep for 5 millisecond*/
+        lv_tick_inc(5);      /*Tell LVGL that 5 milliseconds were elapsed*/
+    }
 }
