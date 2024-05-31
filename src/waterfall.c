@@ -109,8 +109,8 @@ void waterfall_data(float *data_buf, uint16_t size) {
             v = 1.0f;
         }
 
-        uint8_t id = v * 255;
-        lv_memcpy_small(&waterfall_cache[(last_row_id * width + width - 1 - x) * PX_BYTES], &palette[id], PX_BYTES);
+        uint8_t id = v * 254 + 1;
+        memcpy(&waterfall_cache[(last_row_id * width + width - 1 - x) * PX_BYTES], &palette[id], PX_BYTES);
         x_offsets[last_row_id] = 0;
     }
 
