@@ -298,10 +298,10 @@ static void dsp_calc_auto(float *data_buf, uint16_t size) {
 
         auto_clear = false;
     } else {
-        lpf(&spectrum_auto_min, min, 0.75f);
-        lpf(&spectrum_auto_max, max, 0.55f);
+        lpf(&spectrum_auto_min, min, 0.75f, -1);
+        lpf(&spectrum_auto_max, max, 0.55f, -1);
 
-        lpf(&waterfall_auto_min, min, 0.95f);
-        lpf(&waterfall_auto_max, max, 0.85f);
+        lpf(&waterfall_auto_min, min, 0.95f, -1);
+        lpf(&waterfall_auto_max, max, 0.85f, -1);
     }
 }

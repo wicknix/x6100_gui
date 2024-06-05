@@ -18,7 +18,7 @@ int32_t align_int(int32_t x, uint16_t step);
 uint64_t align_long(uint64_t x, uint16_t step);
 int32_t limit(int32_t x, int32_t min, int32_t max);
 float sqr(float x);
-void lpf(float *x, float current, float beta);
+void lpf(float *x, float current, float beta, float initial);
 void lpf_block(float *x, float *current, float beta, unsigned int count);
 
 void to_bcd(uint8_t bcd_data[], uint64_t data, uint8_t len);

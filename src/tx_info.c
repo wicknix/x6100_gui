@@ -5,7 +5,7 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
- 
+
 #include <stdio.h>
 
 #include "tx_info.h"
@@ -60,7 +60,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
     lv_area_t           area;
     lv_point_t          label_size;
     uint32_t            count;
-    
+
     lv_coord_t x1 = obj->coords.x1 + 7;
     lv_coord_t y1 = obj->coords.y1 + 17;
 
@@ -75,7 +75,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
     lv_draw_rect_dsc_init(&rect_dsc);
 
     rect_dsc.bg_opa = LV_OPA_80;
-    
+
     count = len * (pwr - min_pwr) / (max_pwr - min_pwr) / slice;
 
     area.y1 = y1 - slice / 2;
@@ -83,7 +83,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
     for (uint16_t i = 0; i < count; i++) {
         rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
-        
+
         area.x1 = x1 + 30 + i * slice;
         area.x2 = area.x1 + slice - 3;
 
@@ -95,7 +95,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
     lv_draw_rect_dsc_init(&rect_dsc);
 
     rect_dsc.bg_opa = LV_OPA_80;
-    
+
     count = len * (vswr - min_swr) / (max_swr - min_swr) / slice;
 
     area.y1 = y1 - slice / 2 + 54;
@@ -103,7 +103,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
     for (uint16_t i = 0; i < count; i++) {
         float s = i * (max_swr - min_swr) / (len / slice) + min_swr;
-    
+
         if (s <= 2.0f) {
             rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
         } else if (s <= 3.0f) {
@@ -111,7 +111,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
         } else {
             rect_dsc.bg_color = lv_color_hex(0xAA0000);
         }
-        
+
         area.x1 = x1 + 30 + i * slice;
         area.x2 = area.x1 + slice - 3;
 
@@ -119,9 +119,9 @@ static void tx_info_draw_cb(lv_event_t * e) {
     }
 
     /* PWR Labels */
-    
+
     lv_draw_label_dsc_init(&label_dsc);
-    
+
     label_dsc.color = lv_color_white();
     label_dsc.font = &sony_22;
 
@@ -130,7 +130,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
     area.y1 = y1 + 5;
     area.y2 = area.y1 + 18;
-    
+
     for (uint8_t i = 0; i < NUM_PWR_ITEMS; i++) {
         char    *label = pwr_items[i].label;
         float   val = pwr_items[i].val;
@@ -182,7 +182,7 @@ lv_obj_t * tx_info_init(lv_obj_t *parent) {
     obj = lv_obj_create(parent);
 
     lv_obj_add_style(obj, &tx_info_style, 0);
-    
+
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(obj, tx_cb, EVENT_RADIO_TX, NULL);
     lv_obj_add_event_cb(obj, rx_cb, EVENT_RADIO_RX, NULL);
@@ -195,27 +195,41 @@ lv_obj_t * tx_info_init(lv_obj_t *parent) {
     grad.stops[1].color = bg_color;
     grad.stops[2].color = bg_color;
     grad.stops[3].color = lv_color_darken(bg_color, 200);
-    
+
     grad.stops[0].frac  = 0;
     grad.stops[1].frac  = 128 - 10;
     grad.stops[2].frac  = 128 + 10;
     grad.stops[3].frac  = 255;
-   
+
     return obj;
 }
 
 void tx_info_update(float p, float s, float a) {
-    pwr = p;
-    alc = alc * 0.9f + (10.0f - a) * 0.1f;
-
-    if (s <= max_swr) {
-        vswr = s;
+    // Use EMA for smoothing values
+    const float alpha = 0.1f;
+    if (pwr == 0.0f) {
+        pwr = p;
     } else {
-        vswr = max_swr;
+        pwr = pwr * (1.0f - alpha) + p * alpha;
+    }
+    if (alc == 0.0f) {
+        alc = a;
+    } else {
+        alc = alc * (1.0f - alpha) + a * alpha;
+    }
+
+    if (s > max_swr) {
+        s = max_swr;
+    }
+
+    if (vswr == 0.0f) {
+        vswr = s;
+    } else{
+        vswr = vswr * (1.0f - alpha) + s * alpha;
     }
 
     event_send(obj, LV_EVENT_REFRESH, NULL);
-    
+
     if (params.mag_alc.x) {
         msg_tiny_set_text_fmt("ALC: %.1f", alc);
     }

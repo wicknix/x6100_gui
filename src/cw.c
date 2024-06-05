@@ -78,7 +78,7 @@ static bool cw_get_peak() {
     for (uint16_t n = start; n < stop; n++) {
         fft_items[item].n = n;
         fft_items[item].db = audio_psd_sum[n];
-        
+
         item++;
     }
 
@@ -103,8 +103,8 @@ static bool cw_get_peak() {
     if (noise_db > -3.0f)
         noise_db = -3.0f;
 
-    lpf(&peak_filtered, peak_db, params.cw_decoder_peak_beta);
-    lpf(&noise_filtered, noise_db, params.cw_decoder_noise_beta);
+    lpf(&peak_filtered, peak_db, params.cw_decoder_peak_beta, S_MIN);
+    lpf(&noise_filtered, noise_db, params.cw_decoder_noise_beta, S_MIN);
 
     float snr = peak_filtered - noise_filtered;
     float snr_max = params.cw_decoder_snr * OVER;
@@ -129,10 +129,10 @@ static bool cw_get_peak() {
 
     char    str[128];
     uint8_t i = 0;
-    
+
     for (uint16_t n = start; n < stop; n++) {
         char c;
-        
+
         if (n == peak_n) {
             c = '#';
         } else if (audio_psd_sum[n] > noise_filtered) {
@@ -140,10 +140,10 @@ static bool cw_get_peak() {
         } else {
             c = ' ';
         }
-        
+
         str[i++] = c;
     }
-    
+
     str[i] = '\0';
     LV_LOG_INFO("[ %s ]", str);
 #endif
@@ -157,34 +157,34 @@ void cw_put_audio_samples(unsigned int n, float complex *samples) {
     }
 
     cbuffercf_write(audio_buf, samples, n);
-    
+
     while (cbuffercf_size(audio_buf) > FFT_ALL) {
         unsigned int n;
         float complex *buf;
-        
+
         cbuffercf_read(audio_buf, FFT, &buf, &n);
-        
+
         spgramcf_write(audio_sg, buf, n);
         cbuffercf_release(audio_buf, FFT_OVER);
-        
+
         spgramcf_get_psd(audio_sg, audio_psd[audio_psd_index]);
         spgramcf_reset(audio_sg);
-        
+
         audio_psd_index++;
-        
+
         if (audio_psd_index >= OVER) {
             audio_psd_index = 0;
         }
 
         for (uint16_t i = 0; i < FFT; i++) {
             float sum = 0;
-            
+
             for (uint8_t n = 0; n < OVER; n++) {
                 float *psd = audio_psd[n];
-                
+
                 sum += psd[i];
             }
-            
+
             audio_psd_sum[i] = sum;
         }
 
@@ -204,7 +204,7 @@ bool cw_change_decoder(int16_t df) {
     params_unlock(&params.durty.cw_decoder);
 
     pannel_visible();
-    
+
     return params.cw_decoder;
 }
 
@@ -212,7 +212,7 @@ float cw_change_snr(int16_t df) {
     if (df == 0) {
         return params.cw_decoder_snr;
     }
-    
+
     float x = params.cw_decoder_snr + df * 0.1f;
 
     if (x < 7.0f) {
@@ -244,7 +244,7 @@ float cw_change_peak_beta(int16_t df) {
     params_lock();
     params.cw_decoder_peak_beta = x;
     params_unlock(&params.durty.cw_decoder_peak_beta);
-    
+
     return params.cw_decoder_peak_beta;
 }
 
@@ -264,6 +264,6 @@ float cw_change_noise_beta(int16_t df) {
     params_lock();
     params.cw_decoder_noise_beta = x;
     params_unlock(&params.durty.cw_decoder_noise_beta);
-    
+
     return params.cw_decoder_noise_beta;
 }
