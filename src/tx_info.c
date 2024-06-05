@@ -13,6 +13,7 @@
 #include "events.h"
 #include "msg_tiny.h"
 #include "params.h"
+#include "util.h"
 
 #define NUM_PWR_ITEMS   6
 #define NUM_VSWR_ITEMS  5
@@ -206,27 +207,16 @@ lv_obj_t * tx_info_init(lv_obj_t *parent) {
 
 void tx_info_update(float p, float s, float a) {
     // Use EMA for smoothing values
-    const float alpha = 0.1f;
-    if (pwr == 0.0f) {
-        pwr = p;
-    } else {
-        pwr = pwr * (1.0f - alpha) + p * alpha;
-    }
-    if (alc == 0.0f) {
-        alc = a;
-    } else {
-        alc = alc * (1.0f - alpha) + a * alpha;
-    }
+    const float beta = 0.9f;
+
+    lpf(&pwr, p, beta, 0.0f);
+    lpf(&alc, a, beta, 0.0f);
 
     if (s > max_swr) {
         s = max_swr;
     }
 
-    if (vswr == 0.0f) {
-        vswr = s;
-    } else{
-        vswr = vswr * (1.0f - alpha) + s * alpha;
-    }
+    lpf(&vswr, s, beta, 0.0f);
 
     event_send(obj, LV_EVENT_REFRESH, NULL);
 
