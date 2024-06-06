@@ -210,7 +210,7 @@ void tx_info_update(float p, float s, float a) {
     const float beta = 0.9f;
 
     lpf(&pwr, p, beta, 0.0f);
-    lpf(&alc, a, beta, 0.0f);
+    lpf(&alc, 10.0f - a, beta, 0.0f);
 
     if (s > max_swr) {
         s = max_swr;

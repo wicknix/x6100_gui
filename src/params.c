@@ -94,7 +94,7 @@ params_t params = {
     .key_train              = false,
     .qsk_time               = 100,
     .key_ratio              = 30,
-    
+
     .cw_decoder             = true,
     .cw_decoder_snr         = 10.0f,
     .cw_decoder_snr_gist    = 3.0f,
@@ -103,7 +103,7 @@ params_t params = {
 
     .cw_encoder_period      = 10,
     .voice_msg_period       = 10,
-    
+
     .rtty_center            = 800,
     .rtty_shift             = 170,
     .rtty_rate              = 4545,
@@ -126,12 +126,12 @@ params_t params = {
     .long_msg               = ACTION_RECORDER,
     .long_dfn               = ACTION_VOICE_MODE,
     .long_dfl               = ACTION_BAT_INFO,
-    
+
     .press_f1               = ACTION_STEP_UP,
     .press_f2               = ACTION_NONE,
     .long_f1                = ACTION_STEP_DOWN,
     .long_f2                = ACTION_NONE,
-    
+
     .play_gain              = 100,
     .rec_gain               = 100,
 
@@ -241,7 +241,7 @@ static void params_mode_write_int(const char *name, int data, bool *durty) {
     sqlite3_step(write_mode_stmt);
     sqlite3_reset(write_mode_stmt);
     sqlite3_clear_bindings(write_mode_stmt);
-    
+
     *durty = false;
 }
 
@@ -300,7 +300,7 @@ static void params_mb_load(sqlite3_stmt *stmt) {
     bool copy_agc = true;
 
     memset(params_band.label, 0, sizeof(params_band.label));
-    
+
     while (sqlite3_step(stmt) != SQLITE_DONE) {
         const char *name = sqlite3_column_text(stmt, 0);
 
@@ -359,7 +359,7 @@ static void params_mb_write_int(uint16_t id, const char *name, int data, bool *d
     sqlite3_step(write_mb_stmt);
     sqlite3_reset(write_mb_stmt);
     sqlite3_clear_bindings(write_mb_stmt);
-    
+
     *durty = false;
 }
 
@@ -370,7 +370,7 @@ static void params_mb_write_int64(uint16_t id, const char *name, uint64_t data, 
     sqlite3_step(write_mb_stmt);
     sqlite3_reset(write_mb_stmt);
     sqlite3_clear_bindings(write_mb_stmt);
-    
+
     *durty = false;
 }
 
@@ -384,7 +384,7 @@ void params_band_save() {
     }
 
     sqlite3_prepare_v2(db, "INSERT INTO band_params(bands_id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
-    
+
     params_mb_save(params.band);
     sqlite3_finalize(write_mb_stmt);
 }
@@ -397,7 +397,7 @@ void params_memory_save(uint16_t id) {
     sqlite3_prepare_v2(db, "INSERT INTO memory(id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
 
     params_band.durty.vfo = true;
-    
+
     for (uint8_t i = X6100_VFO_A; i <= X6100_VFO_B; i++) {
         params_band.vfo_x[i].durty.freq = true;
         params_band.vfo_x[i].durty.att = true;
@@ -405,7 +405,7 @@ void params_memory_save(uint16_t id) {
         params_band.vfo_x[i].durty.mode = true;
         params_band.vfo_x[i].durty.agc = true;
     }
-    
+
     params_band.durty.grid_min = true;
     params_band.durty.grid_max = true;
     params_band.durty.rfg = true;
@@ -417,40 +417,40 @@ void params_memory_save(uint16_t id) {
 static bool params_mb_save(uint16_t id) {
     if (params_band.durty.vfo)
         params_mb_write_int(id, "vfo", params_band.vfo, &params_band.durty.vfo);
-    
+
     if (params_band.vfo_x[X6100_VFO_A].durty.freq)
         params_mb_write_int64(id, "vfoa_freq", params_band.vfo_x[X6100_VFO_A].freq, &params_band.vfo_x[X6100_VFO_A].durty.freq);
-        
+
     if (params_band.vfo_x[X6100_VFO_A].durty.att)
         params_mb_write_int(id, "vfoa_att", params_band.vfo_x[X6100_VFO_A].att, &params_band.vfo_x[X6100_VFO_A].durty.att);
-        
+
     if (params_band.vfo_x[X6100_VFO_A].durty.pre)
         params_mb_write_int(id, "vfoa_pre", params_band.vfo_x[X6100_VFO_A].pre, &params_band.vfo_x[X6100_VFO_A].durty.pre);
-        
+
     if (params_band.vfo_x[X6100_VFO_A].durty.mode)
         params_mb_write_int(id, "vfoa_mode", params_band.vfo_x[X6100_VFO_A].mode, &params_band.vfo_x[X6100_VFO_A].durty.mode);
-        
+
     if (params_band.vfo_x[X6100_VFO_A].durty.agc)
         params_mb_write_int(id, "vfoa_agc", params_band.vfo_x[X6100_VFO_A].agc, &params_band.vfo_x[X6100_VFO_A].durty.agc);
 
     if (params_band.vfo_x[X6100_VFO_B].durty.freq)
         params_mb_write_int64(id, "vfob_freq", params_band.vfo_x[X6100_VFO_B].freq, &params_band.vfo_x[X6100_VFO_B].durty.freq);
-        
+
     if (params_band.vfo_x[X6100_VFO_B].durty.att)
         params_mb_write_int(id, "vfob_att", params_band.vfo_x[X6100_VFO_B].att, &params_band.vfo_x[X6100_VFO_B].durty.att);
-        
+
     if (params_band.vfo_x[X6100_VFO_B].durty.pre)
         params_mb_write_int(id, "vfob_pre", params_band.vfo_x[X6100_VFO_B].pre, &params_band.vfo_x[X6100_VFO_B].durty.pre);
-        
+
     if (params_band.vfo_x[X6100_VFO_B].durty.mode)
         params_mb_write_int(id, "vfob_mode", params_band.vfo_x[X6100_VFO_B].mode, &params_band.vfo_x[X6100_VFO_B].durty.mode);
-        
+
     if (params_band.vfo_x[X6100_VFO_B].durty.agc)
         params_mb_write_int(id, "vfob_agc", params_band.vfo_x[X6100_VFO_B].agc, &params_band.vfo_x[X6100_VFO_B].durty.agc);
 
     if (params_band.durty.grid_min)
         params_mb_write_int(id, "grid_min", params_band.grid_min, &params_band.durty.grid_min);
-        
+
     if (params_band.durty.grid_max)
         params_mb_write_int(id, "grid_max", params_band.grid_max, &params_band.durty.grid_max);
 
@@ -473,7 +473,7 @@ static bool params_load_bool(params_bool_t *var, const char *name, const int32_t
         var->x = x;
         return true;
     }
-    
+
     return false;
 }
 
@@ -482,7 +482,7 @@ static bool params_load_uint8(params_uint8_t *var, const char *name, const int32
         var->x = x;
         return true;
     }
-    
+
     return false;
 }
 
@@ -491,7 +491,7 @@ static bool params_load_uint16(params_uint16_t *var, const char *name, const int
         var->x = x;
         return true;
     }
-    
+
     return false;
 }
 
@@ -500,20 +500,20 @@ static bool params_load_str(params_str_t *var, const char *name, const char *x) 
         strncpy(var->x, x, sizeof(var->x) - 1);
         return true;
     }
-    
+
     return false;
 }
 
 static bool params_load() {
     sqlite3_stmt    *stmt;
     int             rc;
-    
+
     rc = sqlite3_prepare_v2(db, "SELECT * FROM params", -1, &stmt, 0);
-    
+
     if (rc != SQLITE_OK) {
         return false;
     }
-    
+
     while (sqlite3_step(stmt) != SQLITE_DONE) {
         const char      *name = sqlite3_column_text(stmt, 0);
         const int32_t   i = sqlite3_column_int(stmt, 1);
@@ -673,8 +673,8 @@ static bool params_load() {
             params.play_gain = i;
         } else if (strcmp(name, "rec_gain") == 0) {
             params.rec_gain = i;
-        } 
-        
+        }
+
         if (params_load_bool(&params.mag_freq, name, i)) continue;
         if (params_load_bool(&params.mag_info, name, i)) continue;
         if (params_load_bool(&params.mag_alc, name, i)) continue;
@@ -696,14 +696,14 @@ static bool params_load() {
 
         if (params_load_uint16(&params.ft8_tx_freq, name, i)) continue;
 
-        if (params_load_str(&params.qth, name, t)) { 
+        if (params_load_str(&params.qth, name, t)) {
             qth_update(t);
             continue;
         }
 
         if (params_load_str(&params.callsign, name, t)) continue;
     }
-    
+
     sqlite3_finalize(stmt);
     return true;
 }
@@ -711,14 +711,14 @@ static bool params_load() {
 static bool params_exec(const char *sql) {
     char    *err = 0;
     int     rc;
-    
+
     rc = sqlite3_exec(db, sql, NULL, NULL, &err);
-    
+
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR(err);
         return false;
     }
-    
+
     return true;
 }
 
@@ -728,7 +728,7 @@ static void params_write_int(const char *name, int data, bool *durty) {
     sqlite3_step(write_stmt);
     sqlite3_reset(write_stmt);
     sqlite3_clear_bindings(write_stmt);
-    
+
     *durty = false;
 }
 
@@ -738,7 +738,7 @@ static void params_write_int64(const char *name, uint64_t data, bool *durty) {
     sqlite3_step(write_stmt);
     sqlite3_reset(write_stmt);
     sqlite3_clear_bindings(write_stmt);
-    
+
     *durty = false;
 }
 
@@ -748,7 +748,7 @@ static void params_write_text(const char *name, const char *data, bool *durty) {
     sqlite3_step(write_stmt);
     sqlite3_reset(write_stmt);
     sqlite3_clear_bindings(write_stmt);
-    
+
     *durty = false;
 }
 
@@ -910,13 +910,13 @@ static void params_save() {
 bool transverter_load() {
     sqlite3_stmt    *stmt;
     int             rc;
-    
+
     rc = sqlite3_prepare_v2(db, "SELECT * FROM transverter", -1, &stmt, 0);
-    
+
     if (rc != SQLITE_OK) {
         return false;
     }
-    
+
     while (sqlite3_step(stmt) != SQLITE_DONE) {
         const int       id = sqlite3_column_int(stmt, 0);
         const char      *name = sqlite3_column_text(stmt, 1);
@@ -942,7 +942,7 @@ static void transverter_write(sqlite3_stmt *stmt, uint8_t id, const char *name, 
     sqlite3_step(stmt);
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
-    
+
     *durty = false;
 }
 
@@ -959,10 +959,10 @@ void transverter_save() {
     if (!params_exec("BEGIN")) {
         return;
     }
-    
+
     for (uint8_t i = 0; i < TRANSVERTER_NUM; i++) {
         transverter_t *transverter = &params_transverter[i];
-        
+
         if (transverter->durty.from)    transverter_write(stmt, i, "from", transverter->from, &transverter->durty.from);
         if (transverter->durty.to)      transverter_write(stmt, i, "to", transverter->to, &transverter->durty.to);
         if (transverter->durty.shift)   transverter_write(stmt, i, "shift", transverter->shift, &transverter->durty.shift);
@@ -980,7 +980,7 @@ static void * params_thread(void *arg) {
         if (durty_time) {
             uint64_t    now = get_time();
             int32_t     d = now - durty_time;
-    
+
             if (d > PARAMS_SAVE_TIMEOUT) {
                 durty_time = 0;
 
@@ -990,7 +990,7 @@ static void * params_thread(void *arg) {
                 transverter_save();
             }
         }
-        
+
         pthread_mutex_unlock(&params_mux);
         usleep(100000);
     }
@@ -998,7 +998,7 @@ static void * params_thread(void *arg) {
 
 void params_init() {
     int rc = sqlite3_open("/mnt/params.db", &db);
-    
+
     if (rc == SQLITE_OK) {
         if (!params_load()) {
             LV_LOG_ERROR("Load params");
@@ -1030,10 +1030,10 @@ void params_init() {
             LV_LOG_ERROR("Prepare atu load");
         }
 
-        rc = sqlite3_prepare_v2(db, 
+        rc = sqlite3_prepare_v2(db,
             "SELECT id,name,start_freq,stop_freq,type FROM bands "
                 "WHERE (stop_freq BETWEEN ? AND ?) OR (start_freq BETWEEN ? AND ?) OR (start_freq <= ? AND stop_freq >= ?) "
-                "ORDER BY start_freq ASC", 
+                "ORDER BY start_freq ASC",
                 -1, &bands_find_all_stmt, 0
         );
 
@@ -1046,14 +1046,14 @@ void params_init() {
         if (rc != SQLITE_OK) {
             LV_LOG_ERROR("Prepare bands find");
         }
-        
+
         if (!transverter_load()) {
             LV_LOG_ERROR("Load transverter");
         }
     } else {
         LV_LOG_ERROR("Open params.db");
     }
-    
+
     pthread_mutex_init(&params_mux, NULL);
 
     durty_time = 0;
@@ -1092,18 +1092,18 @@ void params_atu_save(uint32_t val) {
     sqlite3_bind_int(save_atu_stmt, 1, params.ant);
     sqlite3_bind_int(save_atu_stmt, 2, freq / 50000);
     sqlite3_bind_int(save_atu_stmt, 3, val);
-    
+
     sqlite3_step(save_atu_stmt);
     sqlite3_reset(save_atu_stmt);
     sqlite3_clear_bindings(save_atu_stmt);
-    
+
     params_unlock(NULL);
 }
 
 uint32_t params_atu_load(bool *loaded) {
     uint32_t    res = 0;
     uint64_t    freq = params_band.vfo_x[params_band.vfo].freq;
-    
+
     *loaded = false;
 
     params_lock();
@@ -1120,7 +1120,7 @@ uint32_t params_atu_load(bool *loaded) {
     sqlite3_clear_bindings(load_atu_stmt);
 
     params_unlock(NULL);
-    
+
     return res;
 }
 
@@ -1130,7 +1130,7 @@ void params_band_vfo_clone() {
 
     if (params_band.vfo == X6100_VFO_A) {
         *b = *a;
-        
+
         b->durty.freq = true;
         b->durty.att = true;
         b->durty.pre = true;
@@ -1150,29 +1150,29 @@ void params_band_vfo_clone() {
 void params_msg_cw_load() {
     sqlite3_stmt    *stmt;
     int             rc;
-    
+
     rc = sqlite3_prepare_v2(db, "SELECT id,val FROM msg_cw", -1, &stmt, 0);
-    
+
     if (rc != SQLITE_OK) {
         return;
     }
-    
+
     while (sqlite3_step(stmt) != SQLITE_DONE) {
         int         id = sqlite3_column_int(stmt, 0);
         const char  *val = sqlite3_column_text(stmt, 1);
-        
+
         dialog_msg_cw_append(id, val);
     }
-    
+
     sqlite3_finalize(stmt);
 }
 
 void params_msg_cw_new(const char *val) {
     sqlite3_stmt    *stmt;
     int             rc;
-    
+
     rc = sqlite3_prepare_v2(db, "INSERT INTO msg_cw (val) VALUES(?)", -1, &stmt, 0);
-    
+
     if (rc != SQLITE_OK) {
         return;
     }
@@ -1187,9 +1187,9 @@ void params_msg_cw_new(const char *val) {
 void params_msg_cw_edit(uint32_t id, const char *val) {
     sqlite3_stmt    *stmt;
     int             rc;
-    
+
     rc = sqlite3_prepare_v2(db, "UPDATE msg_cw SET val = ? WHERE id = ?", -1, &stmt, 0);
-    
+
     if (rc != SQLITE_OK) {
         return;
     }
@@ -1203,9 +1203,9 @@ void params_msg_cw_edit(uint32_t id, const char *val) {
 void params_msg_cw_delete(uint32_t id) {
     sqlite3_stmt    *stmt;
     int             rc;
-    
+
     rc = sqlite3_prepare_v2(db, "DELETE FROM msg_cw WHERE id = ?", -1, &stmt, 0);
-    
+
     if (rc != SQLITE_OK) {
         return;
     }
@@ -1227,11 +1227,11 @@ band_t * params_bands_find_all(uint64_t freq, int32_t half_width, uint16_t *coun
     sqlite3_bind_int64(bands_find_all_stmt, 4, right);
     sqlite3_bind_int64(bands_find_all_stmt, 5, left);
     sqlite3_bind_int64(bands_find_all_stmt, 6, right);
-    
+
     while (sqlite3_step(bands_find_all_stmt) != SQLITE_DONE) {
         n++;
         res = realloc(res, sizeof(band_t) * n);
-        
+
         band_t *current = &res[n - 1];
 
         current->id = sqlite3_column_int(bands_find_all_stmt, 0);
@@ -1243,7 +1243,7 @@ band_t * params_bands_find_all(uint64_t freq, int32_t half_width, uint16_t *coun
 
     sqlite3_reset(bands_find_all_stmt);
     sqlite3_clear_bindings(bands_find_all_stmt);
-    
+
     *count = n;
     return res;
 }
@@ -1256,19 +1256,19 @@ bool params_bands_find(uint64_t freq, band_t *band) {
     if (sqlite3_step(bands_find_stmt) == SQLITE_ROW) {
         if (band->name)
             free(band->name);
-    
+
         band->id = sqlite3_column_int(bands_find_stmt, 0);
         band->name = strdup(sqlite3_column_text(bands_find_stmt, 1));
         band->start_freq = sqlite3_column_int64(bands_find_stmt, 2);
         band->stop_freq = sqlite3_column_int64(bands_find_stmt, 3);
         band->type = sqlite3_column_int(bands_find_stmt, 4);
-        
+
         res = true;
     }
 
     sqlite3_reset(bands_find_stmt);
     sqlite3_clear_bindings(bands_find_stmt);
-    
+
     return res;
 }
 
@@ -1276,13 +1276,13 @@ bool params_bands_find_next(uint64_t freq, bool up, band_t *band) {
     bool            res = false;
     sqlite3_stmt    *stmt;
     int             rc;
-    
+
     if (up) {
         rc = sqlite3_prepare_v2(db, "SELECT id,name,start_freq,stop_freq,type FROM bands WHERE (? < start_freq AND type != 0) ORDER BY start_freq ASC", -1, &stmt, 0);
     } else {
         rc = sqlite3_prepare_v2(db, "SELECT id,name,start_freq,stop_freq,type FROM bands WHERE (? > stop_freq AND type != 0) ORDER BY start_freq DESC", -1, &stmt, 0);
     }
-    
+
     if (rc != SQLITE_OK) {
         return false;
     }
@@ -1292,7 +1292,7 @@ bool params_bands_find_next(uint64_t freq, bool up, band_t *band) {
     if (sqlite3_step(stmt) == SQLITE_ROW) {
         if (band->name)
             free(band->name);
-    
+
         band->id = sqlite3_column_int(stmt, 0);
         band->name = strdup(sqlite3_column_text(stmt, 1));
         band->start_freq = sqlite3_column_int64(stmt, 2);
@@ -1311,7 +1311,7 @@ void params_bool_set(params_bool_t *var, bool x) {
     params_lock();
     var->x = x;
     params_unlock(&var->durty);
-    
+
     if (var->voice) {
         voice_say_bool(var->voice, var->x);
     }
@@ -1321,7 +1321,7 @@ void params_uint8_set(params_uint8_t *var, uint8_t x) {
     params_lock();
     var->x = x;
     params_unlock(&var->durty);
-    
+
     if (var->voice) {
         voice_say_int(var->voice, var->x);
     }
@@ -1331,7 +1331,7 @@ void params_uint16_set(params_uint16_t *var, uint16_t x) {
     params_lock();
     var->x = x;
     params_unlock(&var->durty);
-    
+
     if (var->voice) {
         voice_say_int(var->voice, var->x);
     }
@@ -1347,13 +1347,13 @@ uint8_t params_uint8_change(params_uint8_t *var, int16_t df) {
     if (df == 0) {
         return var->x;
     }
-    
+
     int32_t x = var->x + df;
-    
+
     if (x > var->max) x = var->max;
     if (x < var->min) x = var->min;
-    
+
     params_uint8_set(var, x);
-    
+
     return var->x;
 }
