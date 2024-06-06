@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "params.h"
+#include "params/params.h"
 
 void backlight_init();
 void backlight_tick();

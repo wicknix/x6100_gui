@@ -14,7 +14,7 @@
 #include "dialog_recorder.h"
 #include "recorder.h"
 #include "msg.h"
-#include "params.h"
+#include "params/params.h"
 
 char            *recorder_path = "/mnt/rec";
 
@@ -29,20 +29,20 @@ static bool create_file() {
     sfinfo.samplerate = AUDIO_CAPTURE_RATE;
     sfinfo.channels = 1;
     sfinfo.format = SF_FORMAT_MPEG | SF_FORMAT_MPEG_LAYER_III;
-    
+
     char        filename[64];
     time_t      now = time(NULL);
     struct tm   *t = localtime(&now);
 
     snprintf(filename, sizeof(filename),
-        "%s/REC_%04i%02i%02i_%02i%02i%02i.mp3", 
+        "%s/REC_%04i%02i%02i_%02i%02i%02i.mp3",
         recorder_path, t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec
     );
-    
+
     file = sf_open(filename, SFM_WRITE, &sfinfo);
-    
+
     if (file == NULL) {
-        char* err = sf_strerror(NULL);
+        const char* err = sf_strerror(NULL);
         LV_LOG_ERROR("Problem with create file: %s", err);
         return false;
     }

@@ -10,7 +10,7 @@
 #include "msg.h"
 #include "radio.h"
 #include "main.h"
-#include "params.h"
+#include "params/params.h"
 #include "voice.h"
 #include "util.h"
 
@@ -28,14 +28,14 @@ void vol_update(int16_t diff, bool voice) {
         case VOL_VOL:
             x = radio_change_vol(diff);
             msg_set_text_fmt("#%3X Volume: %i", color, x);
-            
+
             if (diff) {
                 voice_say_int("Audio level", x);
             } else if (voice) {
                 voice_say_text_fmt("Audio level");
             }
             break;
-            
+
         case VOL_RFG:
             x = radio_change_rfg(diff);
             msg_set_text_fmt("#%3X RF gain: %i", color, x);
@@ -93,7 +93,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_MIC:
             x = radio_change_mic(diff);
-            
+
             switch (x) {
                 case x6100_mic_builtin:
                     s = "Built-In";
@@ -102,12 +102,12 @@ void vol_update(int16_t diff, bool voice) {
                 case x6100_mic_handle:
                     s = "Handle";
                     break;
-                    
+
                 case x6100_mic_auto:
                     s = "Auto";
                     break;
             }
-            
+
             msg_set_text_fmt("#%3X MIC: %s", color, s);
 
             if (diff) {
@@ -169,7 +169,7 @@ void vol_update(int16_t diff, bool voice) {
         case VOL_VOICE_RATE:
             x = params_uint8_change(&params.voice_rate, diff);
             msg_set_text_fmt("#%3X Voice rate: %i", color, x);
-            
+
             if (diff == 0 && voice) {
                 voice_say_text_fmt(params.voice_rate.voice);
             }
@@ -192,7 +192,7 @@ void vol_update(int16_t diff, bool voice) {
                 voice_say_text_fmt(params.voice_volume.voice);
             }
             break;
-            
+
         default:
             break;
     }

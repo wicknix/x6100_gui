@@ -9,7 +9,7 @@
 #pragma once
 
 #include "lvgl/lvgl.h"
-#include "params.h"
+#include "params/params.h"
 
 #define MEM_NUM         8
 

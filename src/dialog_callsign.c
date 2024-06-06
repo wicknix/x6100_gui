@@ -7,7 +7,7 @@
  */
 
 #include "textarea_window.h"
-#include "params.h"
+#include "params/params.h"
 #include "main_screen.h"
 #include "dialog.h"
 #include "events.h"
@@ -37,10 +37,10 @@ static void edit_cancel() {
 
 static void construct_cb(lv_obj_t *parent) {
     dialog.obj = textarea_window_open(edit_ok, edit_cancel);
-    
+
     lv_obj_t *text = textarea_window_text();
-    
-    lv_textarea_set_accepted_chars(text, 
+
+    lv_textarea_set_accepted_chars(text,
         "0123456789/"
         "abcdefghijklmnopqrstuvwxyz"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -70,7 +70,7 @@ static void key_cb(lv_event_t * e) {
             edit_ok();
             dialog_destruct(&dialog);
             break;
-            
+
         case KEY_VOL_LEFT_EDIT:
         case KEY_VOL_LEFT_SELECT:
             radio_change_vol(-1);

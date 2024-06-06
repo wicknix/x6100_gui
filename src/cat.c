@@ -24,7 +24,7 @@
 
 #include "cat.h"
 #include "radio.h"
-#include "params.h"
+#include "params/params.h"
 #include "util.h"
 #include "events.h"
 #include "waterfall.h"
@@ -284,7 +284,7 @@ static void frame_parse(uint16_t len) {
             {
                 set_freq(new_freq);
             }
-            
+
             send_code(CODE_OK);
             break;
 
@@ -294,7 +294,7 @@ static void frame_parse(uint16_t len) {
                 radio_set_mode(cur_vfo, new_mode);
                 event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
             }
-            
+
             send_code(CODE_OK);
             break;
 
@@ -326,7 +326,7 @@ static void frame_parse(uint16_t len) {
                     radio_set_vfo(X6100_VFO_A);
                     event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
                 }
-                
+
                 send_code(CODE_OK);
                 break;
 

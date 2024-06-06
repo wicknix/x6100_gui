@@ -20,7 +20,6 @@
 #include "msg.h"
 #include "msg_tiny.h"
 #include "dsp.h"
-#include "params.h"
 #include "bands.h"
 #include "clock.h"
 #include "info.h"

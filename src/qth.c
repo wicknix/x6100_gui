@@ -9,10 +9,9 @@
 #include <math.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdint.h>
 
 #include "qth.h"
-#include "params.h"
+#include "params/params.h"
 
 static double qth_lon = 0.0;
 static double qth_lat = 0.0;
@@ -24,14 +23,14 @@ void qth_set(const char *qth) {
 
 void qth_update(const char *qth) {
     grid_pos(qth, &qth_lat, &qth_lon);
-    
+
     qth_lat = qth_lat * M_PI / 180.0;
     qth_lon = qth_lon * M_PI / 180.0;
 }
 
 bool grid_check(const char *grid) {
     uint8_t len = strlen(grid);
-    
+
     switch (len) {
         case 8:
             if (grid[7] < '0' || grid[7] > '9') return false;
@@ -46,11 +45,11 @@ bool grid_check(const char *grid) {
             if (toupper(grid[1]) < 'A' || toupper(grid[1]) > 'S') return false;
             if (toupper(grid[0]) < 'A' || toupper(grid[0]) > 'S') return false;
             break;
-            
+
         default:
             return false;
     }
-    
+
     return true;
 }
 
@@ -134,15 +133,15 @@ void grid_pos(const char *grid, double *lat, double *lon) {
 
     *lon = -180.0;
     *lat = -90.0;
-    
+
     *lon += (toupper(grid[0]) - 'A') * 20.0;
     *lat += (toupper(grid[1]) - 'A') * 10.0;
-    
+
     if (n >= 4) {
         *lon += (grid[2] - '0') * 2.0;
         *lat += (grid[3] - '0') * 1.0;
     }
-    
+
     if (n >= 6) {
         *lon += (toupper(grid[4]) - 'A') * 5.0 / 60.0;
         *lat += (toupper(grid[5]) - 'A') * 2.5 / 60.0;
@@ -152,7 +151,7 @@ void grid_pos(const char *grid, double *lat, double *lon) {
         *lon += (grid[6] - '0') * 5.0 / 600.0;
         *lat += (grid[7] - '0') * 2.5 / 600.0;
     }
-    
+
     switch (n) {
         case 2:
             *lon += 20.0 / 2;
@@ -163,12 +162,12 @@ void grid_pos(const char *grid, double *lat, double *lon) {
             *lon += 2.0 / 2;
             *lat += 1.0 / 2;
             break;
-            
+
         case 6:
             *lon += 5.0 / 60.0 / 2;
             *lat += 2.5 / 60.0 / 2;
             break;
-            
+
         case 8:
             *lon += 5.0 / 600.0 / 2;
             *lat += 2.5 / 600.0 / 2;
@@ -180,14 +179,14 @@ int32_t grid_dist(const char *grid) {
     double lon = 0;
 
     grid_pos(grid, &lat, &lon);
-    
+
     lat = lat * M_PI / 180.0;
     lon = lon * M_PI / 180.0;
-    
+
     double dlat = lat - qth_lat;
     double dlon = lon - qth_lon;
     double a = sin(dlat / 2.0) * sin(dlat / 2.0) + cos(lat) * cos(qth_lat) * sin(dlon / 2.0) * sin(dlon / 2.0);
     double c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a));
-    
+
     return c * 6371;
 }

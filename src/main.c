@@ -23,7 +23,7 @@
 #include "spectrum.h"
 #include "waterfall.h"
 #include "keypad.h"
-#include "params.h"
+#include "params/params.h"
 #include "bands.h"
 #include "audio.h"
 #include "cw.h"

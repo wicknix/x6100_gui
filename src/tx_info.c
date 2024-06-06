@@ -12,7 +12,7 @@
 #include "styles.h"
 #include "events.h"
 #include "msg_tiny.h"
-#include "params.h"
+#include "params/params.h"
 #include "util.h"
 
 #define NUM_PWR_ITEMS   6

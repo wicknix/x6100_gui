@@ -14,7 +14,7 @@
 
 #include "cw_decoder.h"
 #include "cw_encoder.h"
-#include "params.h"
+#include "params/params.h"
 #include "radio.h"
 #include "msg.h"
 #include "buttons.h"
@@ -30,16 +30,16 @@ static uint8_t get_morse(char *str, char **morse) {
 
     while (character->morse) {
         uint8_t char_len = strlen(character->character);
-        
+
         if (strncasecmp(character->character, str, char_len) == 0) {
             *morse = character->morse;
 
             return char_len;
         }
-        
+
         character++;
     }
-    
+
     return 0;
 }
 
@@ -51,13 +51,13 @@ static void send_morse(char *str, uint32_t dit, uint32_t dah) {
                 usleep(dit);
                 radio_set_morse_key(false);
                 break;
-                
+
             case '-':
                 radio_set_morse_key(true);
                 usleep(dah);
                 radio_set_morse_key(false);
                 break;
-                
+
             default:
                 break;
         }
@@ -85,7 +85,7 @@ static void * endecode_thread(void *arg) {
             usleep(dit * (7 - 3));
         } else {
             len = get_morse(current_char, &morse);
-        
+
             if (len) {
                 send_morse(morse, dit, dah);
                 current_char += len;
@@ -94,11 +94,11 @@ static void * endecode_thread(void *arg) {
                 usleep(dit * (7 - 3));
             }
         }
-        
+
         if (*current_char == 0) {
             if (state == CW_ENCODER_SEND) {
                 state = CW_ENCODER_IDLE;
-                
+
                 buttons_unload_page();
                 buttons_load_page(PAGE_MSG_CW_1);
                 break;
@@ -106,7 +106,7 @@ static void * endecode_thread(void *arg) {
                 state = CW_ENCODER_BEACON_IDLE;
                 msg_set_text_fmt("Beacon pause: %i s", params.cw_encoder_period);
                 sleep(params.cw_encoder_period);
-                
+
                 state = CW_ENCODER_BEACON;
                 current_char = current_msg;
             }
@@ -130,7 +130,7 @@ void cw_encoder_send(const char *text, bool beacon) {
     if (current_msg) {
         free(current_msg);
     }
-    
+
     current_msg = strdup(text);
     current_char = current_msg;
     state = beacon ? CW_ENCODER_BEACON : CW_ENCODER_SEND;

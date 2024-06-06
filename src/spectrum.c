@@ -14,7 +14,7 @@
 #include "radio.h"
 #include "events.h"
 #include "dsp.h"
-#include "params.h"
+#include "params/params.h"
 #include "util.h"
 #include "meter.h"
 #include "rtty.h"

@@ -8,7 +8,7 @@
 
 #include "info.h"
 #include "styles.h"
-#include "params.h"
+#include "params/params.h"
 
 typedef enum {
     INFO_VFO = 0,
@@ -30,17 +30,17 @@ lv_obj_t * info_init(lv_obj_t * parent) {
     lv_obj_add_style(obj, &info_style, 0);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_left(obj, 0, 0);
-    
+
     uint8_t index = 0;
-    
+
     for (uint8_t y = 0; y < 2; y++)
         for (uint8_t x = 0; x < 3; x++) {
             lv_obj_t *item = lv_label_create(obj);
-            
+
             lv_obj_add_style(item, &info_item_style, 0);
             lv_obj_set_pos(item, x * 58 + 15, y * 24 + 5);
             lv_obj_set_style_text_align(item, LV_TEXT_ALIGN_CENTER, 0);
-            
+
             lv_obj_set_style_text_color(item, lv_color_white(), 0);
             lv_obj_set_size(item, 56, 22);
 
@@ -50,8 +50,8 @@ lv_obj_t * info_init(lv_obj_t * parent) {
 
     lv_label_set_text(items[INFO_PRE], "PRE");
     lv_label_set_text(items[INFO_ATT], "ATT");
-   
-    info_params_set(); 
+
+    info_params_set();
     return obj;
 }
 
@@ -82,23 +82,23 @@ const char* info_params_mode() {
         case x6100_mode_lsb:
             str = "LSB";
             break;
-            
+
         case x6100_mode_lsb_dig:
             str = "LSB-D";
             break;
-            
+
         case x6100_mode_usb:
             str = "USB";
             break;
-            
+
         case x6100_mode_usb_dig:
             str = "USB-D";
             break;
-            
+
         case x6100_mode_cw:
             str = "CW";
             break;
-            
+
         case x6100_mode_cwr:
             str = "CW-R";
             break;
@@ -106,11 +106,11 @@ const char* info_params_mode() {
         case x6100_mode_am:
             str = "AM";
             break;
-            
+
         case x6100_mode_nfm:
             str = "NFM";
             break;
-            
+
         default:
             str = "?";
             break;
@@ -127,19 +127,19 @@ const char* info_params_agc() {
         case x6100_agc_off:
             str = "OFF";
             break;
-            
+
         case x6100_agc_slow:
             str = "SLOW";
             break;
-            
+
         case x6100_agc_fast:
             str = "FAST";
             break;
-            
+
         case x6100_agc_auto:
             str = "AUTO";
             break;
-            
+
         default:
             str = "?";
             break;
@@ -157,7 +157,7 @@ const char* info_params_vfo() {
     } else {
         str = params_band.vfo == X6100_VFO_A ? "VFO-A" : "VFO-B";
     }
-    
+
     return str;
 }
 
@@ -169,7 +169,7 @@ bool info_params_att() {
 
 bool info_params_pre() {
     x6100_pre_t     pre = params_band.vfo_x[params_band.vfo].pre;
-    
+
     return pre == x6100_pre_on;
 }
 

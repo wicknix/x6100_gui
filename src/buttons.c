@@ -14,7 +14,7 @@
 #include "msg.h"
 #include "rtty.h"
 #include "pannel.h"
-#include "params.h"
+#include "params/params.h"
 #include "dialog.h"
 #include "dialog_settings.h"
 #include "dialog_swrscan.h"
@@ -76,7 +76,7 @@ static button_item_t    buttons[] = {
     { .label = "Voice\nRate",       .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_VOICE_RATE },
     { .label = "Voice\nPitch",      .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_VOICE_PITCH },
     { .label = "Voice\nVolume",     .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_VOICE_VOLUME },
-    
+
     { .label = "(MFK 1:4)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_MFK_2, .prev = PAGE_VOL_4, .voice = "MFK|page 1" },
     { .label = "Min\nLevel",        .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_MIN_LEVEL },
     { .label = "Max\nLevel",        .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_MAX_LEVEL },
@@ -114,13 +114,13 @@ static button_item_t    buttons[] = {
     { .label = "Set 8",             .press = button_mem_load_cb,    .hold = button_mem_save_cb,     .data = 8 },
 
     /* CW */
-    
+
     { .label = "(KEY 1:2)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_KEY_2, .prev = PAGE_CW_DECODER_1, .voice = "Key|page 1" },
     { .label = "Speed",             .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_SPEED },
     { .label = "Volume",            .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_VOL },
     { .label = "Train",             .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_TRAIN },
     { .label = "Tone",              .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_TONE },
-    
+
     { .label = "(KEY 2:2)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_CW_DECODER_1, .prev = PAGE_KEY_1, .voice = "Key|page 2" },
     { .label = "Key\nMode",         .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_MODE },
     { .label = "Iambic\nMode",      .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_IAMBIC_MODE },
@@ -132,7 +132,7 @@ static button_item_t    buttons[] = {
     { .label = "CW\nSNR",           .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_DECODER_SNR },
     { .label = "CW Peak\nBeta",     .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_DECODER_PEAK_BETA },
     { .label = "CW Noise\nBeta",    .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_DECODER_NOISE_BETA },
-    
+
     /* DSP */
 
     { .label = "(DFN 1:3)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_DFN_2, .prev = PAGE_DFN_3, .voice = "DNF page" },
@@ -234,7 +234,7 @@ static button_item_t    buttons[] = {
     { .label = "Rename",            .press = dialog_msg_voice_rename_cb },
     { .label = "Delete",            .press = dialog_msg_voice_delete_cb },
     { .label = "Play",              .press = dialog_msg_voice_play_cb },
-    
+
     /* Recorder */
 
     { .label = "(REC 1:1)",         .press = NULL },
@@ -251,17 +251,17 @@ void buttons_init(lv_obj_t *parent) {
 
     for (uint8_t i = 0; i < 5; i++) {
         lv_obj_t *f = lv_btn_create(parent);
-        
-        lv_obj_remove_style_all(f); 
+
+        lv_obj_remove_style_all(f);
         lv_obj_add_style(f, &btn_style, 0);
 
         lv_obj_set_pos(f, x, y);
         lv_obj_set_size(f, width, btn_height);
 
         x += width + 10;
-        
+
         lv_obj_t *label = lv_label_create(f);
-        
+
         lv_obj_center(label);
         lv_obj_set_user_data(f, label);
         lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
@@ -305,9 +305,9 @@ static void button_next_page_cb(lv_event_t * e) {
 
     buttons_unload_page();
     buttons_load_page(item->next);
-    
+
     char *voice = buttons[item->next * BUTTONS].voice;
-    
+
     if (voice) {
         voice_say_text_fmt("%s", voice);
     }
@@ -346,7 +346,7 @@ static void button_prev_page_cb(void * ptr) {
     buttons_load_page(item->prev);
 
     char *voice = buttons[item->prev * BUTTONS].voice;
-    
+
     if (voice) {
         voice_say_text_fmt("%s", voice);
     }
@@ -359,7 +359,7 @@ static void button_vol_hold_cb(void * ptr) {
     params_lock();
     params.vol_modes ^= mask;
     params_unlock(&params.durty.vol_modes);
-    
+
     if (params.vol_modes & mask) {
         msg_set_text_fmt("Added to VOL encoder");
         voice_say_text_fmt("Added to volume encoder");
@@ -376,7 +376,7 @@ static void button_mfk_hold_cb(void * ptr) {
     params_lock();
     params.mfk_modes ^= mask;
     params_unlock(&params.durty.mfk_modes);
-    
+
     if (params.mfk_modes & mask) {
         msg_set_text_fmt("Added to MFK encoder");
         voice_say_text_fmt("Added to MFK encoder");
@@ -395,7 +395,7 @@ static void button_mem_load_cb(lv_event_t * e) {
 
 static void button_mem_save_cb(void * ptr) {
     button_item_t   *item = (button_item_t*) ptr;
- 
+
     mem_save(item->data);
     voice_say_text_fmt("Memory %i stored", item->data);
 }
@@ -403,7 +403,7 @@ static void button_mem_save_cb(void * ptr) {
 void buttons_press(uint8_t n, bool hold) {
     if (hold) {
         button_item_t *item = btn[n].item;
-        
+
         if (item != NULL && item->hold) {
             item->hold(item);
         }

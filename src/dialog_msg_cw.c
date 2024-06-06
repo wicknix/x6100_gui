@@ -11,11 +11,10 @@
 #include <unistd.h>
 #include <math.h>
 
-#include "lvgl/lvgl.h"
 #include "dialog.h"
 #include "dialog_msg_cw.h"
 #include "styles.h"
-#include "params.h"
+#include "params/params.h"
 #include "events.h"
 #include "util.h"
 #include "pannel.h"
@@ -73,16 +72,16 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_add_event_cb(dialog.obj, tx_cb, EVENT_RADIO_TX, NULL);
 
     table = lv_table_create(dialog.obj);
-    
+
     lv_obj_remove_style(table, NULL, LV_STATE_ANY | LV_PART_MAIN);
 
     lv_obj_set_size(table, 775, 325);
-    
+
     lv_table_set_col_cnt(table, 1);
     lv_table_set_col_width(table, 0, 770);
 
     lv_obj_set_style_border_width(table, 0, LV_PART_ITEMS);
-    
+
     lv_obj_set_style_bg_opa(table, LV_OPA_TRANSP, LV_PART_ITEMS);
     lv_obj_set_style_text_color(table, lv_color_white(), LV_PART_ITEMS);
     lv_obj_set_style_pad_top(table, 5, LV_PART_ITEMS);
@@ -102,7 +101,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     table_rows = 0;
     ids = NULL;
-    
+
     params_msg_cw_load();
     main_screen_lock_mode(true);
 }
@@ -111,7 +110,7 @@ static void destruct_cb() {
     if (!ids) {
         free(ids);
     }
-    
+
     cw_encoder_stop();
     textarea_window_close();
     main_screen_lock_mode(false);
@@ -128,7 +127,7 @@ static void key_cb(lv_event_t * e) {
         case KEYBOARD_F4:
             dialog_msg_cw_edit_cb(e);
             break;
-            
+
         case KEY_VOL_LEFT_EDIT:
         case KEY_VOL_LEFT_SELECT:
             radio_change_vol(-1);
@@ -175,13 +174,13 @@ static const char* get_msg() {
     if (row == LV_TABLE_CELL_NONE) {
         return NULL;
     }
-    
+
     return lv_table_get_cell_value(table, row, col);
 }
 
 void dialog_msg_cw_append(uint32_t id, const char *val) {
     ids = realloc(ids, sizeof(uint32_t) * (table_rows + 1));
-    
+
     ids[table_rows] = id;
     lv_table_set_cell_value(table, table_rows, 0, val);
 
@@ -223,15 +222,15 @@ void dialog_msg_cw_period_cb(lv_event_t * e) {
         case 10:
             params.cw_encoder_period = 30;
             break;
-            
+
         case 30:
             params.cw_encoder_period = 60;
             break;
-            
+
         case 60:
             params.cw_encoder_period = 120;
             break;
-            
+
         case 120:
             params.cw_encoder_period = 10;
             break;
@@ -248,7 +247,7 @@ void dialog_msg_cw_new_cb(lv_event_t * e) {
 
 void dialog_msg_cw_edit_cb(lv_event_t * e) {
     const char *msg = get_msg();
-    
+
     if (msg) {
         lv_group_remove_obj(table);
         textarea_window_open(textarea_window_edit_ok_cb, textarea_window_close_cb);
@@ -265,7 +264,7 @@ void dialog_msg_cw_delete_cb(lv_event_t * e) {
     int16_t     col = 0;
 
     lv_table_get_selected_cell(table, &row, &col);
-    
+
     if (row != LV_TABLE_CELL_NONE) {
         params_msg_cw_delete(ids[row]);
         reset();

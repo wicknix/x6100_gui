@@ -9,7 +9,7 @@
 #include "meter.h"
 #include "styles.h"
 #include "events.h"
-#include "params.h"
+#include "params/params.h"
 #include "spectrum.h"
 
 #define NUM_ITEMS   7
@@ -59,7 +59,7 @@ static void meter_draw_cb(lv_event_t * e) {
     lv_draw_rect_dsc_init(&rect_dsc);
 
     rect_dsc.bg_opa = LV_OPA_80;
-    
+
     uint32_t count = slice_db * slice * (meter_db - min_db) / (max_db - min_db);
 
     area.y1 = y1 - slice / 2;
@@ -79,19 +79,19 @@ static void meter_draw_cb(lv_event_t * e) {
         } else {
             rect_dsc.bg_color = lv_color_hex(0xAA0000);
         }
-        
+
         area.x1 = x1 + 30 + i * slice;
         area.x2 = area.x1 + slice - 3;
 
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
-        
+
         db += slice_db;
     }
 
     /* Labels */
-    
+
     lv_draw_label_dsc_init(&label_dsc);
-    
+
     label_dsc.color = lv_color_white();
     label_dsc.font = &sony_22;
 
@@ -104,7 +104,7 @@ static void meter_draw_cb(lv_event_t * e) {
 
     area.y1 = y1 + 5;
     area.y2 = area.y1 + 18;
-    
+
     for (uint8_t i = 0; i < NUM_ITEMS; i++) {
         char    *label = s_items[i].label;
         int16_t db = s_items[i].db;
@@ -130,7 +130,7 @@ lv_obj_t * meter_init(lv_obj_t * parent) {
     obj = lv_obj_create(parent);
 
     lv_obj_add_style(obj, &meter_style, 0);
-    
+
     lv_obj_set_height(obj, meter_height);
 
     lv_obj_add_event_cb(obj, tx_cb, EVENT_RADIO_TX, NULL);

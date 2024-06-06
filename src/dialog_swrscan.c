@@ -11,11 +11,10 @@
 #include <unistd.h>
 #include <math.h>
 
-#include "lvgl/lvgl.h"
 #include "dialog.h"
 #include "dialog_swrscan.h"
 #include "styles.h"
-#include "params.h"
+#include "params/params.h"
 #include "radio.h"
 #include "events.h"
 #include "util.h"
@@ -59,7 +58,7 @@ static void do_init() {
 
     freq_index = 0;
     freq_center = params_band.vfo_x[params_band.vfo].freq;
-        
+
     freq_start = freq_center - params.swrscan_span / 2;
     freq_stop = freq_center + params.swrscan_span / 2;
 }
@@ -69,16 +68,16 @@ static void do_step(float vswr) {
 
     for (int16_t i = 0; i < STEPS; i++) {
         data_filtered[i] = 0.0;
-    
+
         for (int16_t n = -2; n <= 2; n++) {
             int16_t index = i + n;
-            
+
             if (index < 0) {
                 index = 0;
             } else if (index > STEPS-1) {
                 index = STEPS-1;
             }
-        
+
             data_filtered[i] += data[index];
         }
         data_filtered[i] /= 5.0f;
@@ -87,7 +86,7 @@ static void do_step(float vswr) {
     event_send(chart, LV_EVENT_REFRESH, NULL);
 
     freq_index++;
-    
+
     if (freq_index == STEPS) {
         freq_index = 0;
     }
@@ -103,7 +102,7 @@ static lv_coord_t calc_y(float vswr) {
         x = (vswr - 1.0f) / (5.0f - 1.0f);
     } else {
         float c = 1.0f / logf(10.0);
-        
+
         x = log10f(1.0f + (vswr - 1.0f) / c);
     }
 
@@ -117,7 +116,7 @@ static void draw_cb(lv_event_t * e) {
     char                str[32];
 
     lv_draw_line_dsc_init(&line_dsc);
-    
+
     lv_coord_t x1 = obj->coords.x1;
     lv_coord_t y1 = obj->coords.y1;
 
@@ -132,7 +131,7 @@ static void draw_cb(lv_event_t * e) {
 
     lv_draw_label_dsc_t dsc_label;
     lv_draw_label_dsc_init(&dsc_label);
-    
+
     dsc_label.color = lv_color_white();
     dsc_label.font = &sony_28;
 
@@ -160,13 +159,13 @@ static void draw_cb(lv_event_t * e) {
 
         lv_draw_label(draw_ctx, &dsc_label, &area, str, NULL);
     }
-    
+
     uint64_t    freq = freq_center - params.swrscan_span / 4;
     uint16_t    mhz, khz, hz;
 
     a.y = y1;
     b.y = y1 + h;
-    
+
     for (int16_t x = -1; x <= 1; x++, freq += params.swrscan_span / 4) {
         a.x = x1 + w / 2 + (w / 4) * x;
         b.x = a.x;
@@ -215,7 +214,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     w = 780;
     h = 330;
-    
+
     lv_obj_add_event_cb(chart, draw_cb, LV_EVENT_DRAW_MAIN_END, NULL);
     lv_obj_set_size(chart, w, h);
     lv_obj_center(chart);
@@ -236,7 +235,7 @@ static void key_cb(lv_event_t * e) {
         case LV_KEY_ESC:
             dialog_destruct(&dialog);
             break;
-            
+
         case KEY_VOL_LEFT_EDIT:
         case KEY_VOL_LEFT_SELECT:
             radio_change_vol(-1);
@@ -281,11 +280,11 @@ void dialog_swrscan_span_cb(lv_event_t * e) {
         case 50000:
             params.swrscan_span = 100000;
             break;
-    
+
         case 100000:
             params.swrscan_span = 200000;
             break;
-            
+
         case 200000:
             params.swrscan_span = 500000;
             break;

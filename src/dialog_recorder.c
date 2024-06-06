@@ -17,13 +17,12 @@
 
 #include <aether_radio/x6100_control/control.h>
 
-#include "lvgl/lvgl.h"
 #include "audio.h"
 #include "recorder.h"
 #include "dialog.h"
 #include "dialog_recorder.h"
 #include "styles.h"
-#include "params.h"
+#include "params/params.h"
 #include "events.h"
 #include "util.h"
 #include "pannel.h"
@@ -68,7 +67,7 @@ static void load_table() {
 
     DIR             *dp;
     struct dirent   *ep;
-    
+
     dp = opendir(recorder_path);
 
     if (dp != NULL) {
@@ -79,7 +78,7 @@ static void load_table() {
 
             lv_table_set_cell_value(table, table_rows++, 0, ep->d_name);
         }
-          
+
         closedir(dp);
     }
 }
@@ -101,7 +100,7 @@ static const char* get_item() {
     if (row == LV_TABLE_CELL_NONE) {
         return NULL;
     }
-    
+
     return lv_table_get_cell_value(table, row, col);
 }
 
@@ -111,9 +110,9 @@ static void play_item() {
     if (!item) {
         return;
     }
-    
+
     char filename[64];
-        
+
     strcpy(filename, recorder_path);
     strcat(filename, "/");
     strcat(filename, item);
@@ -127,7 +126,7 @@ static void play_item() {
     if (!file) {
         return;
     }
-    
+
     if (recorder_is_on()) {
         recorder_set_on(false);
     }
@@ -136,10 +135,10 @@ static void play_item() {
 
     while (play_state) {
         int res = sf_read_short(file, samples_buf, BUF_SIZE);
-            
+
         if (res > 0) {
             int16_t *samples = audio_gain(samples_buf, res, params.play_gain);
-            
+
             audio_play(samples, res);
             free(samples);
         } else {
@@ -168,18 +167,18 @@ static void * play_thread(void *arg) {
 static void textarea_window_close_cb() {
     lv_group_add_obj(keyboard_group, table);
     lv_group_set_editing(keyboard_group, true);
-    
+
     free(prev_filename);
     prev_filename = NULL;
 }
 
 static void textarea_window_edit_ok_cb() {
     const char *new_filename = textarea_window_get();
-    
+
     if (strcmp(prev_filename, new_filename) != 0) {
         char prev[64];
         char new[64];
-        
+
         snprintf(prev, sizeof(prev), "%s/%s", recorder_path, prev_filename);
         snprintf(new, sizeof(new), "%s/%s", recorder_path, new_filename);
 
@@ -208,16 +207,16 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_add_event_cb(dialog.obj, tx_cb, EVENT_RADIO_TX, NULL);
 
     table = lv_table_create(dialog.obj);
-    
+
     lv_obj_remove_style(table, NULL, LV_STATE_ANY | LV_PART_MAIN);
 
     lv_obj_set_size(table, 775, 325);
-    
+
     lv_table_set_col_cnt(table, 1);
     lv_table_set_col_width(table, 0, 770);
 
     lv_obj_set_style_border_width(table, 0, LV_PART_ITEMS);
-    
+
     lv_obj_set_style_bg_opa(table, LV_OPA_TRANSP, LV_PART_ITEMS);
     lv_obj_set_style_text_color(table, lv_color_white(), LV_PART_ITEMS);
     lv_obj_set_style_pad_top(table, 5, LV_PART_ITEMS);
@@ -234,10 +233,10 @@ static void construct_cb(lv_obj_t *parent) {
     lv_group_set_editing(keyboard_group, true);
 
     lv_obj_center(table);
-    
+
     mkdir(recorder_path, 0755);
     load_table();
-    
+
     if (recorder_is_on()) {
         buttons_unload_page();
         buttons_load(1, &button_rec_stop);
@@ -292,7 +291,7 @@ void play_stop_cb(lv_event_t * e) {
 
 void dialog_recorder_rename_cb(lv_event_t * e) {
     prev_filename = strdup(get_item());
-    
+
     if (prev_filename) {
         lv_group_remove_obj(table);
         textarea_window_open(textarea_window_edit_ok_cb, textarea_window_close_cb);
@@ -305,11 +304,11 @@ void dialog_recorder_delete_cb(lv_event_t * e) {
 
     if (item) {
         char filename[64];
-        
+
         strcpy(filename, recorder_path);
         strcat(filename, "/");
         strcat(filename, item);
-        
+
         unlink(filename);
         load_table();
     }

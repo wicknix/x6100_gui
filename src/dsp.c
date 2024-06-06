@@ -15,7 +15,7 @@
 #include "waterfall.h"
 #include "util.h"
 #include "radio.h"
-#include "params.h"
+#include "params/params.h"
 #include "meter.h"
 #include "audio.h"
 #include "cw.h"

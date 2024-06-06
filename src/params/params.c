@@ -13,13 +13,11 @@
 
 #include "lvgl/lvgl.h"
 #include "params.h"
-#include "util.h"
-#include "bands.h"
-#include "mfk.h"
-#include "vol.h"
-#include "dialog_msg_cw.h"
-#include "qth.h"
-#include "voice.h"
+#include "../util.h"
+#include "../mfk.h"
+#include "../vol.h"
+#include "../dialog_msg_cw.h"
+#include "../qth.h"
 
 #define PARAMS_SAVE_TIMEOUT  (3 * 1000)
 

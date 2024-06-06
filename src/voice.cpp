@@ -12,10 +12,9 @@ extern "C" {
 #include <unistd.h>
 #include <pthread.h>
 #include <aether_radio/x6100_control/control.h>
-#include <lvgl.h>
 
 #include "audio.h"
-#include "params.h"
+#include "params/params.h"
 #include "util.h"
 #include "backlight.h"
 #include "recorder.h"
@@ -69,7 +68,7 @@ void audio_player::finish() {
 }
 
 typedef struct {
-    const char* name; 
+    const char* name;
     const char* label;
     const char* welcome;
 } voice_item_t;
@@ -98,17 +97,17 @@ static void * say_thread(void *arg) {
     if (delay) {
         usleep(delay);
     }
-    
+
     run = true;
 
     profile = eng->create_voice_profile(voice_item[params.voice_lang.x].name);
 
     char *ptr = strchr(buf, '|');
-    
+
     if (ptr != NULL) {
         if (strncmp(buf, prev, ptr - buf) == 0) {
             repeated++;
-        
+
             if (repeated > 4) {
                 repeated = 0;
                 ptr = buf;
@@ -130,7 +129,7 @@ static void * say_thread(void *arg) {
     std::istreambuf_iterator<char>  text_start{text};
     std::istreambuf_iterator<char>  text_end;
     std::unique_ptr<document>       doc = document::create_from_plain_text(eng, text_start, text_end, content_text, profile);
-    
+
     doc->speech_settings.relative.rate = params.voice_rate.x / 100.0;
     doc->speech_settings.relative.pitch = params.voice_pitch.x / 100.0;
     doc->speech_settings.relative.volume = params.voice_volume.x / 100.0;
@@ -140,7 +139,7 @@ static void * say_thread(void *arg) {
     doc->synthesize();
     player.finish();
     audio_play_en(false);
-    
+
     run = false;
     sure = false;
     return NULL;
@@ -159,13 +158,13 @@ void voice_change_mode() {
             msg_set_text_fmt("Voice mode: LCD");
             voice_say_text("Voice mode|", "is LCD");
             break;
-            
+
         case VOICE_LCD:
             params_uint8_set(&params.voice_mode, VOICE_ALWAYS);
             msg_set_text_fmt("Voice mode: Always");
             voice_say_text("Voice mode|", "is always");
             break;
-            
+
         case VOICE_ALWAYS:
             params_uint8_set(&params.voice_mode, VOICE_OFF);
             msg_set_text_fmt("Voice mode: Off");
@@ -178,22 +177,22 @@ bool voice_enable() {
     if (run || recorder_is_on()) {
         return false;
     }
-    
+
     if (sure) {
         return true;
     }
-    
+
     switch (params.voice_mode.x) {
         case VOICE_OFF:
             return false;
-            
+
         case VOICE_ALWAYS:
             return true;
-            
+
         case VOICE_LCD:
             return !backlight_is_on();
     }
-    
+
     return false;
 }
 
@@ -212,7 +211,7 @@ void voice_delay_say_text_fmt(const char * fmt, ...) {
         pthread_cancel(thread);
         pthread_join(thread, NULL);
     }
-    
+
     delay = 1000000;
     pthread_create(&thread, NULL, say_thread, NULL);
 }
@@ -227,7 +226,7 @@ void voice_say_text_fmt(const char * fmt, ...) {
     va_start(args, fmt);
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
-    
+
     delay = 0;
     pthread_create(&thread, NULL, say_thread, NULL);
 }
@@ -238,9 +237,9 @@ void voice_say_freq(uint64_t freq) {
     }
 
     uint16_t    mhz, khz, hz;
-    
+
     split_freq(freq, &mhz, &khz, &hz);
-    
+
     if (hz) {
         snprintf(buf, sizeof(buf), "%i.|%i.%i", mhz, khz, hz);
     } else if (khz) {
@@ -274,7 +273,7 @@ void voice_say_float2(const char *prompt, float x) {
     voice_delay_say_text_fmt("%s|%.2f", prompt, x);
 }
 
-void voice_say_text(const char *prompt, char *x) {
+void voice_say_text(const char *prompt, const char *x) {
     voice_delay_say_text_fmt("%s|%s", prompt, x);
 }
 

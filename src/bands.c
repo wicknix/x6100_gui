@@ -8,7 +8,7 @@
 
 #include "lvgl/lvgl.h"
 #include "bands.h"
-#include "params.h"
+#include "params/params.h"
 #include "radio.h"
 #include "info.h"
 #include "spectrum.h"
@@ -37,7 +37,7 @@ void bands_activate(band_t *band, uint64_t *freq) {
 
 void bands_change(bool up) {
     band_t band = { .name = NULL };
-    
+
     if (params_bands_find_next(params_band.vfo_x[params_band.vfo].freq, up, &band)) {
         bands_activate(&band, NULL);
         radio_load_atu();
@@ -48,7 +48,7 @@ void bands_change(bool up) {
         spectrum_clear();
         dsp_auto_clear();
         main_screen_band_set();
-            
+
         voice_say_text_fmt("Band %s", band.name);
     }
 }

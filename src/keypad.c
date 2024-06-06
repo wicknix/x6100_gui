@@ -7,6 +7,7 @@
  */
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <linux/input.h>
@@ -34,10 +35,10 @@ static void keypad_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
     if (read(keypad->fd, &in, sizeof(struct input_event)) > 0) {
         if (in.type == EV_KEY) {
             backlight_tick();
-        
+
             switch (in.code) {
                 /* Rotary VOL */
-                
+
                 case BTN_TRIGGER_HAPPY21:
                     data->key = LV_KEY_ESC;
                     data->state = (in.value) ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
@@ -46,17 +47,17 @@ static void keypad_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
                     return;
 
                 /* Rotary MFK */
-                    
+
                 case BTN_TRIGGER_HAPPY27:
                     mfk->pressed = (in.value != 0);
                     return;
-                
+
                 /* Front side */
 
                 case KEY_POWER:
                     event.key = KEYPAD_POWER;
                     break;
-                    
+
                 case BTN_TRIGGER_HAPPY1:
                     event.key = KEYPAD_GEN;
                     break;
@@ -105,7 +106,7 @@ static void keypad_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
                     event.key = KEYPAD_LOCK;
                     break;
 
-                /* Top side */ 
+                /* Top side */
 
                 case BTN_TRIGGER_HAPPY4:
                     event.key = KEYPAD_PTT;
@@ -154,7 +155,7 @@ static void keypad_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
                 case BTN_TRIGGER_HAPPY24:
                     event.key = KEYPAD_FST;
                     break;
-                    
+
                 default:
                     event.key = KEYPAD_UNKNOWN;
                     LV_LOG_WARN("Unknown key");
@@ -165,7 +166,7 @@ static void keypad_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
                 lv_timer_del(timer);
                 timer = NULL;
             }
-        
+
             if (in.value == 1) {
                 event.state = KEYPAD_PRESS;
                 lv_event_send(lv_scr_act(), EVENT_KEYPAD, (void*) &event);
@@ -183,7 +184,7 @@ static void keypad_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
             }
         }
     }
-    
+
     data->key = keypad->evdev_key;
     data->state = keypad->evdev_state;
 }
@@ -200,16 +201,16 @@ keypad_t * keypad_init(char *dev_name) {
     fcntl(fd, F_SETFL, O_ASYNC | O_NONBLOCK);
 
     keypad_t *keypad = malloc(sizeof(keypad_t));
-    
+
     keypad->fd = fd;
-    
+
     lv_indev_drv_init(&keypad->indev_drv);
-    
+
     keypad->indev_drv.type = LV_INDEV_TYPE_KEYPAD;
     keypad->indev_drv.read_cb = keypad_input_read;
     keypad->indev_drv.user_data = keypad;
     keypad->indev_drv.long_press_time = 1000;
-    
+
     keypad->indev = lv_indev_drv_register(&keypad->indev_drv);
 
 

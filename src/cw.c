@@ -12,7 +12,7 @@
 #include "cw.h"
 #include "audio.h"
 #include "util.h"
-#include "params.h"
+#include "params/params.h"
 #include "cw_decoder.h"
 #include "pannel.h"
 #include "meter.h"

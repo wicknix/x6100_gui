@@ -12,7 +12,7 @@
 #include "styles.h"
 #include "radio.h"
 #include "events.h"
-#include "params.h"
+#include "params/params.h"
 #include "bands.h"
 #include "band_info.h"
 #include "meter.h"
