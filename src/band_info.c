@@ -34,7 +34,7 @@ static void band_info_draw_cb(lv_event_t * e) {
     lv_event_code_t     code = lv_event_get_code(e);
     lv_obj_t            *obj = lv_event_get_target(e);
     lv_draw_ctx_t       *draw_ctx = lv_event_get_draw_ctx(e);
-    
+
     if (!bands) {
         return;
     }
@@ -50,6 +50,30 @@ static void band_info_draw_cb(lv_event_t * e) {
 
         /* Rect */
 
+        lv_border_side_t border_side = LV_BORDER_SIDE_NONE;
+
+        int32_t start = (int64_t)(band->start_freq - freq) * w / width_hz;
+        int32_t stop = (int64_t)(band->stop_freq - freq) * w / width_hz;
+
+        start += w / 2;
+        stop += w / 2;
+
+        if (start < 0) {
+            start = 0;
+        } else if (start > w) {
+            continue;
+        } else {
+            border_side |= LV_BORDER_SIDE_LEFT;
+        }
+
+        if (stop < 0) {
+            continue;
+        } else if (stop > w) {
+            stop = w;
+        } else {
+            border_side |= LV_BORDER_SIDE_RIGHT;
+        }
+
         lv_draw_rect_dsc_t  rect_dsc;
         lv_area_t           area;
 
@@ -60,24 +84,7 @@ static void band_info_draw_cb(lv_event_t * e) {
         rect_dsc.border_width = 2;
         rect_dsc.border_color = lv_color_white();
         rect_dsc.border_opa = LV_OPA_50;
-    
-        int32_t start = (int64_t)(band->start_freq - freq) * w / width_hz;
-        int32_t stop = (int64_t)(band->stop_freq - freq) * w / width_hz;
-
-        start += w / 2;
-        stop += w / 2;
-
-        if (start < 0) {
-            start = 0;
-        } else if (start > w) {
-            start = w;
-        }
-    
-        if (stop < 0) {
-            stop = 0;
-        } else if (stop > w) {
-            stop = w;
-        }
+        rect_dsc.border_side = border_side;
 
         area.x1 = x1 + start + 2;
         area.y1 = y1;
@@ -85,18 +92,18 @@ static void band_info_draw_cb(lv_event_t * e) {
         area.y2 = y1 + h;
 
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
-    
+
         /* Label */
 
         lv_draw_label_dsc_t dsc_label;
         lv_draw_label_dsc_init(&dsc_label);
-    
+
         dsc_label.color = lv_color_white();
         dsc_label.font = &sony_22;
 
         lv_point_t label_size;
         lv_txt_get_size(&label_size, band->name, dsc_label.font, 0, 0, LV_COORD_MAX, 0);
-        
+
         if (stop - start > label_size.x) {
             area.x1 = x1 + (start + stop) / 2 - label_size.x / 2;
             area.y1 = y1 + (h - label_size.y) / 2;
@@ -118,11 +125,11 @@ static void fade_ready(lv_anim_t * a) {
 
 lv_obj_t * band_info_init(lv_obj_t *parent) {
     obj = lv_obj_create(parent);
-    
+
     lv_obj_set_size(obj, lv_obj_get_width(parent), band_info_height);
     lv_obj_align(obj, LV_ALIGN_CENTER, 0, -lv_obj_get_height(parent) / 2 + 18);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-    
+
     lv_obj_set_style_radius(obj, 0, 0);
     lv_obj_set_style_border_width(obj, 0, 0);
     lv_obj_set_style_bg_opa(obj, LV_OPA_0, 0);
