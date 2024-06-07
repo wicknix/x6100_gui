@@ -451,8 +451,8 @@ void static waterfall_process(float complex *frame, const size_t size) {
     spgramcf_write(waterfall_sg, frame, size);
 
     if (now - waterfall_time > waterfall_fps_ms) {
-        uint32_t low_bin = waterfall_nfft / 2 + waterfall_nfft * params_mode.filter_low / SAMPLE_RATE;
-        uint32_t high_bin = waterfall_nfft / 2 + waterfall_nfft * params_mode.filter_high / SAMPLE_RATE;
+        uint32_t low_bin = waterfall_nfft / 2 + waterfall_nfft * params_current_mode_filter_low_get() / SAMPLE_RATE;
+        uint32_t high_bin = waterfall_nfft / 2 + waterfall_nfft * params_current_mode_filter_high_get() / SAMPLE_RATE;
 
         spgramcf_get_psd(waterfall_sg, waterfall_psd);
 
@@ -1077,16 +1077,19 @@ static void fade_ready(lv_anim_t * a) {
 
 static void rotary_cb(int32_t diff) {
     uint32_t f = params.ft8_tx_freq.x + diff;
+    uint32_t f_low, f_high;
+    params_current_mode_filter_get(&f_low, &f_high);
 
-    if (f > params_mode.filter_high) {
-        f = params_mode.filter_high;
+    if (f > f_high) {
+        f = f_high;
     }
 
-    if (f < params_mode.filter_low) {
-        f = params_mode.filter_low;
+    if (f < f_low) {
+        f = f_low;
     }
 
     params_uint16_set(&params.ft8_tx_freq, f);
+
 
     lv_finder_set_value(finder, f);
     lv_obj_invalidate(finder);
@@ -1226,7 +1229,10 @@ static void construct_cb(lv_obj_t *parent) {
     mem_save(MEM_BACKUP_ID);
     load_band();
 
-    lv_finder_set_range(finder, params_mode.filter_low, params_mode.filter_high);
+    uint32_t f_low, f_high;
+    params_current_mode_filter_get(&f_low, &f_high);
+
+    lv_finder_set_range(finder, f_low, f_high);
 
     main_screen_lock_mode(true);
     main_screen_lock_freq(true);

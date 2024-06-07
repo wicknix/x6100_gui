@@ -70,7 +70,7 @@ void dsp_init() {
     spectrum_psd = (float *) malloc(nfft * sizeof(float));
     spectrum_psd_filtered = (float *) malloc(nfft * sizeof(float));
 
-    dsp_set_spectrum_factor(params_mode.spectrum_factor);
+    dsp_set_spectrum_factor(params_current_mode_spectrum_factor_get());
 
     for (uint16_t i = 0; i < nfft; i++)
         spectrum_psd_filtered[i] = S_MIN;

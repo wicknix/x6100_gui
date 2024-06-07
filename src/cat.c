@@ -220,7 +220,7 @@ static uint8_t x_mode_2_ci_mode(x6100_mode_t mode) {
 
 
 static uint8_t get_if_bandwidth() {
-    int32_t bw;
+    uint32_t bw = params_current_mode_filter_bw();
     switch (params_band.vfo_x[params_band.vfo].mode)
     {
     case x6100_mode_cw:
@@ -229,7 +229,6 @@ static uint8_t get_if_bandwidth() {
     case x6100_mode_lsb_dig:
     case x6100_mode_usb:
     case x6100_mode_usb_dig:
-        bw = params_mode.filter_high - params_mode.filter_low;
         if (bw <= 500)
         {
             return (bw - 25) / 50;
@@ -239,7 +238,6 @@ static uint8_t get_if_bandwidth() {
         break;
     case x6100_mode_am:
     case x6100_mode_nfm:
-        bw = params_mode.filter_high  * 2;
         return (bw - 100) / 200;
     default:
         return 31;

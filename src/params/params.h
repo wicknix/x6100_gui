@@ -17,24 +17,9 @@
 #include "../radio.h"
 #include "../clock.h"
 #include "../voice.h"
+#include "modulation.h"
+#include "common.h"
 
-typedef struct {
-    int32_t         filter_low;
-    int32_t         filter_high;
-
-    uint16_t        freq_step;
-    int16_t         spectrum_factor;
-
-    /* durty flags */
-
-    struct {
-        bool    filter_low;
-        bool    filter_high;
-
-        bool    freq_step;
-        bool    spectrum_factor;
-    } durty;
-} params_mode_t;
 
 typedef struct {
     uint64_t        freq;
@@ -451,12 +436,9 @@ typedef struct {
 
 extern params_t params;
 extern params_band_t params_band;
-extern params_mode_t params_mode;
 extern transverter_t params_transverter[TRANSVERTER_NUM];
 
 void params_init();
-void params_lock();
-void params_unlock(bool *durty);
 
 void params_bool_set(params_bool_t *var, bool x);
 void params_uint8_set(params_uint8_t *var, uint8_t x);
@@ -470,9 +452,6 @@ void params_band_load();
 
 void params_memory_save(uint16_t id);
 void params_memory_load(uint16_t id);
-
-void params_mode_save();
-void params_mode_load();
 
 void params_band_freq_set(uint64_t freq);
 

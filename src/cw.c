@@ -65,8 +65,8 @@ static int compare_fft_items(const void *p1, const void *p2) {
 }
 
 static bool cw_get_peak() {
-    uint32_t    start = FFT / 2 + FFT * params_mode.filter_low / AUDIO_CAPTURE_RATE;
-    uint32_t    stop = FFT / 2 + FFT * params_mode.filter_high / AUDIO_CAPTURE_RATE;
+    uint32_t    start = FFT / 2 + FFT * params_current_mode_filter_low_get() / AUDIO_CAPTURE_RATE;
+    uint32_t    stop = FFT / 2 + FFT * params_current_mode_filter_high_get() / AUDIO_CAPTURE_RATE;
     uint16_t    num = stop - start;
 
     float       peak_db = 0;

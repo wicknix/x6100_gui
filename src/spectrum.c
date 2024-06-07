@@ -131,7 +131,7 @@ static void spectrum_draw_cb(lv_event_t * e) {
     rect_dsc.bg_color = bg_color;
     rect_dsc.bg_opa = LV_OPA_50;
 
-    uint32_t    w_hz = width_hz / params_mode.spectrum_factor;
+    uint32_t    w_hz = width_hz / params_current_mode_spectrum_factor_get();
     int32_t     filter_from, filter_to;
 
     radio_filter_get(&filter_from, &filter_to);
@@ -267,8 +267,8 @@ void spectrum_band_set() {
     spectrum_set_max(params_band.grid_max);
 }
 
-void spectrum_mode_set() {
-    dsp_set_spectrum_factor(params_mode.spectrum_factor);
+void spectrum_mode_setup() {
+    dsp_set_spectrum_factor(params_current_mode_spectrum_factor_get());
 }
 
 void spectrum_set_max(int db) {
@@ -292,7 +292,7 @@ void spectrum_change_freq(int16_t df) {
     peak_t      *from, *to;
     uint64_t    time = get_time();
 
-    uint16_t    div = width_hz / spectrum_size / params_mode.spectrum_factor;
+    uint16_t    div = width_hz / spectrum_size / params_current_mode_spectrum_factor_get();
     int16_t     surplus = df % div;
     int32_t     delta = df / div;
 

@@ -82,8 +82,8 @@ void mem_load(uint16_t id) {
     }
 
     radio_vfo_set();
-    radio_mode_set();
-    spectrum_mode_set();
+    radio_mode_setup();
+    spectrum_mode_setup();
     spectrum_band_set();
     waterfall_band_set();
 
@@ -174,36 +174,9 @@ static void check_cross_band(uint64_t freq, uint64_t prev_freq) {
 }
 
 static void next_freq_step(bool up) {
-    params_lock();
-
-    switch (params_mode.freq_step) {
-        case 10:
-            params_mode.freq_step = up ? 100 : 5000;
-            break;
-
-        case 100:
-            params_mode.freq_step = up ? 500 : 10;
-            break;
-
-        case 500:
-            params_mode.freq_step = up ? 1000 : 100;
-            break;
-
-        case 1000:
-            params_mode.freq_step = up ? 5000 : 500;
-            break;
-
-        case 5000:
-            params_mode.freq_step = up ? 10 : 1000;
-            break;
-
-        default:
-            break;
-    }
-
-    params_unlock(&params_mode.durty.freq_step);
-    msg_set_text_fmt("Freq step: %i Hz", params_mode.freq_step);
-    voice_say_text_fmt("Frequency step %i herz", params_mode.freq_step);
+    uint16_t new_step = params_current_mode_freq_step_change(up);
+    msg_set_text_fmt("Freq step: %i Hz", new_step);
+    voice_say_text_fmt("Frequency step %i herz", new_step);
 }
 
 static void apps_disable() {
@@ -385,9 +358,8 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
             if (keypad->state == KEYPAD_RELEASE) {
                 radio_change_mode(RADIO_MODE_AM);
-                params_mode_load();
-                radio_mode_set();
-                spectrum_mode_set();
+                radio_mode_setup();
+                spectrum_mode_setup();
                 info_params_set();
                 pannel_visible();
 
@@ -404,9 +376,8 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
             if (keypad->state == KEYPAD_RELEASE) {
                 radio_change_mode(RADIO_MODE_CW);
-                params_mode_load();
-                radio_mode_set();
-                spectrum_mode_set();
+                radio_mode_setup();
+                spectrum_mode_setup();
                 info_params_set();
                 pannel_visible();
 
@@ -423,9 +394,8 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
             if (keypad->state == KEYPAD_RELEASE) {
                 radio_change_mode(RADIO_MODE_SSB);
-                params_mode_load();
-                radio_mode_set();
-                spectrum_mode_set();
+                radio_mode_setup();
+                spectrum_mode_setup();
                 info_params_set();
                 pannel_visible();
 
@@ -827,7 +797,7 @@ static void freq_shift(int16_t diff) {
 
     uint64_t        freq, prev_freq;
 
-    freq = radio_change_freq(diff * params_mode.freq_step * freq_accel(abs(diff)), &prev_freq);
+    freq = radio_change_freq(diff * params_current_mode_freq_step_get() * freq_accel(abs(diff)), &prev_freq);
     waterfall_change_freq(freq - prev_freq);
     spectrum_change_freq(freq - prev_freq);
     freq_update();

@@ -63,26 +63,19 @@ void mfk_update(int16_t diff, bool voice) {
 
         case MFK_SPECTRUM_FACTOR:
             if (diff != 0) {
-                params_lock();
-                params_mode.spectrum_factor += diff;
-
-                if (params_mode.spectrum_factor < 1) {
-                    params_mode.spectrum_factor = 1;
-                } else if (params_mode.spectrum_factor > 4) {
-                    params_mode.spectrum_factor = 4;
-                }
-                params_unlock(&params_mode.durty.spectrum_factor);
-
-                spectrum_mode_set();
+                params_current_mode_spectrum_factor_add(diff);
+                spectrum_mode_setup();
             }
-            msg_set_text_fmt("#%3X Spectrum zoom: x%i", color, params_mode.spectrum_factor);
+            int16_t new_factor = params_current_mode_spectrum_factor_get();
+            msg_set_text_fmt("#%3X Spectrum zoom: x%i", color, new_factor);
 
             if (diff) {
-                voice_say_int("Spectrum zoom", params_mode.spectrum_factor);
+                voice_say_int("Spectrum zoom", new_factor);
             } else if (voice) {
                 voice_say_text_fmt("Spectrum zoom");
             }
             break;
+
 
         case MFK_SPECTRUM_BETA:
             if (diff != 0) {

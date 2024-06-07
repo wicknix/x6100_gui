@@ -35,7 +35,7 @@ typedef enum {
     RADIO_ATU_WAIT,
     RADIO_ATU_RUN,
     RADIO_SWRSCAN,
-    
+
     RADIO_POWEROFF,
     RADIO_OFF
 } radio_state_t;
@@ -115,7 +115,7 @@ bool radio_start_swrscan();
 void radio_stop_swrscan();
 
 void radio_vfo_set();
-void radio_mode_set();
+void radio_mode_setup();
 
 void radio_filter_get(int32_t *from_freq, int32_t *to_freq);
 void radio_poweroff();

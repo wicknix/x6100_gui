@@ -196,21 +196,23 @@ void radio_vfo_set() {
     params_bands_find(params_band.vfo_x[params_band.vfo].freq, &params.freq_band);
 }
 
-void radio_mode_set() {
+void radio_mode_setup() {
     x6100_mode_t    mode = radio_current_mode();
-
+    int32_t low, high;
+    params_current_mode_filter_get(&low, &high);
     radio_lock();
 
     if (mode == x6100_mode_am || mode == x6100_mode_nfm) {
-        x6100_control_cmd(x6100_filter1_low, -params_mode.filter_high);
-        x6100_control_cmd(x6100_filter2_low, -params_mode.filter_high);
+        // TODO: check pasing negative values as unsigned.
+        x6100_control_cmd(x6100_filter1_low, -high);
+        x6100_control_cmd(x6100_filter2_low, -high);
     } else {
-        x6100_control_cmd(x6100_filter1_low, params_mode.filter_low);
-        x6100_control_cmd(x6100_filter2_low, params_mode.filter_low);
+        x6100_control_cmd(x6100_filter1_low, low);
+        x6100_control_cmd(x6100_filter2_low, low);
     }
 
-    x6100_control_cmd(x6100_filter1_high, params_mode.filter_high);
-    x6100_control_cmd(x6100_filter2_high, params_mode.filter_high);
+    x6100_control_cmd(x6100_filter1_high, high);
+    x6100_control_cmd(x6100_filter2_high, high);
 
     radio_unlock();
     update_agc_time();
@@ -241,7 +243,7 @@ void radio_init(lv_obj_t *obj) {
     pack = malloc(sizeof(x6100_flow_t));
 
     radio_vfo_set();
-    radio_mode_set();
+    radio_mode_setup();
     radio_load_atu();
 
     x6100_control_rxvol_set(params.vol);
@@ -469,35 +471,29 @@ bool radio_change_att() {
 }
 
 void radio_filter_get(int32_t *from_freq, int32_t *to_freq) {
+    int32_t low, high;
+    params_current_mode_filter_get(&low, &high);
     x6100_mode_t    mode = radio_current_mode();
 
     switch (mode) {
         case x6100_mode_lsb:
         case x6100_mode_lsb_dig:
-            *from_freq = -params_mode.filter_high;
-            *to_freq = -params_mode.filter_low;
+        case x6100_mode_cwr:
+            *from_freq = -high;
+            *to_freq = -low;
             break;
 
         case x6100_mode_usb:
         case x6100_mode_usb_dig:
-            *from_freq = params_mode.filter_low;
-            *to_freq = params_mode.filter_high;
-            break;
-
         case x6100_mode_cw:
-            *from_freq = params_mode.filter_low;
-            *to_freq = params_mode.filter_high;
-            break;
-
-        case x6100_mode_cwr:
-            *from_freq = -params_mode.filter_high;
-            *to_freq = -params_mode.filter_low;
+            *from_freq = low;
+            *to_freq = high;
             break;
 
         case x6100_mode_am:
         case x6100_mode_nfm:
-            *from_freq = -params_mode.filter_high;
-            *to_freq = params_mode.filter_high;
+            *from_freq = -high;
+            *to_freq = high;
             break;
 
         default:
@@ -612,7 +608,6 @@ void radio_change_mode(radio_mode_t select) {
             break;
     }
 
-    params_mode_save();
     radio_set_mode(params_band.vfo, mode);
 }
 
@@ -620,70 +615,34 @@ x6100_mode_t radio_current_mode() {
     return params_band.vfo_x[params_band.vfo].mode;
 }
 
-uint32_t radio_change_filter_low(int32_t df) {
-    if (df == 0) {
-        return params_mode.filter_low;
+uint32_t radio_change_filter_low(int32_t freq) {
+    if (freq == params_current_mode_filter_low_get()){
+        return freq;
     }
-
-    x6100_mode_t    mode = radio_current_mode();
-
-    if (mode == x6100_mode_am || mode == x6100_mode_nfm) {
-        return 0;
-    }
-
-    params_lock();
-
-    params_mode.filter_low = align_int(params_mode.filter_low + df * 10, 10);
-
-    if (params_mode.filter_low < 0) {
-        params_mode.filter_low = 0;
-    } else if (params_mode.filter_low > 6000) {
-        params_mode.filter_low = 6000;
-    } else if (params_mode.filter_low > params_mode.filter_high) {
-        params_mode.filter_low = params_mode.filter_high;
-    }
-    params_unlock(&params_mode.durty.filter_low);
+    int32_t new_freq = params_current_mode_filter_low_set(freq);
 
     radio_lock();
-    x6100_control_cmd(x6100_filter1_low, params_mode.filter_low);
-    x6100_control_cmd(x6100_filter2_low, params_mode.filter_low);
+    x6100_control_cmd(x6100_filter1_low, freq);
+    x6100_control_cmd(x6100_filter2_low, freq);
     radio_unlock();
 
-    return params_mode.filter_low;
+    return freq;
 }
 
-uint32_t radio_change_filter_high(int32_t df) {
-    if (df == 0) {
-        return params_mode.filter_high;
+uint32_t radio_change_filter_high(int32_t freq) {
+    if (freq == params_current_mode_filter_high_get()){
+        return freq;
     }
-
-    x6100_mode_t    mode = radio_current_mode();
-
-    params_lock();
-    params_mode.filter_high = align_int(params_mode.filter_high + df * 50, 50);
-
-    if (params_mode.filter_high < 0) {
-        params_mode.filter_high = 0;
-    } else if (params_mode.filter_high > 6000) {
-        params_mode.filter_high = 6000;
-    } else if (params_mode.filter_high < params_mode.filter_low) {
-        params_mode.filter_high = params_mode.filter_low;
-    }
-    params_unlock(&params_mode.durty.filter_high);
+    int32_t new_freq = params_current_mode_filter_high_set(freq);
 
     radio_lock();
-
-    if (mode == x6100_mode_am || mode == x6100_mode_nfm) {
-        x6100_control_cmd(x6100_filter1_low, -params_mode.filter_high);
-        x6100_control_cmd(x6100_filter2_low, -params_mode.filter_high);
-    }
-
-    x6100_control_cmd(x6100_filter1_high, params_mode.filter_high);
-    x6100_control_cmd(x6100_filter2_high, params_mode.filter_high);
-
+    x6100_control_cmd(x6100_filter1_high, freq);
+    x6100_control_cmd(x6100_filter2_high, freq);
     radio_unlock();
-    return params_mode.filter_high;
+
+    return freq;
 }
+
 
 static void update_agc_time() {
     x6100_agc_t     agc = params_band.vfo_x[params_band.vfo].agc;
