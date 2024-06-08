@@ -18,20 +18,21 @@ pthread_mutex_t         db_write_mux = PTHREAD_MUTEX_INITIALIZER;
 static sqlite3_stmt     *write_stmt;
 
 
-void database_init() {
-
+bool database_init() {
     int rc = sqlite3_open("/mnt/params.db", &db);
 
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Can't open params.db");
-        return;
+        return false;
     }
 
     rc = sqlite3_prepare_v2(db, "INSERT INTO params(name, val) VALUES(?, ?)", -1, &write_stmt, 0);
 
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Can't prepare insert statement for params");
+        return false;
     }
+    return true;
 }
 
 bool sql_query_exec(const char *sql) {

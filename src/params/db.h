@@ -16,7 +16,7 @@
 extern sqlite3          *db;
 extern pthread_mutex_t  db_write_mux;
 
-void database_init();
+bool database_init();
 
 bool sql_query_exec(const char *sql);
 

@@ -172,8 +172,6 @@ transverter_t params_transverter[TRANSVERTER_NUM] = {
     { .from = 432000000,    .to = 438000000,    .shift = 404000000 }
 };
 
-static uint64_t         durty_time;
-static sqlite3_stmt     *write_stmt;
 static sqlite3_stmt     *write_mb_stmt;
 static sqlite3_stmt     *write_mode_stmt;
 static sqlite3_stmt     *save_atu_stmt;
@@ -864,16 +862,13 @@ static void * params_thread(void *arg) {
 }
 
 void params_init() {
-    int rc = sqlite3_open("/mnt/params.db", &db);
-
-    if (rc == SQLITE_OK) {
+    int rc;
+    if (database_init()) {
         if (!params_load()) {
             LV_LOG_ERROR("Load params");
             sqlite3_close(db);
             db = NULL;
         }
-
-        rc = sqlite3_prepare_v2(db, "INSERT INTO params(name, val) VALUES(?, ?)", -1, &write_stmt, 0);
 
         if (rc != SQLITE_OK) {
             LV_LOG_ERROR("Prepare write");
@@ -920,8 +915,6 @@ void params_init() {
     } else {
         LV_LOG_ERROR("Open params.db");
     }
-
-    durty_time = 0;
 
     pthread_t thread;
 
