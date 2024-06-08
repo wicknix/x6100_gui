@@ -202,15 +202,8 @@ void radio_mode_setup() {
     params_current_mode_filter_get(&low, &high);
     radio_lock();
 
-    if (mode == x6100_mode_am || mode == x6100_mode_nfm) {
-        // TODO: check pasing negative values as unsigned.
-        x6100_control_cmd(x6100_filter1_low, -high);
-        x6100_control_cmd(x6100_filter2_low, -high);
-    } else {
-        x6100_control_cmd(x6100_filter1_low, low);
-        x6100_control_cmd(x6100_filter2_low, low);
-    }
-
+    x6100_control_cmd(x6100_filter1_low, low);
+    x6100_control_cmd(x6100_filter2_low, low);
     x6100_control_cmd(x6100_filter1_high, high);
     x6100_control_cmd(x6100_filter2_high, high);
 
