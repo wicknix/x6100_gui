@@ -18,7 +18,7 @@ uint32_t params_current_mode_filter_bw_get();
 uint32_t params_current_mode_filter_bw_set(int32_t val);
 
 int16_t params_current_mode_spectrum_factor_get();
-int16_t params_current_mode_spectrum_factor_add(int16_t diff);
+int16_t params_current_mode_spectrum_factor_set(int16_t val);
 
 void params_current_mode_filter_get(int32_t *low, int32_t *high);
 

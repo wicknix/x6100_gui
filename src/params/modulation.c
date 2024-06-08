@@ -293,10 +293,6 @@ uint32_t params_current_mode_filter_bw() {
     return mode_params->filter_high.x - mode_params->filter_low.x;
 }
 
-int16_t params_current_mode_spectrum_factor_add(int16_t diff) {
-    return params_current_mode_spectrum_factor_set(params_current_mode_spectrum_factor_get() + diff);
-}
-
 /* Database operations */
 
 void params_modulation_setup() {
