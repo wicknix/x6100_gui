@@ -62,8 +62,8 @@ static button_item_t    buttons[] = {
     { .label = "(VOL 2:4)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_VOL_3, .prev = PAGE_VOL_1, .voice = "Volume|page 2" },
     { .label = "Filter\nLow",       .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_FILTER_LOW },
     { .label = "Filter\nHigh",      .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_FILTER_HIGH },
+    { .label = "Filter\nBW",        .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_FILTER_BW },
     { .label = "Speaker\nMode",     .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_SPMODE },
-    { .label = "",                  .press = NULL },
 
     { .label = "(VOL 3:4)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_VOL_4, .prev = PAGE_VOL_2, .voice = "Volume|page 3" },
     { .label = "MIC\nSelect",       .press = button_vol_update_cb,  .hold = button_vol_hold_cb,     .data = VOL_MIC },
@@ -365,7 +365,7 @@ static void button_vol_hold_cb(void * ptr) {
         voice_say_text_fmt("Added to volume encoder");
     } else {
         msg_set_text_fmt("Removed from VOL encoder");
-        voice_say_text_fmt("Romoved to volume encoder");
+        voice_say_text_fmt("Removed from volume encoder");
     }
 }
 

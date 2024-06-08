@@ -10,7 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sqlite3.h>
-#include <lvgl/src/misc/lv_log.h>
+#include <lvgl/lvgl.h>
 #include <aether_radio/x6100_control/control.h>
 
 #include "common.h"
@@ -20,6 +20,8 @@
 #include "../radio.h"
 
 #include "modulation.h"
+
+#define MAX_FILTER_FREQ 10000
 
 /*********************
  *  Radio modes params (SSB, CW, etc)
@@ -124,7 +126,7 @@ uint32_t params_mode_filter_low_get(x6100_mode_t mode) {
     return get_params_by_mode(mode)->filter_low.x;
 }
 
-uint32_t params_mode_filter_low_set(x6100_mode_t mode, uint32_t val) {
+uint32_t params_mode_filter_low_set(x6100_mode_t mode, int32_t val) {
     if ((mode == x6100_mode_am) || (mode == x6100_mode_nfm)) {
         return 0;
     }
@@ -142,16 +144,48 @@ uint32_t params_mode_filter_low_set(x6100_mode_t mode, uint32_t val) {
 uint32_t params_mode_filter_high_get(x6100_mode_t mode) {
     return get_params_by_mode(mode)->filter_high.x;
 }
-uint32_t params_mode_filter_high_set(x6100_mode_t mode, uint32_t val) {
+uint32_t params_mode_filter_high_set(x6100_mode_t mode, int32_t val) {
     params_mode_t *mode_params = get_params_by_mode(mode);
     int32_param_t *param = &mode_params->filter_high;
     params_lock();
-    if ((val != param->x) & (val < 10000) & (val > mode_params->filter_low.x)) {
+    if ((val != param->x) & (val < MAX_FILTER_FREQ) & (val > mode_params->filter_low.x)) {
         param->x = val;
         param->dirty = true;
     }
     params_unlock(NULL);
     return param->x;
+}
+
+uint32_t params_mode_filter_bw_get(x6100_mode_t mode) {
+    params_mode_t *params = get_params_by_mode(mode);
+    return params->filter_high.x - params->filter_low.x;
+}
+uint32_t params_mode_filter_bw_set(x6100_mode_t mode, int32_t val) {
+    int32_t change;
+    params_mode_t *mode_params = get_params_by_mode(mode);
+    int32_param_t *l_param = &mode_params->filter_low;
+    int32_param_t *h_param = &mode_params->filter_high;
+    params_lock();
+    int32_t cur_bw = h_param->x - l_param->x;
+    change = (val - cur_bw) / 2;
+    if (h_param->x + change > MAX_FILTER_FREQ) {
+        change = MAX_FILTER_FREQ - h_param->x;
+    }
+    if (l_param->x - change < 0) {
+        change = LV_MIN(change, l_param->x);
+    }
+    if (cur_bw + 2 * change <= 20) {
+        change = 0;
+    }
+    if (change != 0) {
+        l_param->x -= change;
+        h_param->x += change;
+        l_param->dirty = true;
+        h_param->dirty = true;
+        cur_bw = h_param->x - l_param->x;
+    }
+    params_unlock(NULL);
+    return cur_bw;
 }
 
 uint16_t params_mode_freq_step_get(x6100_mode_t mode) {
@@ -188,15 +222,24 @@ uint32_t params_current_mode_filter_low_get() {
     return params_mode_filter_low_get(radio_current_mode());
 }
 
-uint32_t params_current_mode_filter_low_set(uint32_t val) {
+uint32_t params_current_mode_filter_low_set(int32_t val) {
     return params_mode_filter_low_set(radio_current_mode(), val);
 }
 
 uint32_t params_current_mode_filter_high_get() {
     return params_mode_filter_high_get(radio_current_mode());
 }
-uint32_t params_current_mode_filter_high_set(uint32_t val) {
+
+uint32_t params_current_mode_filter_high_set(int32_t val) {
     return params_mode_filter_high_set(radio_current_mode(), val);
+}
+
+uint32_t params_current_mode_filter_bw_get() {
+    return params_mode_filter_bw_get(radio_current_mode());
+}
+
+uint32_t params_current_mode_filter_bw_set(int32_t val) {
+    return params_mode_filter_bw_set(radio_current_mode(), val);
 }
 
 uint16_t params_current_mode_freq_step_get() {

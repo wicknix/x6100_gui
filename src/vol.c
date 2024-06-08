@@ -60,8 +60,11 @@ void vol_update(int16_t diff, bool voice) {
             break;
 
         case VOL_FILTER_LOW:
-            // TODO: make step depending on freq
-            new_freq = align_int(params_current_mode_filter_low_get() + diff * 10, 10);
+            new_freq = params_current_mode_filter_low_get();
+            if (diff) {
+                // TODO: make step depending on freq
+                new_freq = align_int(new_freq + diff * 10, 10);
+            }
             x = radio_change_filter_low(new_freq);
             msg_set_text_fmt("#%3X Filter low: %i Hz", color, x);
 
@@ -73,7 +76,10 @@ void vol_update(int16_t diff, bool voice) {
             break;
 
         case VOL_FILTER_HIGH:
-            new_freq = align_int(params_current_mode_filter_high_get() + diff * 50, 50);
+            new_freq = params_current_mode_filter_high_get();
+            if (diff) {
+                new_freq = align_int(new_freq + diff * 50, 50);
+            }
             x = radio_change_filter_high(new_freq);
             msg_set_text_fmt("#%3X Filter high: %i Hz", color, x);
 
@@ -81,6 +87,21 @@ void vol_update(int16_t diff, bool voice) {
                 voice_say_int("High filter limit", x);
             } else if (voice) {
                 voice_say_text_fmt("High filter limit");
+            }
+            break;
+
+        case VOL_FILTER_BW:;
+            uint32_t new_bw = params_current_mode_filter_bw_get();
+            if (diff) {
+                new_bw = align_int(new_bw + diff * 20, 20);
+            }
+            x = radio_change_filter_bw(new_bw);
+            msg_set_text_fmt("#%3X Filter bw: %i Hz", color, x);
+
+            if (diff) {
+                voice_delay_say_text_fmt("%i", x);
+            } else if (voice) {
+                voice_say_text_fmt("Bandwidth filter limit");
             }
             break;
 

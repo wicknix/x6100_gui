@@ -11,9 +11,11 @@
 #include <stdint.h>
 
 uint32_t params_current_mode_filter_low_get();
-uint32_t params_current_mode_filter_low_set(uint32_t val);
+uint32_t params_current_mode_filter_low_set(int32_t val);
 uint32_t params_current_mode_filter_high_get();
-uint32_t params_current_mode_filter_high_set(uint32_t val);
+uint32_t params_current_mode_filter_high_set(int32_t val);
+uint32_t params_current_mode_filter_bw_get();
+uint32_t params_current_mode_filter_bw_set(int32_t val);
 
 int16_t params_current_mode_spectrum_factor_get();
 int16_t params_current_mode_spectrum_factor_add(int16_t diff);
