@@ -203,6 +203,7 @@ void dsp_set_spectrum_factor(uint8_t x) {
 
     if (spectrum_factor > 1) {
         spectrum_decim = firdecim_crcf_create_kaiser(spectrum_factor, 16, 40.0f);
+        firdecim_crcf_set_scale(spectrum_decim, sqrt(1.0f/(float)spectrum_factor));
         spectrum_dec_buf = (float complex *) malloc(RADIO_SAMPLES * sizeof(float complex) / spectrum_factor);
     }
 
