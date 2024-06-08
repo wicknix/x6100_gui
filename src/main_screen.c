@@ -308,6 +308,18 @@ void main_screen_action(press_action_t action) {
     }
 }
 
+static void change_mode(radio_mode_t mode) {
+    radio_change_mode(mode);
+    radio_mode_setup();
+    spectrum_mode_setup();
+    info_params_set();
+    pannel_visible();
+
+    if (params.mag_info.x) {
+        msg_tiny_set_text_fmt("%s", info_params_mode());
+    }
+}
+
 static void main_screen_keypad_cb(lv_event_t * e) {
     event_keypad_t *keypad = lv_event_get_param(e);
     uint64_t prev_freq = params_band.vfo_x[params_band.vfo].freq;
@@ -352,56 +364,20 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             break;
 
         case KEYPAD_MODE_AM:
-            if (mode_lock) {
-                break;
-            }
-
-            if (keypad->state == KEYPAD_RELEASE) {
-                radio_change_mode(RADIO_MODE_AM);
-                radio_mode_setup();
-                spectrum_mode_setup();
-                info_params_set();
-                pannel_visible();
-
-                if (params.mag_info.x) {
-                    msg_tiny_set_text_fmt("%s", info_params_mode());
-                }
+            if ((keypad->state == KEYPAD_RELEASE) && (!mode_lock)) {
+                change_mode(RADIO_MODE_AM);
             }
             break;
 
         case KEYPAD_MODE_CW:
-            if (mode_lock) {
-                break;
-            }
-
-            if (keypad->state == KEYPAD_RELEASE) {
-                radio_change_mode(RADIO_MODE_CW);
-                radio_mode_setup();
-                spectrum_mode_setup();
-                info_params_set();
-                pannel_visible();
-
-                if (params.mag_info.x) {
-                    msg_tiny_set_text_fmt("%s", info_params_mode());
-                }
+            if ((keypad->state == KEYPAD_RELEASE) && (!mode_lock)) {
+                change_mode(RADIO_MODE_CW);
             }
             break;
 
         case KEYPAD_MODE_SSB:
-            if (mode_lock) {
-                break;
-            }
-
-            if (keypad->state == KEYPAD_RELEASE) {
-                radio_change_mode(RADIO_MODE_SSB);
-                radio_mode_setup();
-                spectrum_mode_setup();
-                info_params_set();
-                pannel_visible();
-
-                if (params.mag_info.x) {
-                    msg_tiny_set_text_fmt("%s", info_params_mode());
-                }
+            if ((keypad->state == KEYPAD_RELEASE) && (!mode_lock)) {
+                change_mode(RADIO_MODE_SSB);
             }
             break;
 
