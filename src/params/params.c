@@ -920,7 +920,7 @@ void params_init() {
 
     pthread_create(&thread, NULL, params_thread, NULL);
     pthread_detach(thread);
-    params_modulation_setup();
+    params_modulation_setup(&params_lo_offset_get);
 }
 
 void params_band_freq_set(uint64_t freq) {
@@ -928,6 +928,18 @@ void params_band_freq_set(uint64_t freq) {
 
     params_band.vfo_x[params_band.vfo].freq = freq;
     params_unlock(&params_band.vfo_x[params_band.vfo].durty.freq);
+}
+
+int32_t params_lo_offset_get() {
+    x6100_mode_t mode = radio_current_mode();
+    switch (mode) {
+        case x6100_mode_cw:
+            return -params.key_tone;
+        case x6100_mode_cwr:
+            return params.key_tone;
+        default:
+            return 0;
+    }
 }
 
 void params_atu_save(uint32_t val) {

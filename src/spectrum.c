@@ -131,7 +131,7 @@ static void spectrum_draw_cb(lv_event_t * e) {
     rect_dsc.bg_color = bg_color;
     rect_dsc.bg_opa = LV_OPA_50;
 
-    uint32_t    w_hz = width_hz / params_current_mode_spectrum_factor_get();
+    int32_t     w_hz = width_hz / params_current_mode_spectrum_factor_get();
     int32_t     filter_from, filter_to;
 
     radio_filter_get(&filter_from, &filter_to);
@@ -139,8 +139,8 @@ static void spectrum_draw_cb(lv_event_t * e) {
     int16_t sign_from = (filter_from > 0) ? 1 : -1;
     int16_t sign_to = (filter_to > 0) ? 1 : -1;
 
-    int32_t f1 = (int64_t)(w * filter_from) / w_hz;
-    int32_t f2 = (int64_t)(w * filter_to) / w_hz;
+    int32_t f1 = (w * filter_from) / w_hz;
+    int32_t f2 = (w * filter_to) / w_hz;
 
     area.x1 = x1 + w / 2 + f1;
     area.y1 = y1 + h - visor_height;
@@ -159,11 +159,11 @@ static void spectrum_draw_cb(lv_event_t * e) {
         filter_to = sign_to * (params.dnf_center + params.dnf_width);
 
         if (filter_from < filter_to) {
-            f1 = (int64_t)(w * filter_from) / w_hz;
-            f2 = (int64_t)(w * filter_to) / w_hz;
+            f1 = (w * filter_from) / w_hz;
+            f2 = (w * filter_to) / w_hz;
         } else {
-            f1 = (int64_t)(w * filter_to) / w_hz;
-            f2 = (int64_t)(w * filter_from) / w_hz;
+            f1 = (w * filter_to) / w_hz;
+            f2 = (w * filter_from) / w_hz;
         }
 
         area.x1 = x1 + w / 2 + f1;

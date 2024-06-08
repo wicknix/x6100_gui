@@ -455,6 +455,8 @@ void params_memory_load(uint16_t id);
 
 void params_band_freq_set(uint64_t freq);
 
+int32_t params_lo_offset_get();
+
 void params_atu_save(uint32_t val);
 uint32_t params_atu_load(bool *loaded);
 

@@ -463,10 +463,13 @@ bool radio_change_att() {
     return params_band.vfo_x[params_band.vfo].att;
 }
 
+/**
+ * get frequencies for display and dsp (with negative numbers)
+*/
 void radio_filter_get(int32_t *from_freq, int32_t *to_freq) {
-    int32_t low, high;
-    params_current_mode_filter_get(&low, &high);
+    int32_t         low, high;
     x6100_mode_t    mode = radio_current_mode();
+    params_current_mode_filter_get(&low, &high);
 
     switch (mode) {
         case x6100_mode_lsb:
@@ -615,8 +618,8 @@ uint32_t radio_change_filter_low(int32_t freq) {
     int32_t new_freq = params_current_mode_filter_low_set(freq);
 
     radio_lock();
-    x6100_control_cmd(x6100_filter1_low, freq);
-    x6100_control_cmd(x6100_filter2_low, freq);
+    x6100_control_cmd(x6100_filter1_low, new_freq);
+    x6100_control_cmd(x6100_filter2_low, new_freq);
     radio_unlock();
 
     return new_freq;
@@ -629,8 +632,8 @@ uint32_t radio_change_filter_high(int32_t freq) {
     int32_t new_freq = params_current_mode_filter_high_set(freq);
 
     radio_lock();
-    x6100_control_cmd(x6100_filter1_high, freq);
-    x6100_control_cmd(x6100_filter2_high, freq);
+    x6100_control_cmd(x6100_filter1_high, new_freq);
+    x6100_control_cmd(x6100_filter2_high, new_freq);
     radio_unlock();
 
     return new_freq;

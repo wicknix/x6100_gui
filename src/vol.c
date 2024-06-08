@@ -21,7 +21,7 @@ void vol_update(int16_t diff, bool voice) {
     float       f;
     char        *s;
     bool        b;
-    int32_t     new_freq;
+    int32_t     freq;
 
     uint32_t    color = vol->mode == VOL_EDIT ? 0xFFFFFF : 0xBBBBBB;
 
@@ -60,12 +60,12 @@ void vol_update(int16_t diff, bool voice) {
             break;
 
         case VOL_FILTER_LOW:
-            new_freq = params_current_mode_filter_low_get();
+            freq = params_current_mode_filter_low_get();
             if (diff) {
                 // TODO: make step depending on freq
-                new_freq = align_int(new_freq + diff * 10, 10);
+                freq = align_int(freq + diff * 10, 10);
             }
-            x = radio_change_filter_low(new_freq);
+            x = radio_change_filter_low(freq);
             msg_set_text_fmt("#%3X Filter low: %i Hz", color, x);
 
             if (diff) {
@@ -76,11 +76,21 @@ void vol_update(int16_t diff, bool voice) {
             break;
 
         case VOL_FILTER_HIGH:
-            new_freq = params_current_mode_filter_high_get();
+            freq = params_current_mode_filter_high_get();
             if (diff) {
-                new_freq = align_int(new_freq + diff * 50, 50);
+                uint8_t freq_step;
+                switch (radio_current_mode()) {
+                case x6100_mode_cw:
+                case x6100_mode_cwr:
+                    freq_step = 10;
+                    break;
+                default:
+                    freq_step = 50;
+                    break;
+                }
+                freq = align_int(freq + diff * freq_step, freq_step);
             }
-            x = radio_change_filter_high(new_freq);
+            x = radio_change_filter_high(freq);
             msg_set_text_fmt("#%3X Filter high: %i Hz", color, x);
 
             if (diff) {

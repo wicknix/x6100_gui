@@ -22,6 +22,7 @@
 #include "modulation.h"
 
 #define MAX_FILTER_FREQ 10000
+#define MAX_CW_BW 500
 
 /*********************
  *  Radio modes params (SSB, CW, etc)
@@ -34,6 +35,7 @@ typedef struct {
     int16_param_t         spectrum_factor;
 } params_mode_t;
 
+static get_lo_offset_t get_lo_offset = NULL;
 
 static params_mode_t ssb_params = {
     .filter_low = {.x = 50, .dirty=false},
@@ -50,8 +52,8 @@ static params_mode_t ssb_dig_params = {
 };
 
 static params_mode_t cw_params = {
-    .filter_low = {.x = 500, .dirty=false},
-    .filter_high = {.x = 900, .dirty=false},
+    .filter_low = {.x = 0, .dirty=false},
+    .filter_high = {.x = 250, .dirty=false},
     .freq_step = {.x = 100, .dirty=false},
     .spectrum_factor = {.x = 4, .dirty=false},
 };
@@ -119,41 +121,69 @@ inline static params_mode_t* get_params_by_mode(x6100_mode_t mode) {
 
 }
 
-uint32_t params_mode_filter_low_get(x6100_mode_t mode) {
-    if ((mode == x6100_mode_am) || (mode == x6100_mode_nfm)) {
-        return 0;
-    }
-    return get_params_by_mode(mode)->filter_low.x;
-}
-
-uint32_t params_mode_filter_low_set(x6100_mode_t mode, int32_t val) {
-    if ((mode == x6100_mode_am) || (mode == x6100_mode_nfm)) {
-        return 0;
-    }
-    params_mode_t *mode_params = get_params_by_mode(mode);
-    int32_param_t *param = &mode_params->filter_low;
-    params_lock();
-    if ((val != param->x) & (val >= 0) & (val < mode_params->filter_high.x)) {
-        param->x = val;
-        param->dirty = true;
-    }
-    params_unlock(NULL);
-    return param->x;
-}
-
 uint32_t params_mode_filter_high_get(x6100_mode_t mode) {
-    return get_params_by_mode(mode)->filter_high.x;
+    switch (mode) {
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            return LV_ABS(get_lo_offset()) + cw_params.filter_high.x / 2;
+        default:
+            return get_params_by_mode(mode)->filter_high.x;
+    }
 }
 uint32_t params_mode_filter_high_set(x6100_mode_t mode, int32_t val) {
     params_mode_t *mode_params = get_params_by_mode(mode);
     int32_param_t *param = &mode_params->filter_high;
+    uint32_t lo_offset = LV_ABS(get_lo_offset());
+    switch (mode) {
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            val = (val - lo_offset) * 2;
+            val = LV_MIN(val, MAX_CW_BW);
+    }
     params_lock();
-    if ((val != param->x) & (val < MAX_FILTER_FREQ) & (val > mode_params->filter_low.x)) {
+    if ((val != param->x) & (val <= MAX_FILTER_FREQ) & (val > mode_params->filter_low.x)) {
         param->x = val;
         param->dirty = true;
     }
     params_unlock(NULL);
-    return param->x;
+    return params_mode_filter_high_get(mode);
+}
+
+uint32_t params_mode_filter_low_get(x6100_mode_t mode) {
+    switch (mode) {
+        case x6100_mode_am:
+        case x6100_mode_nfm:
+            return 0;
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            return LV_ABS(get_lo_offset()) - cw_params.filter_high.x / 2;
+        default:
+            return get_params_by_mode(mode)->filter_low.x;
+    }
+}
+
+uint32_t params_mode_filter_low_set(x6100_mode_t mode, int32_t val) {
+    params_mode_t *mode_params = get_params_by_mode(mode);
+    switch (mode) {
+        case x6100_mode_am:
+        case x6100_mode_nfm:
+            return 0;
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            if (val >= 0) {
+                params_mode_filter_high_set(mode, 2 * LV_ABS(get_lo_offset()) - val);
+            }
+            return params_mode_filter_low_get(mode);
+        default:;
+            int32_param_t *param = &mode_params->filter_low;
+            params_lock();
+            if ((val != param->x) & (val >= 0) & (val < mode_params->filter_high.x)) {
+                param->x = val;
+                param->dirty = true;
+            }
+            params_unlock(NULL);
+            return param->x;
+    }
 }
 
 uint32_t params_mode_filter_bw_get(x6100_mode_t mode) {
@@ -259,9 +289,8 @@ int16_t params_current_mode_spectrum_factor_set(int16_t val) {
 
 void params_current_mode_filter_get(int32_t *low, int32_t *high) {
     x6100_mode_t mode = radio_current_mode();
-    params_mode_t *param = get_params_by_mode(mode);
-    *low = param->filter_low.x;
-    *high = param->filter_high.x;
+    *low = params_mode_filter_low_get(mode);
+    *high = params_mode_filter_high_get(mode);
 }
 
 
@@ -295,7 +324,8 @@ uint32_t params_current_mode_filter_bw() {
 
 /* Database operations */
 
-void params_modulation_setup() {
+void params_modulation_setup(get_lo_offset_t get_lo_offset_fn) {
+    get_lo_offset = get_lo_offset_fn;
     int rc = sqlite3_prepare_v2(db, "INSERT INTO mode_params(mode, name, val) VALUES(?, ?, ?)", -1, &write_mode_stmt, 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Prepare mode write failed: %i", rc);
@@ -341,6 +371,9 @@ static void params_mode_load() {
         }
     }
     sqlite3_finalize(stmt);
+    cw_params.filter_low.x = 0;
+    am_params.filter_low.x = 0;
+    fm_params.filter_low.x = 0;
 }
 
 

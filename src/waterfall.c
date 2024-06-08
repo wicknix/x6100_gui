@@ -99,6 +99,8 @@ void waterfall_data(float *data_buf, uint16_t size) {
     float min = params.waterfall_auto_min.x ? waterfall_auto_min + 3.0f : grid_min;
     float max = params.waterfall_auto_max.x ? waterfall_auto_max + 3.0f : grid_max;
 
+    int16_t offset = params_lo_offset_get() * width  / width_hz;
+
     for (int x = 0; x < width; x++) {
         uint16_t    index = x * size / width;
         float       v = (data_buf[index] - min) / (max - min);
@@ -111,7 +113,7 @@ void waterfall_data(float *data_buf, uint16_t size) {
 
         uint8_t id = v * 254 + 1;
         memcpy(&waterfall_cache[(last_row_id * width + width - 1 - x) * PX_BYTES], &palette[id], PX_BYTES);
-        x_offsets[last_row_id] = 0;
+        x_offsets[last_row_id] = offset;
     }
 
     redraw();

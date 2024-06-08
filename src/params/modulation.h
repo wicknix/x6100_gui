@@ -10,10 +10,12 @@
 
 #include <stdint.h>
 
-uint32_t params_current_mode_filter_low_get();
-uint32_t params_current_mode_filter_low_set(int32_t val);
+typedef int32_t (* get_lo_offset_t)();
+
 uint32_t params_current_mode_filter_high_get();
 uint32_t params_current_mode_filter_high_set(int32_t val);
+uint32_t params_current_mode_filter_low_get();
+uint32_t params_current_mode_filter_low_set(int32_t val);
 uint32_t params_current_mode_filter_bw_get();
 uint32_t params_current_mode_filter_bw_set(int32_t val);
 
@@ -30,5 +32,5 @@ uint32_t params_current_mode_filter_bw();
 uint16_t params_current_mode_freq_step_get();
 
 
-void params_modulation_setup();
+void params_modulation_setup(get_lo_offset_t fn);
 void params_mode_save();
