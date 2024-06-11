@@ -247,32 +247,50 @@ void waterfall_change_freq(int64_t df) {
 
 void redraw() {
     int x_offset;
-    size_t n, src_pos, dst_pos;
+    size_t copy_n, copy_src, copy_dst;
+    size_t clean_n, clean_from;
 
     buf_offset = buf_offset == 0 ? frame->data_size : 0;
 
-    memset(frame_buf + buf_offset, 0, frame->data_size);
+    uint8_t * temp_buf = frame_buf + buf_offset;
 
     for (size_t i = 0; i < height; i++) {
         x_offset = x_offsets[i];
-        if ((x_offset >= width) || (x_offset <= -width)){
-            continue;
-        }
-        if (x_offset >= 0) {
-            n = width - x_offset;
-            src_pos = 0;
-            dst_pos = x_offset;
-        } else {
-            n = width + x_offset;
-            src_pos = -x_offset;
-            dst_pos = 0;
-        }
-        src_pos += i * width;
-        dst_pos += ((height - i + last_row_id) % height) * width;
+        if (x_offset > 0) {
+            copy_n = LV_MAX(width - x_offset, 0);
+            copy_src = 0;
+            copy_dst = x_offset;
 
-        memcpy(frame_buf + buf_offset + dst_pos * PX_BYTES, waterfall_cache + src_pos * PX_BYTES, n * PX_BYTES);
+            clean_n = LV_MIN(x_offset, width);
+            clean_from = 0;
+        } else if (x_offset < 0) {
+            copy_n = LV_MAX(width + x_offset, 0);
+            copy_src = -x_offset;
+            copy_dst = 0;
+
+            clean_n = LV_MIN(-x_offset, width);
+            clean_from = (width + x_offset);
+        } else {
+            copy_n = width;
+            copy_src = 0;
+            copy_dst = 0;
+            clean_n = 0;
+        }
+        copy_src += i * width;
+        copy_dst += ((height - i + last_row_id) % height) * width;
+        clean_from += ((height - i + last_row_id) % height) * width;
+        if (clean_n > 0){
+            memset(temp_buf + clean_from * PX_BYTES, 0, clean_n * PX_BYTES);
+        }
+        if (copy_n > 0){
+            memcpy(
+                temp_buf + copy_dst * PX_BYTES,
+                waterfall_cache + copy_src * PX_BYTES,
+                copy_n * PX_BYTES
+            );
+        }
     }
-    frame->data = frame_buf + buf_offset;
+    frame->data = temp_buf;
     event_send(img, LV_EVENT_REFRESH, NULL);
 }
 
