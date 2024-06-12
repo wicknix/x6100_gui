@@ -33,7 +33,9 @@ typedef enum {
     RADIO_CHARGER_SHADOW
 } radio_charger_t;
 
-void radio_init(lv_obj_t *obj);
+typedef void (*radio_state_change_t) ();
+
+void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb, radio_state_change_t atu_update_cb);
 void radio_bb_reset();
 bool radio_tick();
 radio_state_t radio_get_state();

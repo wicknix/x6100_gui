@@ -100,7 +100,11 @@ int main(void) {
     cw_init();
     dsp_init();
     rtty_init();
-    radio_init(main_obj);
+    radio_init(
+        &main_screen_notify_tx,
+        &main_screen_notify_rx,
+        &main_screen_notify_atu_update
+    );
     backlight_init();
     cat_init();
     pannel_visible();

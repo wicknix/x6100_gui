@@ -20,6 +20,10 @@
 #define MEM_SSTV_ID     400
 
 lv_obj_t * main_screen();
+
+void main_screen_notify_tx();
+void main_screen_notify_rx();
+void main_screen_notify_atu_update();
 void main_screen_band_set();
 
 void main_screen_keys_enable(bool value);

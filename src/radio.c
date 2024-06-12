@@ -17,22 +17,18 @@
 #include "util.h"
 #include "radio.h"
 #include "dsp.h"
-#include "main_screen.h"
-#include "waterfall.h"
 #include "params/params.h"
 #include "hkey.h"
 #include "tx_info.h"
-#include "meter.h"
-#include "events.h"
-#include "clock.h"
 #include "info.h"
 #include "dialog_swrscan.h"
-#include "voice.h"
 
 #define FLOW_RESTART_TIMOUT 300
 #define IDLE_TIMEOUT        (3 * 1000)
 
-static lv_obj_t         *main_obj;
+static radio_state_change_t notify_tx;
+static radio_state_change_t notify_rx;
+static radio_state_change_t notify_atu_update;
 
 static pthread_mutex_t  control_mux;
 
@@ -78,14 +74,14 @@ bool radio_tick() {
             case RADIO_RX:
                 if (pack->flag.tx) {
                     state = RADIO_TX;
-                    event_send(main_obj, EVENT_RADIO_TX, NULL);
+                    notify_tx();
                 }
                 break;
 
             case RADIO_TX:
                 if (!pack->flag.tx) {
                     state = RADIO_RX;
-                    event_send(main_obj, EVENT_RADIO_RX, NULL);
+                    notify_rx();
                 } else {
                     tx_info_update(pack->tx_power * 0.1f, pack->vswr * 0.1f, pack->alc_level * 0.1f);
                 }
@@ -100,7 +96,7 @@ bool radio_tick() {
 
             case RADIO_ATU_WAIT:
                 if (pack->flag.tx) {
-                    event_send(main_obj, EVENT_RADIO_TX, NULL);
+                    notify_tx();
                     state = RADIO_ATU_RUN;
                 }
                 break;
@@ -111,14 +107,14 @@ bool radio_tick() {
                     radio_lock();
                     x6100_control_atu_tune(false);
                     radio_unlock();
-                    event_send(main_obj, EVENT_RADIO_RX, NULL);
+                    notify_rx();
 
                     if (params.atu) {
                         radio_lock();
                         x6100_control_cmd(x6100_atu_network, pack->atu_params);
                         radio_unlock();
                         params.atu_loaded = true;
-                        event_send(main_obj, EVENT_ATU_UPDATE, NULL);
+                        notify_atu_update();
                     }
                     state = RADIO_RX;
                 } else {
@@ -217,7 +213,7 @@ void radio_bb_reset() {
     x6100_gpio_set(x6100_pin_bb_reset, 0);
 }
 
-void radio_init(lv_obj_t *obj) {
+void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb, radio_state_change_t atu_update_cb) {
     if (!x6100_gpio_init())
         return;
 
@@ -231,7 +227,9 @@ void radio_init(lv_obj_t *obj) {
     x6100_gpio_set(x6100_pin_wifi, 1);          /* WiFi off */
     x6100_gpio_set(x6100_pin_morse_key, 1);     /* Morse key off */
 
-    main_obj = obj;
+    notify_tx = tx_cb;
+    notify_rx = rx_cb;
+    notify_atu_update = atu_update_cb;
 
     pack = malloc(sizeof(x6100_flow_t));
 

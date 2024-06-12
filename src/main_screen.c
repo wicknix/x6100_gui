@@ -1165,6 +1165,22 @@ lv_obj_t * main_screen() {
     return obj;
 }
 
-void main_screen_band_set() {
+void main_screen_notify_tx()
+{
+    event_send(obj, EVENT_RADIO_TX, NULL);
+}
+
+void main_screen_notify_rx()
+{
+    event_send(obj, EVENT_RADIO_RX, NULL);
+}
+
+void main_screen_notify_atu_update()
+{
+    event_send(obj, EVENT_ATU_UPDATE, NULL);
+}
+
+void main_screen_band_set()
+{
     freq_update();
 }
