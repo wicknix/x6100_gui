@@ -49,6 +49,7 @@
 #include "recorder.h"
 #include "voice.h"
 
+
 static uint16_t     spectrum_height = (480 / 3);
 static uint16_t     freq_height = 36;
 static lv_obj_t     *obj;
@@ -308,8 +309,120 @@ void main_screen_action(press_action_t action) {
     }
 }
 
-static void change_mode(radio_mode_t mode) {
-    radio_change_mode(mode);
+static x6100_mode_t get_next_mode_am_fm(bool long_press) {
+    x6100_mode_t    mode = radio_current_mode();
+    switch (mode) {
+        case x6100_mode_am:
+            mode = x6100_mode_nfm;
+            break;
+        case x6100_mode_nfm:
+        default:
+            mode = x6100_mode_am;
+            break;
+    }
+    return mode;
+}
+
+static x6100_mode_t get_next_mode_cw(bool long_press) {
+    x6100_mode_t    mode = radio_current_mode();
+    switch (mode) {
+        case x6100_mode_cw:
+            mode = x6100_mode_cwr;
+            break;
+        case x6100_mode_cwr:
+        default:
+            mode = x6100_mode_cw;
+            break;
+    }
+    return mode;
+}
+
+static x6100_mode_t get_next_mode_ssb(bool long_press) {
+    x6100_mode_t    mode = radio_current_mode();
+    switch (mode) {
+        case x6100_mode_lsb_dig:
+            if (long_press) {
+                mode = x6100_mode_lsb;
+            } else {
+                mode = x6100_mode_usb_dig;
+            }
+            break;
+        case x6100_mode_usb_dig:
+            if (long_press) {
+                mode = x6100_mode_usb;
+            } else {
+                mode = x6100_mode_lsb_dig;
+            }
+            break;
+        case x6100_mode_lsb:
+            if (long_press) {
+                mode = x6100_mode_lsb_dig;
+            } else {
+                mode = x6100_mode_usb;
+            }
+            break;
+        case x6100_mode_usb:
+            if (long_press) {
+                mode = x6100_mode_usb_dig;
+            } else {
+                mode = x6100_mode_lsb;
+            }
+            break;
+        default:
+            mode = x6100_mode_lsb;
+            break;
+    }
+    return mode;
+}
+
+static void change_mode(keypad_key_t key, keypad_state_t state) {
+    switch (state) {
+        case KEYPAD_LONG:
+        case KEYPAD_RELEASE:
+            break;
+        default:
+            return;
+    }
+
+    // Define mode->text struct
+    typedef struct {
+        x6100_mode_t    mode;
+        const char*     msg;
+    } mode_text_t;
+
+    mode_text_t modes_text[] = {
+        {.mode=x6100_mode_nfm, .msg="N F M modulation"},
+        {.mode=x6100_mode_am, .msg="A M modulation"},
+        {.mode=x6100_mode_cwr, .msg="CWR modulation"},
+        {.mode=x6100_mode_cw, .msg="CW modulation"},
+        {.mode=x6100_mode_lsb_dig, .msg="LSB digital modulation"},
+        {.mode=x6100_mode_lsb, .msg="LSB modulation"},
+        {.mode=x6100_mode_usb_dig, .msg="USB digital modulation"},
+        {.mode=x6100_mode_usb, .msg="USB modulation"},
+    };
+
+    // find next mode
+    x6100_mode_t    next_mode;
+    switch (key) {
+        case KEYPAD_MODE_AM:
+            next_mode = get_next_mode_am_fm(state == KEYPAD_LONG);
+            break;
+        case KEYPAD_MODE_CW:
+            next_mode = get_next_mode_cw(state == KEYPAD_LONG);
+            break;
+        case KEYPAD_MODE_SSB:
+            next_mode = get_next_mode_ssb(state == KEYPAD_LONG);
+            break;
+    }
+
+    for (size_t i = 0; i < sizeof(modes_text)/sizeof(modes_text[0]); i++) {
+        if (modes_text[i].mode == next_mode) {
+            voice_say_text_fmt(modes_text[i].msg);
+            break;
+        }
+    }
+
+    radio_set_mode(params_band.vfo, next_mode);
     radio_mode_setup();
     spectrum_mode_setup();
     info_params_set();
@@ -364,20 +477,10 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             break;
 
         case KEYPAD_MODE_AM:
-            if ((keypad->state == KEYPAD_RELEASE) && (!mode_lock)) {
-                change_mode(RADIO_MODE_AM);
-            }
-            break;
-
         case KEYPAD_MODE_CW:
-            if ((keypad->state == KEYPAD_RELEASE) && (!mode_lock)) {
-                change_mode(RADIO_MODE_CW);
-            }
-            break;
-
         case KEYPAD_MODE_SSB:
-            if ((keypad->state == KEYPAD_RELEASE) && (!mode_lock)) {
-                change_mode(RADIO_MODE_SSB);
+            if (!mode_lock) {
+                change_mode(keypad->key, keypad->state);
             }
             break;
 
