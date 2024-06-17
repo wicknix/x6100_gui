@@ -138,6 +138,8 @@ static void params_mb_load(sqlite3_stmt *stmt) {
         } else if (strcmp(name, "vfob_agc") == 0) {
             params_band.vfo_x[X6100_VFO_B].agc.x = sqlite3_column_int(stmt, 1);
             copy_agc = false;
+        } else if (strcmp(name, "split") == 0) {
+            params_band.split.x = (bool) sqlite3_column_int(stmt, 1);
         } else if (strcmp(name, "grid_min") == 0) {
             params_band.grid_min.x = sqlite3_column_int(stmt, 1);
         } else if (strcmp(name, "grid_max") == 0) {
@@ -252,6 +254,9 @@ static void params_mb_save(uint16_t id) {
 
     if (params_band.vfo_x[X6100_VFO_B].agc.dirty)
         params_mb_write_int(id, "vfob_agc", params_band.vfo_x[X6100_VFO_B].agc.x, &params_band.vfo_x[X6100_VFO_B].agc.dirty);
+
+    if (params_band.split.dirty)
+        params_mb_write_int(id, "split", params_band.split.x, &params_band.split.dirty);
 
     if (params_band.grid_min.dirty)
         params_mb_write_int(id, "grid_min", params_band.grid_min.x, &params_band.grid_min.dirty);
@@ -460,7 +465,7 @@ bool params_band_split_set(bool split)
 {
     if (params_band.split.x != split) {
         params_lock();
-        params_band.split.x = db;
+        params_band.split.x = split;
         params_band.split.dirty = true;
         params_unlock(NULL);
     }
