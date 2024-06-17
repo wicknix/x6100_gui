@@ -142,247 +142,17 @@ params_t params = {
     .callsign               = { .x = "",  .max_len = 12, .name = "callsign" },
 };
 
-params_band_t params_band = {
-    .vfo                = X6100_VFO_A,
-
-    .vfo_x[X6100_VFO_A] = {
-        .freq           = 14000000,
-        .att            = x6100_att_off,
-        .pre            = x6100_pre_off,
-        .mode           = x6100_mode_usb,
-        .agc            = x6100_agc_fast
-    },
-
-    .vfo_x[X6100_VFO_B] = {
-        .freq           = 14100000,
-        .att            = x6100_att_off,
-        .pre            = x6100_pre_off,
-        .mode           = x6100_mode_usb,
-        .agc            = x6100_agc_fast
-    },
-
-    .split              = false,
-    .grid_min           = -121,
-    .grid_max           = -73,
-    .rfg                = 63,
-};
-
 transverter_t params_transverter[TRANSVERTER_NUM] = {
     { .from = 144000000,    .to = 150000000,    .shift = 116000000 },
     { .from = 432000000,    .to = 438000000,    .shift = 404000000 }
 };
 
-static sqlite3_stmt     *write_mb_stmt;
 static sqlite3_stmt     *write_mode_stmt;
 static sqlite3_stmt     *save_atu_stmt;
 static sqlite3_stmt     *load_atu_stmt;
 static sqlite3_stmt     *bands_find_all_stmt;
 static sqlite3_stmt     *bands_find_stmt;
 
-static void params_mb_save(uint16_t id);
-static void params_mb_load(sqlite3_stmt *stmt);
-
-
-/* Memory/Bands params */
-
-void params_memory_load(uint16_t id) {
-    sqlite3_stmt *stmt;
-
-    int rc = sqlite3_prepare_v2(db, "SELECT name,val FROM memory WHERE id = ?", -1, &stmt, 0);
-
-    if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Prepare");
-        return;
-    }
-
-    sqlite3_bind_int(stmt, 1, id);
-    params_mb_load(stmt);
-}
-
-void params_band_load() {
-    if (params.band < 0) {
-        return;
-    }
-
-    sqlite3_stmt *stmt;
-
-    int rc = sqlite3_prepare_v2(db, "SELECT name,val FROM band_params WHERE bands_id = ?", -1, &stmt, 0);
-
-    if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Prepare");
-        return;
-    }
-
-    sqlite3_bind_int(stmt, 1, params.band);
-    params_mb_load(stmt);
-}
-
-static void params_mb_load(sqlite3_stmt *stmt) {
-    bool copy_freq = true;
-    bool copy_att = true;
-    bool copy_pre = true;
-    bool copy_mode = true;
-    bool copy_agc = true;
-
-    memset(params_band.label, 0, sizeof(params_band.label));
-
-    while (sqlite3_step(stmt) != SQLITE_DONE) {
-        const char *name = sqlite3_column_text(stmt, 0);
-
-        if (strcmp(name, "vfo") == 0) {
-            params_band.vfo = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "vfoa_freq") == 0) {
-            params_band.vfo_x[X6100_VFO_A].freq = sqlite3_column_int64(stmt, 1);
-        } else if (strcmp(name, "vfoa_att") == 0) {
-            params_band.vfo_x[X6100_VFO_A].att = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "vfoa_pre") == 0) {
-            params_band.vfo_x[X6100_VFO_A].pre = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "vfoa_mode") == 0) {
-            params_band.vfo_x[X6100_VFO_A].mode = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "vfoa_agc") == 0) {
-            params_band.vfo_x[X6100_VFO_A].agc = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "vfob_freq") == 0) {
-            params_band.vfo_x[X6100_VFO_B].freq = sqlite3_column_int64(stmt, 1);
-            copy_freq = false;
-        } else if (strcmp(name, "vfob_att") == 0) {
-            params_band.vfo_x[X6100_VFO_B].att = sqlite3_column_int(stmt, 1);
-            copy_att = false;
-        } else if (strcmp(name, "vfob_pre") == 0) {
-            params_band.vfo_x[X6100_VFO_B].pre = sqlite3_column_int(stmt, 1);
-            copy_pre = false;
-        } else if (strcmp(name, "vfob_mode") == 0) {
-            params_band.vfo_x[X6100_VFO_B].mode = sqlite3_column_int(stmt, 1);
-            copy_mode = false;
-        } else if (strcmp(name, "vfob_agc") == 0) {
-            params_band.vfo_x[X6100_VFO_B].agc = sqlite3_column_int(stmt, 1);
-            copy_agc = false;
-        } else if (strcmp(name, "grid_min") == 0) {
-            params_band.grid_min = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "grid_max") == 0) {
-            params_band.grid_max = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "label") == 0) {
-            strncpy(params_band.label, sqlite3_column_text(stmt, 1), sizeof(params_band.label) - 1);
-        } else if (strcmp(name, "rfg") == 0) {
-            params_band.rfg = sqlite3_column_int64(stmt, 1);
-        }
-    }
-
-    if (copy_freq)  params_band.vfo_x[X6100_VFO_B].freq = params_band.vfo_x[X6100_VFO_A].freq;
-    if (copy_att)   params_band.vfo_x[X6100_VFO_B].att = params_band.vfo_x[X6100_VFO_A].att;
-    if (copy_pre)   params_band.vfo_x[X6100_VFO_B].pre = params_band.vfo_x[X6100_VFO_A].pre;
-    if (copy_mode)  params_band.vfo_x[X6100_VFO_B].mode = params_band.vfo_x[X6100_VFO_A].mode;
-    if (copy_agc)   params_band.vfo_x[X6100_VFO_B].agc = params_band.vfo_x[X6100_VFO_A].agc;
-
-    sqlite3_finalize(stmt);
-}
-
-static void params_mb_write_int(uint16_t id, const char *name, int data, bool *durty) {
-    sqlite3_bind_int(write_mb_stmt, 1, id);
-    sqlite3_bind_text(write_mb_stmt, 2, name, strlen(name), 0);
-    sqlite3_bind_int(write_mb_stmt, 3, data);
-    sqlite3_step(write_mb_stmt);
-    sqlite3_reset(write_mb_stmt);
-    sqlite3_clear_bindings(write_mb_stmt);
-
-    *durty = false;
-}
-
-static void params_mb_write_int64(uint16_t id, const char *name, uint64_t data, bool *durty) {
-    sqlite3_bind_int(write_mb_stmt, 1, id);
-    sqlite3_bind_text(write_mb_stmt, 2, name, strlen(name), 0);
-    sqlite3_bind_int64(write_mb_stmt, 3, data);
-    sqlite3_step(write_mb_stmt);
-    sqlite3_reset(write_mb_stmt);
-    sqlite3_clear_bindings(write_mb_stmt);
-
-    *durty = false;
-}
-
-void params_band_save() {
-    if (params.band < 0) {
-        return;
-    }
-
-    if (!sql_query_exec("BEGIN")) {
-        return;
-    }
-
-    sqlite3_prepare_v2(db, "INSERT INTO band_params(bands_id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
-
-    params_mb_save(params.band);
-    sql_query_exec("COMMIT");
-    sqlite3_finalize(write_mb_stmt);
-}
-
-void params_memory_save(uint16_t id) {
-    if (!sql_query_exec("BEGIN")) {
-        return;
-    }
-
-    sqlite3_prepare_v2(db, "INSERT INTO memory(id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
-
-    params_band.durty.vfo = true;
-
-    for (uint8_t i = X6100_VFO_A; i <= X6100_VFO_B; i++) {
-        params_band.vfo_x[i].durty.freq = true;
-        params_band.vfo_x[i].durty.att = true;
-        params_band.vfo_x[i].durty.pre = true;
-        params_band.vfo_x[i].durty.mode = true;
-        params_band.vfo_x[i].durty.agc = true;
-    }
-
-    params_band.durty.grid_min = true;
-    params_band.durty.grid_max = true;
-    params_band.durty.rfg = true;
-
-    params_mb_save(id);
-    sql_query_exec("COMMIT");
-    sqlite3_finalize(write_mb_stmt);
-}
-
-static void params_mb_save(uint16_t id) {
-    if (params_band.durty.vfo)
-        params_mb_write_int(id, "vfo", params_band.vfo, &params_band.durty.vfo);
-
-    if (params_band.vfo_x[X6100_VFO_A].durty.freq)
-        params_mb_write_int64(id, "vfoa_freq", params_band.vfo_x[X6100_VFO_A].freq, &params_band.vfo_x[X6100_VFO_A].durty.freq);
-
-    if (params_band.vfo_x[X6100_VFO_A].durty.att)
-        params_mb_write_int(id, "vfoa_att", params_band.vfo_x[X6100_VFO_A].att, &params_band.vfo_x[X6100_VFO_A].durty.att);
-
-    if (params_band.vfo_x[X6100_VFO_A].durty.pre)
-        params_mb_write_int(id, "vfoa_pre", params_band.vfo_x[X6100_VFO_A].pre, &params_band.vfo_x[X6100_VFO_A].durty.pre);
-
-    if (params_band.vfo_x[X6100_VFO_A].durty.mode)
-        params_mb_write_int(id, "vfoa_mode", params_band.vfo_x[X6100_VFO_A].mode, &params_band.vfo_x[X6100_VFO_A].durty.mode);
-
-    if (params_band.vfo_x[X6100_VFO_A].durty.agc)
-        params_mb_write_int(id, "vfoa_agc", params_band.vfo_x[X6100_VFO_A].agc, &params_band.vfo_x[X6100_VFO_A].durty.agc);
-
-    if (params_band.vfo_x[X6100_VFO_B].durty.freq)
-        params_mb_write_int64(id, "vfob_freq", params_band.vfo_x[X6100_VFO_B].freq, &params_band.vfo_x[X6100_VFO_B].durty.freq);
-
-    if (params_band.vfo_x[X6100_VFO_B].durty.att)
-        params_mb_write_int(id, "vfob_att", params_band.vfo_x[X6100_VFO_B].att, &params_band.vfo_x[X6100_VFO_B].durty.att);
-
-    if (params_band.vfo_x[X6100_VFO_B].durty.pre)
-        params_mb_write_int(id, "vfob_pre", params_band.vfo_x[X6100_VFO_B].pre, &params_band.vfo_x[X6100_VFO_B].durty.pre);
-
-    if (params_band.vfo_x[X6100_VFO_B].durty.mode)
-        params_mb_write_int(id, "vfob_mode", params_band.vfo_x[X6100_VFO_B].mode, &params_band.vfo_x[X6100_VFO_B].durty.mode);
-
-    if (params_band.vfo_x[X6100_VFO_B].durty.agc)
-        params_mb_write_int(id, "vfob_agc", params_band.vfo_x[X6100_VFO_B].agc, &params_band.vfo_x[X6100_VFO_B].durty.agc);
-
-    if (params_band.durty.grid_min)
-        params_mb_write_int(id, "grid_min", params_band.grid_min, &params_band.durty.grid_min);
-
-    if (params_band.durty.grid_max)
-        params_mb_write_int(id, "grid_max", params_band.grid_max, &params_band.durty.grid_max);
-
-    if (params_band.durty.rfg)
-        params_mb_write_int(id, "rfg", params_band.rfg, &params_band.durty.rfg);
-}
 
 /* System params */
 
@@ -440,7 +210,7 @@ static bool params_load() {
 
         if (strcmp(name, "band") == 0) {
             params.band = i;
-            params_band_load();
+            params_band_load(i);
         } else if (strcmp(name, "vol") == 0) {
             params.vol = i;
         } else if (strcmp(name, "sql") == 0) {
@@ -627,26 +397,26 @@ static bool params_load() {
 }
 
 static void params_save_bool(params_bool_t *var) {
-    if (var->durty) {
-        params_write_int(var->name, var->x, &var->durty);
+    if (var->dirty) {
+        params_write_int(var->name, var->x, &var->dirty);
     }
 }
 
 static void params_save_uint8(params_uint8_t *var) {
-    if (var->durty) {
-        params_write_int(var->name, var->x, &var->durty);
+    if (var->dirty) {
+        params_write_int(var->name, var->x, &var->dirty);
     }
 }
 
 static void params_save_uint16(params_uint16_t *var) {
-    if (var->durty) {
-        params_write_int(var->name, var->x, &var->durty);
+    if (var->dirty) {
+        params_write_int(var->name, var->x, &var->dirty);
     }
 }
 
 static void params_save_str(params_str_t *var) {
-    if (var->durty) {
-        params_write_text(var->name, var->x, &var->durty);
+    if (var->dirty) {
+        params_write_text(var->name, var->x, &var->dirty);
     }
 }
 
@@ -655,102 +425,102 @@ static void params_save() {
         return;
     }
 
-    if (params.durty.band)                  params_write_int("band", params.band, &params.durty.band);
-    if (params.durty.vol)                   params_write_int("vol", params.vol, &params.durty.vol);
-    if (params.durty.sql)                   params_write_int("sql", params.sql, &params.durty.sql);
-    if (params.durty.atu)                   params_write_int("atu", params.atu, &params.durty.atu);
-    if (params.durty.pwr)                   params_write_int("pwr", params.pwr * 10, &params.durty.pwr);
+    if (params.dirty.band)                  params_write_int("band", params.band, &params.dirty.band);
+    if (params.dirty.vol)                   params_write_int("vol", params.vol, &params.dirty.vol);
+    if (params.dirty.sql)                   params_write_int("sql", params.sql, &params.dirty.sql);
+    if (params.dirty.atu)                   params_write_int("atu", params.atu, &params.dirty.atu);
+    if (params.dirty.pwr)                   params_write_int("pwr", params.pwr * 10, &params.dirty.pwr);
 
-    if (params.durty.spectrum_beta)         params_write_int("spectrum_beta", params.spectrum_beta, &params.durty.spectrum_beta);
-    if (params.durty.spectrum_filled)       params_write_int("spectrum_filled", params.spectrum_filled, &params.durty.spectrum_filled);
-    if (params.durty.spectrum_peak)         params_write_int("spectrum_peak", params.spectrum_peak, &params.durty.spectrum_peak);
-    if (params.durty.spectrum_peak_hold)    params_write_int("spectrum_peak_hold", params.spectrum_peak_hold, &params.durty.spectrum_peak_hold);
-    if (params.durty.spectrum_peak_speed)   params_write_int("spectrum_peak_speed", params.spectrum_peak_speed * 10, &params.durty.spectrum_peak_speed);
+    if (params.dirty.spectrum_beta)         params_write_int("spectrum_beta", params.spectrum_beta, &params.dirty.spectrum_beta);
+    if (params.dirty.spectrum_filled)       params_write_int("spectrum_filled", params.spectrum_filled, &params.dirty.spectrum_filled);
+    if (params.dirty.spectrum_peak)         params_write_int("spectrum_peak", params.spectrum_peak, &params.dirty.spectrum_peak);
+    if (params.dirty.spectrum_peak_hold)    params_write_int("spectrum_peak_hold", params.spectrum_peak_hold, &params.dirty.spectrum_peak_hold);
+    if (params.dirty.spectrum_peak_speed)   params_write_int("spectrum_peak_speed", params.spectrum_peak_speed * 10, &params.dirty.spectrum_peak_speed);
 
-    if (params.durty.key_speed)             params_write_int("key_speed", params.key_speed, &params.durty.key_speed);
-    if (params.durty.key_mode)              params_write_int("key_mode", params.key_mode, &params.durty.key_mode);
-    if (params.durty.iambic_mode)           params_write_int("iambic_mode", params.iambic_mode, &params.durty.iambic_mode);
-    if (params.durty.key_tone)              params_write_int("key_tone", params.key_tone, &params.durty.key_tone);
-    if (params.durty.key_vol)               params_write_int("key_vol", params.key_vol, &params.durty.key_vol);
-    if (params.durty.key_train)             params_write_int("key_train", params.key_train, &params.durty.key_train);
-    if (params.durty.qsk_time)              params_write_int("qsk_time", params.qsk_time, &params.durty.qsk_time);
-    if (params.durty.key_ratio)             params_write_int("key_ratio", params.key_ratio, &params.durty.key_ratio);
+    if (params.dirty.key_speed)             params_write_int("key_speed", params.key_speed, &params.dirty.key_speed);
+    if (params.dirty.key_mode)              params_write_int("key_mode", params.key_mode, &params.dirty.key_mode);
+    if (params.dirty.iambic_mode)           params_write_int("iambic_mode", params.iambic_mode, &params.dirty.iambic_mode);
+    if (params.dirty.key_tone)              params_write_int("key_tone", params.key_tone, &params.dirty.key_tone);
+    if (params.dirty.key_vol)               params_write_int("key_vol", params.key_vol, &params.dirty.key_vol);
+    if (params.dirty.key_train)             params_write_int("key_train", params.key_train, &params.dirty.key_train);
+    if (params.dirty.qsk_time)              params_write_int("qsk_time", params.qsk_time, &params.dirty.qsk_time);
+    if (params.dirty.key_ratio)             params_write_int("key_ratio", params.key_ratio, &params.dirty.key_ratio);
 
-    if (params.durty.mic)                   params_write_int("mic", params.mic, &params.durty.mic);
-    if (params.durty.hmic)                  params_write_int("hmic", params.hmic, &params.durty.hmic);
-    if (params.durty.imic)                  params_write_int("imic", params.imic, &params.durty.imic);
+    if (params.dirty.mic)                   params_write_int("mic", params.mic, &params.dirty.mic);
+    if (params.dirty.hmic)                  params_write_int("hmic", params.hmic, &params.dirty.hmic);
+    if (params.dirty.imic)                  params_write_int("imic", params.imic, &params.dirty.imic);
 
-    if (params.durty.charger)               params_write_int("charger", params.charger, &params.durty.charger);
+    if (params.dirty.charger)               params_write_int("charger", params.charger, &params.dirty.charger);
 
-    if (params.durty.dnf)                   params_write_int("dnf", params.dnf, &params.durty.dnf);
-    if (params.durty.dnf_center)            params_write_int("dnf_center", params.dnf_center, &params.durty.dnf_center);
-    if (params.durty.dnf_width)             params_write_int("dnf_width", params.dnf_width, &params.durty.dnf_width);
-    if (params.durty.nb)                    params_write_int("nb", params.nb, &params.durty.nb);
-    if (params.durty.nb_level)              params_write_int("nb_level", params.nb_level, &params.durty.nb_level);
-    if (params.durty.nb_width)              params_write_int("nb_width", params.nb_width, &params.durty.nb_width);
-    if (params.durty.nr)                    params_write_int("nr", params.nr, &params.durty.nr);
-    if (params.durty.nr_level)              params_write_int("nr_level", params.nr_level, &params.durty.nr_level);
+    if (params.dirty.dnf)                   params_write_int("dnf", params.dnf, &params.dirty.dnf);
+    if (params.dirty.dnf_center)            params_write_int("dnf_center", params.dnf_center, &params.dirty.dnf_center);
+    if (params.dirty.dnf_width)             params_write_int("dnf_width", params.dnf_width, &params.dirty.dnf_width);
+    if (params.dirty.nb)                    params_write_int("nb", params.nb, &params.dirty.nb);
+    if (params.dirty.nb_level)              params_write_int("nb_level", params.nb_level, &params.dirty.nb_level);
+    if (params.dirty.nb_width)              params_write_int("nb_width", params.nb_width, &params.dirty.nb_width);
+    if (params.dirty.nr)                    params_write_int("nr", params.nr, &params.dirty.nr);
+    if (params.dirty.nr_level)              params_write_int("nr_level", params.nr_level, &params.dirty.nr_level);
 
-    if (params.durty.agc_hang)              params_write_int("agc_hang", params.agc_hang, &params.durty.agc_hang);
-    if (params.durty.agc_knee)              params_write_int("agc_knee", params.agc_knee, &params.durty.agc_knee);
-    if (params.durty.agc_slope)             params_write_int("agc_slope", params.agc_slope, &params.durty.agc_slope);
+    if (params.dirty.agc_hang)              params_write_int("agc_hang", params.agc_hang, &params.dirty.agc_hang);
+    if (params.dirty.agc_knee)              params_write_int("agc_knee", params.agc_knee, &params.dirty.agc_knee);
+    if (params.dirty.agc_slope)             params_write_int("agc_slope", params.agc_slope, &params.dirty.agc_slope);
 
-    if (params.durty.cw_decoder)            params_write_int("cw_decoder", params.cw_decoder, &params.durty.cw_decoder);
-    if (params.durty.cw_decoder_snr)        params_write_int("cw_decoder_snr", params.cw_decoder_snr * 10, &params.durty.cw_decoder_snr);
-    if (params.durty.cw_decoder_peak_beta)  params_write_int("cw_decoder_peak_beta", params.cw_decoder_peak_beta * 100, &params.durty.cw_decoder_peak_beta);
-    if (params.durty.cw_decoder_noise_beta) params_write_int("cw_decoder_noise_beta", params.cw_decoder_noise_beta * 100, &params.durty.cw_decoder_noise_beta);
+    if (params.dirty.cw_decoder)            params_write_int("cw_decoder", params.cw_decoder, &params.dirty.cw_decoder);
+    if (params.dirty.cw_decoder_snr)        params_write_int("cw_decoder_snr", params.cw_decoder_snr * 10, &params.dirty.cw_decoder_snr);
+    if (params.dirty.cw_decoder_peak_beta)  params_write_int("cw_decoder_peak_beta", params.cw_decoder_peak_beta * 100, &params.dirty.cw_decoder_peak_beta);
+    if (params.dirty.cw_decoder_noise_beta) params_write_int("cw_decoder_noise_beta", params.cw_decoder_noise_beta * 100, &params.dirty.cw_decoder_noise_beta);
 
-    if (params.durty.cw_encoder_period)     params_write_int("cw_encoder_period", params.cw_encoder_period, &params.durty.cw_encoder_period);
-    if (params.durty.voice_msg_period)      params_write_int("voice_msg_period", params.voice_msg_period, &params.durty.voice_msg_period);
+    if (params.dirty.cw_encoder_period)     params_write_int("cw_encoder_period", params.cw_encoder_period, &params.dirty.cw_encoder_period);
+    if (params.dirty.voice_msg_period)      params_write_int("voice_msg_period", params.voice_msg_period, &params.dirty.voice_msg_period);
 
-    if (params.durty.vol_modes)             params_write_int64("vol_modes", params.vol_modes, &params.durty.vol_modes);
-    if (params.durty.mfk_modes)             params_write_int64("mfk_modes", params.mfk_modes, &params.durty.mfk_modes);
+    if (params.dirty.vol_modes)             params_write_int64("vol_modes", params.vol_modes, &params.dirty.vol_modes);
+    if (params.dirty.mfk_modes)             params_write_int64("mfk_modes", params.mfk_modes, &params.dirty.mfk_modes);
 
-    if (params.durty.rtty_rate)             params_write_int("rtty_rate", params.rtty_rate, &params.durty.rtty_rate);
-    if (params.durty.rtty_shift)            params_write_int("rtty_shift", params.rtty_shift, &params.durty.rtty_shift);
-    if (params.durty.rtty_center)           params_write_int("rtty_center", params.rtty_center, &params.durty.rtty_center);
-    if (params.durty.rtty_reverse)          params_write_int("rtty_reverse", params.rtty_reverse, &params.durty.rtty_reverse);
+    if (params.dirty.rtty_rate)             params_write_int("rtty_rate", params.rtty_rate, &params.dirty.rtty_rate);
+    if (params.dirty.rtty_shift)            params_write_int("rtty_shift", params.rtty_shift, &params.dirty.rtty_shift);
+    if (params.dirty.rtty_center)           params_write_int("rtty_center", params.rtty_center, &params.dirty.rtty_center);
+    if (params.dirty.rtty_reverse)          params_write_int("rtty_reverse", params.rtty_reverse, &params.dirty.rtty_reverse);
 
-    if (params.durty.ant)                   params_write_int("ant", params.ant, &params.durty.ant);
-    if (params.durty.rit)                   params_write_int("rit", params.rit, &params.durty.rit);
-    if (params.durty.xit)                   params_write_int("xit", params.xit, &params.durty.xit);
+    if (params.dirty.ant)                   params_write_int("ant", params.ant, &params.dirty.ant);
+    if (params.dirty.rit)                   params_write_int("rit", params.rit, &params.dirty.rit);
+    if (params.dirty.xit)                   params_write_int("xit", params.xit, &params.dirty.xit);
 
-    if (params.durty.line_in)               params_write_int("line_in", params.line_in, &params.durty.line_in);
-    if (params.durty.line_out)              params_write_int("line_out", params.line_out, &params.durty.line_out);
+    if (params.dirty.line_in)               params_write_int("line_in", params.line_in, &params.dirty.line_in);
+    if (params.dirty.line_out)              params_write_int("line_out", params.line_out, &params.dirty.line_out);
 
-    if (params.durty.moni)                  params_write_int("moni", params.moni, &params.durty.moni);
+    if (params.dirty.moni)                  params_write_int("moni", params.moni, &params.dirty.moni);
 
-    if (params.durty.brightness_normal)     params_write_int("brightness_normal", params.brightness_normal, &params.durty.brightness_normal);
-    if (params.durty.brightness_idle)       params_write_int("brightness_idle", params.brightness_idle, &params.durty.brightness_idle);
-    if (params.durty.brightness_timeout)    params_write_int("brightness_timeout", params.brightness_timeout, &params.durty.brightness_timeout);
-    if (params.durty.brightness_buttons)    params_write_int("brightness_buttons", params.brightness_buttons, &params.durty.brightness_buttons);
+    if (params.dirty.brightness_normal)     params_write_int("brightness_normal", params.brightness_normal, &params.dirty.brightness_normal);
+    if (params.dirty.brightness_idle)       params_write_int("brightness_idle", params.brightness_idle, &params.dirty.brightness_idle);
+    if (params.dirty.brightness_timeout)    params_write_int("brightness_timeout", params.brightness_timeout, &params.dirty.brightness_timeout);
+    if (params.dirty.brightness_buttons)    params_write_int("brightness_buttons", params.brightness_buttons, &params.dirty.brightness_buttons);
 
-    if (params.durty.clock_view)            params_write_int("clock_view", params.clock_view, &params.durty.clock_view);
-    if (params.durty.clock_time_timeout)    params_write_int("clock_time_timeout", params.clock_time_timeout, &params.durty.clock_time_timeout);
-    if (params.durty.clock_power_timeout)   params_write_int("clock_power_timeout", params.clock_power_timeout, &params.durty.clock_power_timeout);
-    if (params.durty.clock_tx_timeout)      params_write_int("clock_tx_timeout", params.clock_tx_timeout, &params.durty.clock_tx_timeout);
+    if (params.dirty.clock_view)            params_write_int("clock_view", params.clock_view, &params.dirty.clock_view);
+    if (params.dirty.clock_time_timeout)    params_write_int("clock_time_timeout", params.clock_time_timeout, &params.dirty.clock_time_timeout);
+    if (params.dirty.clock_power_timeout)   params_write_int("clock_power_timeout", params.clock_power_timeout, &params.dirty.clock_power_timeout);
+    if (params.dirty.clock_tx_timeout)      params_write_int("clock_tx_timeout", params.clock_tx_timeout, &params.dirty.clock_tx_timeout);
 
-    if (params.durty.swrscan_linear)        params_write_int("swrscan_linear", params.swrscan_linear, &params.durty.swrscan_linear);
-    if (params.durty.swrscan_span)          params_write_int("swrscan_span", params.swrscan_span, &params.durty.swrscan_span);
+    if (params.dirty.swrscan_linear)        params_write_int("swrscan_linear", params.swrscan_linear, &params.dirty.swrscan_linear);
+    if (params.dirty.swrscan_span)          params_write_int("swrscan_span", params.swrscan_span, &params.dirty.swrscan_span);
 
-    if (params.durty.ft8_show_all)          params_write_int("ft8_show_all", params.ft8_show_all, &params.durty.ft8_show_all);
-    if (params.durty.ft8_band)              params_write_int("ft8_band", params.ft8_band, &params.durty.ft8_band);
-    if (params.durty.ft8_protocol)          params_write_int("ft8_protocol", params.ft8_protocol, &params.durty.ft8_protocol);
+    if (params.dirty.ft8_show_all)          params_write_int("ft8_show_all", params.ft8_show_all, &params.dirty.ft8_show_all);
+    if (params.dirty.ft8_band)              params_write_int("ft8_band", params.ft8_band, &params.dirty.ft8_band);
+    if (params.dirty.ft8_protocol)          params_write_int("ft8_protocol", params.ft8_protocol, &params.dirty.ft8_protocol);
 
-    if (params.durty.long_gen)              params_write_int("long_gen", params.long_gen, &params.durty.long_gen);
-    if (params.durty.long_app)              params_write_int("long_app", params.long_app, &params.durty.long_app);
-    if (params.durty.long_key)              params_write_int("long_key", params.long_key, &params.durty.long_key);
-    if (params.durty.long_msg)              params_write_int("long_msg", params.long_msg, &params.durty.long_msg);
-    if (params.durty.long_dfn)              params_write_int("long_dfn", params.long_dfn, &params.durty.long_dfn);
-    if (params.durty.long_dfl)              params_write_int("long_dfl", params.long_dfl, &params.durty.long_dfl);
+    if (params.dirty.long_gen)              params_write_int("long_gen", params.long_gen, &params.dirty.long_gen);
+    if (params.dirty.long_app)              params_write_int("long_app", params.long_app, &params.dirty.long_app);
+    if (params.dirty.long_key)              params_write_int("long_key", params.long_key, &params.dirty.long_key);
+    if (params.dirty.long_msg)              params_write_int("long_msg", params.long_msg, &params.dirty.long_msg);
+    if (params.dirty.long_dfn)              params_write_int("long_dfn", params.long_dfn, &params.dirty.long_dfn);
+    if (params.dirty.long_dfl)              params_write_int("long_dfl", params.long_dfl, &params.dirty.long_dfl);
 
-    if (params.durty.press_f1)              params_write_int("press_f1", params.press_f1, &params.durty.press_f1);
-    if (params.durty.press_f2)              params_write_int("press_f2", params.press_f2, &params.durty.press_f2);
-    if (params.durty.long_f1)               params_write_int("long_f1", params.long_f1, &params.durty.long_f1);
-    if (params.durty.long_f2)               params_write_int("long_f2", params.long_f2, &params.durty.long_f2);
+    if (params.dirty.press_f1)              params_write_int("press_f1", params.press_f1, &params.dirty.press_f1);
+    if (params.dirty.press_f2)              params_write_int("press_f2", params.press_f2, &params.dirty.press_f2);
+    if (params.dirty.long_f1)               params_write_int("long_f1", params.long_f1, &params.dirty.long_f1);
+    if (params.dirty.long_f2)               params_write_int("long_f2", params.long_f2, &params.dirty.long_f2);
 
-    if (params.durty.play_gain)             params_write_int("play_gain", params.play_gain, &params.durty.play_gain);
-    if (params.durty.rec_gain)              params_write_int("rec_gain", params.rec_gain, &params.durty.rec_gain);
+    if (params.dirty.play_gain)             params_write_int("play_gain", params.play_gain, &params.dirty.play_gain);
+    if (params.dirty.rec_gain)              params_write_int("rec_gain", params.rec_gain, &params.dirty.rec_gain);
 
     params_save_uint8(&params.voice_mode);
     params_save_uint8(&params.voice_lang);
@@ -809,7 +579,7 @@ bool transverter_load() {
     return true;
 }
 
-static void transverter_write(sqlite3_stmt *stmt, uint8_t id, const char *name, uint64_t data, bool *durty) {
+static void transverter_write(sqlite3_stmt *stmt, uint8_t id, const char *name, uint64_t data, bool *dirty) {
     sqlite3_bind_int64(stmt, 1, id);
     sqlite3_bind_text(stmt, 2, name, strlen(name), 0);
     sqlite3_bind_int64(stmt, 3, data);
@@ -817,7 +587,7 @@ static void transverter_write(sqlite3_stmt *stmt, uint8_t id, const char *name, 
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
 
-    *durty = false;
+    *dirty = false;
 }
 
 void transverter_save() {
@@ -837,9 +607,9 @@ void transverter_save() {
     for (uint8_t i = 0; i < TRANSVERTER_NUM; i++) {
         transverter_t *transverter = &params_transverter[i];
 
-        if (transverter->durty.from)    transverter_write(stmt, i, "from", transverter->from, &transverter->durty.from);
-        if (transverter->durty.to)      transverter_write(stmt, i, "to", transverter->to, &transverter->durty.to);
-        if (transverter->durty.shift)   transverter_write(stmt, i, "shift", transverter->shift, &transverter->durty.shift);
+        if (transverter->dirty.from)    transverter_write(stmt, i, "from", transverter->from, &transverter->dirty.from);
+        if (transverter->dirty.to)      transverter_write(stmt, i, "to", transverter->to, &transverter->dirty.to);
+        if (transverter->dirty.shift)   transverter_write(stmt, i, "shift", transverter->shift, &transverter->dirty.shift);
     }
 
     sql_query_exec("COMMIT");
@@ -852,7 +622,7 @@ static void * params_thread(void *arg) {
         pthread_mutex_lock(&params_mux);
         if (params_ready_to_save()){
             params_save();
-            params_band_save();
+            params_band_save(params.band);
             params_mode_save();
             transverter_save();
         }
@@ -923,13 +693,6 @@ void params_init() {
     params_modulation_setup(&params_lo_offset_get);
 }
 
-void params_band_freq_set(uint64_t freq) {
-    params_lock();
-
-    params_band.vfo_x[params_band.vfo].freq = freq;
-    params_unlock(&params_band.vfo_x[params_band.vfo].durty.freq);
-}
-
 int32_t params_lo_offset_get() {
     x6100_mode_t mode = radio_current_mode();
     switch (mode) {
@@ -943,7 +706,7 @@ int32_t params_lo_offset_get() {
 }
 
 void params_atu_save(uint32_t val) {
-    uint64_t freq = params_band.vfo_x[params_band.vfo].freq;
+    uint64_t freq = params_band_cur_freq_get();
 
     params_lock();
 
@@ -960,7 +723,7 @@ void params_atu_save(uint32_t val) {
 
 uint32_t params_atu_load(bool *loaded) {
     uint32_t    res = 0;
-    uint64_t    freq = params_band.vfo_x[params_band.vfo].freq;
+    uint64_t    freq = params_band_cur_freq_get();
 
     *loaded = false;
 
@@ -980,29 +743,6 @@ uint32_t params_atu_load(bool *loaded) {
     params_unlock(NULL);
 
     return res;
-}
-
-void params_band_vfo_clone() {
-    params_vfo_t *a = &params_band.vfo_x[X6100_VFO_A];
-    params_vfo_t *b = &params_band.vfo_x[X6100_VFO_B];
-
-    if (params_band.vfo == X6100_VFO_A) {
-        *b = *a;
-
-        b->durty.freq = true;
-        b->durty.att = true;
-        b->durty.pre = true;
-        b->durty.mode = true;
-        b->durty.agc = true;
-    } else {
-        *a = *b;
-
-        a->durty.freq = true;
-        a->durty.att = true;
-        a->durty.pre = true;
-        a->durty.mode = true;
-        a->durty.agc = true;
-    }
 }
 
 void params_msg_cw_load() {
@@ -1168,7 +908,7 @@ bool params_bands_find_next(uint64_t freq, bool up, band_t *band) {
 void params_bool_set(params_bool_t *var, bool x) {
     params_lock();
     var->x = x;
-    params_unlock(&var->durty);
+    params_unlock(&var->dirty);
 
     if (var->voice) {
         voice_say_bool(var->voice, var->x);
@@ -1178,7 +918,7 @@ void params_bool_set(params_bool_t *var, bool x) {
 void params_uint8_set(params_uint8_t *var, uint8_t x) {
     params_lock();
     var->x = x;
-    params_unlock(&var->durty);
+    params_unlock(&var->dirty);
 
     if (var->voice) {
         voice_say_int(var->voice, var->x);
@@ -1188,7 +928,7 @@ void params_uint8_set(params_uint8_t *var, uint8_t x) {
 void params_uint16_set(params_uint16_t *var, uint16_t x) {
     params_lock();
     var->x = x;
-    params_unlock(&var->durty);
+    params_unlock(&var->dirty);
 
     if (var->voice) {
         voice_say_int(var->voice, var->x);
@@ -1198,7 +938,7 @@ void params_uint16_set(params_uint16_t *var, uint16_t x) {
 void params_str_set(params_str_t *var, const char *x) {
     params_lock();
     strncpy(var->x, x, sizeof(var->x) - 1);
-    params_unlock(&var->durty);
+    params_unlock(&var->dirty);
 }
 
 uint8_t params_uint8_change(params_uint8_t *var, int16_t df) {

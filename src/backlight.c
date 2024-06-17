@@ -43,7 +43,7 @@ static void set_power(bool value) {
     if (power > 0) {
         char    str[8];
         int     len = snprintf(str, sizeof(str), "%i\n", value ? 0 : 1);
-        
+
         write(power, str, len);
     }
 }
@@ -52,7 +52,7 @@ void backlight_init() {
     power = open("/sys/class/backlight/backlight/bl_power", O_WRONLY);
     brightness = open("/sys/class/backlight/backlight/brightness", O_WRONLY);
     on = true;
-    
+
     backlight_tick();
 }
 
@@ -73,7 +73,7 @@ void backlight_set_brightness(int16_t value) {
     if (on) {
         if (value < 0) {
             set_power(false);
-            
+
             /* Setting max PWM for reduce noice */
             set_brightness(9);
         } else {
@@ -86,7 +86,7 @@ void backlight_set_brightness(int16_t value) {
 void backlight_set_buttons(buttons_light_t value) {
     params_lock();
     params.brightness_buttons = value;
-    params_unlock(&params.durty.brightness_buttons);
+    params_unlock(&params.dirty.brightness_buttons);
 
     x6100_gpio_set(x6100_pin_light, value == BUTTONS_DARK ? 0 : 1);
 }

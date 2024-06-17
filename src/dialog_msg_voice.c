@@ -434,7 +434,7 @@ void dialog_msg_voice_period_cb(lv_event_t * e) {
             break;
     }
 
-    params_unlock(&params.durty.voice_msg_period);
+    params_unlock(&params.dirty.voice_msg_period);
     msg_set_text_fmt("Beacon period: %i s", params.voice_msg_period);
 }
 

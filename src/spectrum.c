@@ -20,13 +20,10 @@
 #include "rtty.h"
 #include "recorder.h"
 
-float                   spectrum_auto_min;
-float                   spectrum_auto_max;
+static float            grid_min = -70;
+static float            grid_max = -40;
 
 static lv_obj_t         *obj;
-
-static int              grid_min = -70;
-static int              grid_max = -40;
 
 static int32_t          width_hz = 100000;
 static int16_t          visor_height = 100;
@@ -84,17 +81,14 @@ static void spectrum_draw_cb(lv_event_t * e) {
     peak_b.x = x1;
     peak_b.y = y1 + h;
 
-    float min = params.spectrum_auto_min.x ? spectrum_auto_min + 3.0f : grid_min;
-    float max = params.spectrum_auto_max.x ? spectrum_auto_max + 10.0f : grid_max;
-
     for (uint16_t i = 0; i < spectrum_size; i++) {
-        float       v = (spectrum_buf[i] - min) / (max - min);
+        float       v = (spectrum_buf[i] - grid_min) / (grid_max - grid_min);
         uint16_t    x = i * w / spectrum_size;
 
         /* Peak */
 
         if (params.spectrum_peak) {
-            float v_peak = (spectrum_peak[i].val - min) / (max - min);
+            float v_peak = (spectrum_peak[i].val - grid_min) / (grid_max - grid_min);
 
             peak_a.x = x1 + x;
             peak_a.y = y1 + (1.0f - v_peak) * h;
@@ -263,20 +257,40 @@ void spectrum_data(float *data_buf, uint16_t size) {
 }
 
 void spectrum_band_set() {
-    spectrum_set_min(params_band.grid_min);
-    spectrum_set_max(params_band.grid_max);
+    grid_min = params_band_grid_min_get();
+    grid_max = params_band_grid_max_get();
 }
 
 void spectrum_mode_setup() {
     dsp_set_spectrum_factor(params_current_mode_spectrum_factor_get());
 }
 
-void spectrum_set_max(int db) {
-    grid_max = db;
+float spectrum_get_min() {
+    return grid_min;
 }
 
-void spectrum_set_min(int db) {
-    grid_min = db;
+void spectrum_set_max(float db) {
+    if (!params.spectrum_auto_max.x) {
+        grid_max = db;
+    }
+}
+
+void spectrum_set_min(float db) {
+    if (!params.spectrum_auto_min.x) {
+        grid_min = db;
+    }
+}
+
+void spectrum_update_max(float db) {
+    if (params.spectrum_auto_max.x) {
+        lpf(&grid_max, db + 10.0f, 0.55f, -1);
+    }
+}
+
+void spectrum_update_min(float db) {
+    if (params.spectrum_auto_min.x) {
+        lpf(&grid_min, db + 3.0f, 0.75f, -1);
+    }
 }
 
 void spectrum_clear() {

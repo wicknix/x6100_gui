@@ -36,14 +36,14 @@ static char             str[32];
 
 static void set_state(clock_state_t new_state) {
     state = new_state;
-    
+
     switch (state) {
         case CLOCK_TIME:
             lv_obj_set_style_text_font(obj, &sony_38, 0);
             lv_obj_set_style_pad_ver(obj, 18, 0);
             break;
 
-        case CLOCK_POWER:        
+        case CLOCK_POWER:
             lv_obj_set_style_text_font(obj, &sony_30, 0);
             lv_obj_set_style_pad_ver(obj, 8, 0);
             break;
@@ -84,15 +84,15 @@ static void show_time() {
             timeout = ms + params.clock_tx_timeout * 1000;
         }
     }
-        
+
     switch (state) {
         case CLOCK_TIME:
             now = time(NULL);
             t = localtime(&now);
-            
+
             snprintf(str, sizeof(str), "%02i:%02i:%02i", t->tm_hour, t->tm_min, t->tm_sec);
             break;
-            
+
         case CLOCK_POWER:
             pthread_mutex_lock(&power_mux);
 
@@ -135,28 +135,28 @@ void clock_update_power(float ext, float bat, uint8_t cap) {
 void clock_set_view(clock_view_t x) {
     params_lock();
     params.clock_view = x;
-    params_unlock(&params.durty.clock_view);
+    params_unlock(&params.dirty.clock_view);
     timeout = get_time();
 }
 
 void clock_set_time_timeout(uint8_t sec) {
     params_lock();
     params.clock_time_timeout = sec;
-    params_unlock(&params.durty.clock_time_timeout);
+    params_unlock(&params.dirty.clock_time_timeout);
     timeout = get_time();
 }
 
 void clock_set_power_timeout(uint8_t sec) {
     params_lock();
     params.clock_power_timeout = sec;
-    params_unlock(&params.durty.clock_power_timeout);
+    params_unlock(&params.dirty.clock_power_timeout);
     timeout = get_time();
 }
 
 void clock_set_tx_timeout(uint8_t sec) {
     params_lock();
     params.clock_tx_timeout = sec;
-    params_unlock(&params.durty.clock_tx_timeout);
+    params_unlock(&params.dirty.clock_tx_timeout);
     timeout = get_time();
 }
 

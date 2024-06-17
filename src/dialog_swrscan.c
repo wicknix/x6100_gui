@@ -57,7 +57,7 @@ static void do_init() {
     }
 
     freq_index = 0;
-    freq_center = params_band.vfo_x[params_band.vfo].freq;
+    freq_center = params_band_cur_freq_get();
 
     freq_start = freq_center - params.swrscan_span / 2;
     freq_stop = freq_center + params.swrscan_span / 2;
@@ -264,7 +264,7 @@ void dialog_swrscan_run_cb(lv_event_t * e) {
 void dialog_swrscan_scale_cb(lv_event_t * e) {
     params_lock();
     params.swrscan_linear = !params.swrscan_linear;
-    params_unlock(&params.durty.swrscan_linear);
+    params_unlock(&params.dirty.swrscan_linear);
 
     event_send(chart, LV_EVENT_REFRESH, NULL);
 }
@@ -294,7 +294,7 @@ void dialog_swrscan_span_cb(lv_event_t * e) {
             break;
     }
 
-    params_unlock(&params.durty.swrscan_span);
+    params_unlock(&params.dirty.swrscan_span);
     do_init();
     event_send(chart, LV_EVENT_REFRESH, NULL);
 }

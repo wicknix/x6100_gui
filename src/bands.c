@@ -20,13 +20,13 @@
 
 void bands_activate(band_t *band, uint64_t *freq) {
     params_lock();
-    params_band_save();
+    params_band_save(params.band);
     params.band = band->id;
-    params_band_load();
-    params_unlock(&params.durty.band);
+    params_band_load(params.band);
+    params_unlock(&params.dirty.band);
 
     if (freq) {
-        params_band_freq_set(*freq);
+        params_band_cur_freq_set(*freq);
     }
 
     radio_vfo_set();
@@ -39,7 +39,7 @@ void bands_activate(band_t *band, uint64_t *freq) {
 void bands_change(bool up) {
     band_t band = { .name = NULL };
 
-    if (params_bands_find_next(params_band.vfo_x[params_band.vfo].freq, up, &band)) {
+    if (params_bands_find_next(params_band_cur_freq_get(), up, &band)) {
         bands_activate(&band, NULL);
         radio_load_atu();
         info_params_set();

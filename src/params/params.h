@@ -19,47 +19,8 @@
 #include "../voice.h"
 #include "modulation.h"
 #include "common.h"
-
-
-typedef struct {
-    uint64_t        freq;
-    bool            shift;
-    x6100_att_t     att;
-    x6100_pre_t     pre;
-    x6100_mode_t    mode;
-    x6100_agc_t     agc;
-
-    struct {
-        bool    freq;
-        bool    att;
-        bool    pre;
-        bool    mode;
-        bool    agc;
-    } durty;
-} params_vfo_t;
-
-typedef struct {
-    x6100_vfo_t     vfo;
-
-    params_vfo_t    vfo_x[2];
-
-    bool            split;
-    int16_t         grid_min;
-    int16_t         grid_max;
-    int16_t         rfg;
-    char            label[64];
-
-    /* durty flags */
-
-    struct {
-        bool    vfo;
-        bool    split;
-        bool    grid_min;
-        bool    grid_max;
-        bool    rfg;
-        bool    label;
-    } durty;
-} params_band_t;
+#include "band.h"
+#include "types.h"
 
 typedef enum {
     BUTTONS_DARK = 0,
@@ -93,66 +54,6 @@ typedef enum {
     FREQ_ACCEL_STRONG,
 } freq_accel_t;
 
-/* Params items */
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    bool        x;
-    bool        durty;
-} params_bool_t;
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    float       x;
-    bool        durty;
-} params_float_t;
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    uint8_t     x;
-    uint8_t     min;
-    uint8_t     max;
-    bool        durty;
-} params_uint8_t;
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    int8_t      x;
-    bool        durty;
-} params_int8_t;
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    uint16_t    x;
-    bool        durty;
-} params_uint16_t;
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    int16_t     x;
-    bool        durty;
-} params_int16_t;
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    uint64_t    x;
-    bool        durty;
-} params_uint64_t;
-
-typedef struct {
-    char        *name;
-    char        *voice;
-    char        x[16];
-    uint8_t     max_len;
-    bool        durty;
-} params_str_t;
 
 /* Params */
 
@@ -417,7 +318,7 @@ typedef struct {
 
         bool    play_gain;
         bool    rec_gain;
-    } durty;
+    } dirty;
 } params_t;
 
 typedef struct {
@@ -429,13 +330,12 @@ typedef struct {
         bool        from;
         bool        to;
         bool        shift;
-    } durty;
+    } dirty;
 } transverter_t;
 
 #define TRANSVERTER_NUM 2
 
 extern params_t params;
-extern params_band_t params_band;
 extern transverter_t params_transverter[TRANSVERTER_NUM];
 
 void params_init();
@@ -447,20 +347,10 @@ void params_str_set(params_str_t *var, const char *x);
 
 uint8_t params_uint8_change(params_uint8_t *var, int16_t df);
 
-void params_band_save();
-void params_band_load();
-
-void params_memory_save(uint16_t id);
-void params_memory_load(uint16_t id);
-
-void params_band_freq_set(uint64_t freq);
-
 int32_t params_lo_offset_get();
 
 void params_atu_save(uint32_t val);
 uint32_t params_atu_load(bool *loaded);
-
-void params_band_vfo_clone();
 
 void params_msg_cw_load();
 void params_msg_cw_new(const char *val);

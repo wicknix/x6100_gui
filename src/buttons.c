@@ -358,7 +358,7 @@ static void button_vol_hold_cb(void * ptr) {
 
     params_lock();
     params.vol_modes ^= mask;
-    params_unlock(&params.durty.vol_modes);
+    params_unlock(&params.dirty.vol_modes);
 
     if (params.vol_modes & mask) {
         msg_set_text_fmt("Added to VOL encoder");
@@ -375,7 +375,7 @@ static void button_mfk_hold_cb(void * ptr) {
 
     params_lock();
     params.mfk_modes ^= mask;
-    params_unlock(&params.durty.mfk_modes);
+    params_unlock(&params.dirty.mfk_modes);
 
     if (params.mfk_modes & mask) {
         msg_set_text_fmt("Added to MFK encoder");

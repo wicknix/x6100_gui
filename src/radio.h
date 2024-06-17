@@ -45,11 +45,11 @@ bool radio_check_freq(uint64_t freq, uint64_t *shift);
 uint64_t radio_change_freq(int32_t df, uint64_t *prev_freq);
 
 void radio_set_mode(x6100_vfo_t vfo,  x6100_mode_t mode);
-void radio_restore_mode(x6100_mode_t mode);
+void radio_set_cur_mode(x6100_mode_t mode);
 x6100_mode_t radio_current_mode();
 
 x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo);
-x6100_vfo_t radio_change_vfo();
+x6100_vfo_t radio_toggle_vfo();
 
 uint16_t radio_change_vol(int16_t df);
 uint16_t radio_change_rfg(int16_t df);
@@ -66,7 +66,7 @@ bool radio_change_pre();
 bool radio_change_att();
 void radio_change_agc();
 void radio_change_atu();
-void radio_change_split();
+void radio_toggle_split();
 float radio_change_pwr(int16_t d);
 void radio_set_pwr(float d);
 

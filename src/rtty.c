@@ -328,7 +328,7 @@ float rtty_change_rate(int16_t df) {
             break;
     }
 
-    params_unlock(&params.durty.rtty_rate);
+    params_unlock(&params.dirty.rtty_rate);
     update();
 
     return (float) params.rtty_rate / 100.0f;
@@ -363,7 +363,7 @@ uint16_t rtty_change_shift(int16_t df) {
             break;
     }
 
-    params_unlock(&params.durty.rtty_shift);
+    params_unlock(&params.dirty.rtty_shift);
     update();
 
     return params.rtty_shift;
@@ -376,7 +376,7 @@ uint16_t rtty_change_center(int16_t df) {
 
     params_lock();
     params.rtty_center = limit(align_int(params.rtty_center + df * 10, 10), 800, 1600);
-    params_unlock(&params.durty.rtty_center);
+    params_unlock(&params.dirty.rtty_center);
 
     pthread_mutex_lock(&rtty_mux);
     update_nco();
@@ -392,7 +392,7 @@ bool rtty_change_reverse(int16_t df) {
 
     params_lock();
     params.rtty_reverse = !params.rtty_reverse;
-    params_unlock(&params.durty.rtty_reverse);
+    params_unlock(&params.dirty.rtty_reverse);
 
     return params.rtty_reverse;
 }

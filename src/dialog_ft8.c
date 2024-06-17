@@ -661,7 +661,7 @@ static void * decode_thread(void *arg) {
                     switch (state) {
                         case RX_PROCESS:
                             if (qso == QSO_IDLE) {
-                                send_info("RX %s %02i:%02i:%02i", params_band.label, timestamp.tm_hour, timestamp.tm_min, timestamp.tm_sec);
+                                send_info("RX %s %02i:%02i:%02i", params_band_label_get(), timestamp.tm_hour, timestamp.tm_min, timestamp.tm_sec);
                             }
                             rx_worker(true);
                             break;
@@ -1053,7 +1053,7 @@ static void band_cb(lv_event_t * e) {
 
     params_lock();
     params.ft8_band = band;
-    params_unlock(&params.durty.ft8_band);
+    params_unlock(&params.dirty.ft8_band);
     load_band();
 
     done();
@@ -1249,7 +1249,7 @@ static void construct_cb(lv_obj_t *parent) {
 static void show_all_cb(lv_event_t * e) {
     params_lock();
     params.ft8_show_all = false;
-    params_unlock(&params.durty.ft8_show_all);
+    params_unlock(&params.dirty.ft8_show_all);
 
     buttons_load(0, &button_show_cq);
 }
@@ -1257,7 +1257,7 @@ static void show_all_cb(lv_event_t * e) {
 static void show_cq_cb(lv_event_t * e) {
     params_lock();
     params.ft8_show_all = true;
-    params_unlock(&params.durty.ft8_show_all);
+    params_unlock(&params.dirty.ft8_show_all);
 
     buttons_load(0, &button_show_all);
 }
@@ -1265,7 +1265,7 @@ static void show_cq_cb(lv_event_t * e) {
 static void mode_ft8_cb(lv_event_t * e) {
     params_lock();
     params.ft8_protocol = PROTO_FT4;
-    params_unlock(&params.durty.ft8_protocol);
+    params_unlock(&params.dirty.ft8_protocol);
 
     buttons_load(1, &button_mode_ft4);
 
@@ -1278,7 +1278,7 @@ static void mode_ft8_cb(lv_event_t * e) {
 static void mode_ft4_cb(lv_event_t * e) {
     params_lock();
     params.ft8_protocol = PROTO_FT8;
-    params_unlock(&params.durty.ft8_protocol);
+    params_unlock(&params.dirty.ft8_protocol);
 
     buttons_load(1, &button_mode_ft8);
 

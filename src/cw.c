@@ -201,7 +201,7 @@ bool cw_change_decoder(int16_t df) {
 
     params_lock();
     params.cw_decoder = !params.cw_decoder;
-    params_unlock(&params.durty.cw_decoder);
+    params_unlock(&params.dirty.cw_decoder);
 
     pannel_visible();
 
@@ -223,7 +223,7 @@ float cw_change_snr(int16_t df) {
 
     params_lock();
     params.cw_decoder_snr = x;
-    params_unlock(&params.durty.cw_decoder_snr);
+    params_unlock(&params.dirty.cw_decoder_snr);
 
     return params.cw_decoder_snr;
 }
@@ -243,7 +243,7 @@ float cw_change_peak_beta(int16_t df) {
 
     params_lock();
     params.cw_decoder_peak_beta = x;
-    params_unlock(&params.durty.cw_decoder_peak_beta);
+    params_unlock(&params.dirty.cw_decoder_peak_beta);
 
     return params.cw_decoder_peak_beta;
 }
@@ -263,7 +263,7 @@ float cw_change_noise_beta(int16_t df) {
 
     params_lock();
     params.cw_decoder_noise_beta = x;
-    params_unlock(&params.durty.cw_decoder_noise_beta);
+    params_unlock(&params.dirty.cw_decoder_noise_beta);
 
     return params.cw_decoder_noise_beta;
 }

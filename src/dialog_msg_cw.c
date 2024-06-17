@@ -236,7 +236,7 @@ void dialog_msg_cw_period_cb(lv_event_t * e) {
             break;
     }
 
-    params_unlock(&params.durty.cw_encoder_period);
+    params_unlock(&params.dirty.cw_encoder_period);
     msg_set_text_fmt("Beacon period: %i s", params.cw_encoder_period);
 }
 

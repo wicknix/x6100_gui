@@ -326,7 +326,7 @@ static void backlight_timeout_update_cb(lv_event_t * e) {
 
     params_lock();
     params.brightness_timeout = lv_spinbox_get_value(obj);
-    params_unlock(&params.durty.brightness_timeout);
+    params_unlock(&params.dirty.brightness_timeout);
 
     backlight_tick();
 }
@@ -336,11 +336,11 @@ static void backlight_brightness_update_cb(lv_event_t * e) {
 
     params_lock();
     params.brightness_normal = lv_slider_get_value(obj);
-    params_unlock(&params.durty.brightness_normal);
+    params_unlock(&params.dirty.brightness_normal);
 
     params_lock();
     params.brightness_idle = lv_slider_get_left_value(obj);
-    params_unlock(&params.durty.brightness_idle);
+    params_unlock(&params.dirty.brightness_idle);
 
     backlight_set_brightness(params.brightness_normal);
 }
@@ -693,32 +693,32 @@ static void long_action_update_cb(lv_event_t * e) {
     switch (*i) {
         case 0:
             params.long_gen = val;
-            params_unlock(&params.durty.long_gen);
+            params_unlock(&params.dirty.long_gen);
             break;
 
         case 1:
             params.long_app = val;
-            params_unlock(&params.durty.long_app);
+            params_unlock(&params.dirty.long_app);
             break;
 
         case 2:
             params.long_key = val;
-            params_unlock(&params.durty.long_key);
+            params_unlock(&params.dirty.long_key);
             break;
 
         case 3:
             params.long_msg = val;
-            params_unlock(&params.durty.long_msg);
+            params_unlock(&params.dirty.long_msg);
             break;
 
         case 4:
             params.long_dfn = val;
-            params_unlock(&params.durty.long_dfn);
+            params_unlock(&params.dirty.long_dfn);
             break;
 
         case 5:
             params.long_dfl = val;
-            params_unlock(&params.durty.long_dfl);
+            params_unlock(&params.dirty.long_dfl);
             break;
     }
 }
@@ -811,22 +811,22 @@ static void hmic_action_update_cb(lv_event_t * e) {
     switch (*i) {
         case 0:
             params.press_f1 = val;
-            params_unlock(&params.durty.press_f1);
+            params_unlock(&params.dirty.press_f1);
             break;
 
         case 1:
             params.press_f2 = val;
-            params_unlock(&params.durty.press_f2);
+            params_unlock(&params.dirty.press_f2);
             break;
 
         case 2:
             params.long_f1 = val;
-            params_unlock(&params.durty.long_f1);
+            params_unlock(&params.dirty.long_f1);
             break;
 
         case 3:
             params.long_f2 = val;
-            params_unlock(&params.durty.long_f2);
+            params_unlock(&params.dirty.long_f2);
             break;
     }
 }
@@ -901,7 +901,7 @@ static void play_gain_update_cb(lv_event_t * e) {
 
     params_lock();
     params.play_gain = lv_slider_get_value(obj);
-    params_unlock(&params.durty.play_gain);
+    params_unlock(&params.dirty.play_gain);
 }
 
 static void rec_gain_update_cb(lv_event_t * e) {
@@ -909,7 +909,7 @@ static void rec_gain_update_cb(lv_event_t * e) {
 
     params_lock();
     params.rec_gain = lv_slider_get_value(obj);
-    params_unlock(&params.durty.rec_gain);
+    params_unlock(&params.dirty.rec_gain);
 }
 
 static uint8_t make_audio_gain(uint8_t row) {
@@ -973,7 +973,7 @@ static void transverter_from_update_cb(lv_event_t * e) {
 
     params_lock();
     transverter->from = lv_spinbox_get_value(obj) * 1000000L;
-    params_unlock(&transverter->durty.from);
+    params_unlock(&transverter->dirty.from);
 }
 
 static void transverter_to_update_cb(lv_event_t * e) {
@@ -982,7 +982,7 @@ static void transverter_to_update_cb(lv_event_t * e) {
 
     params_lock();
     transverter->to = lv_spinbox_get_value(obj) * 1000000L;
-    params_unlock(&transverter->durty.to);
+    params_unlock(&transverter->dirty.to);
 }
 
 static void transverter_shift_update_cb(lv_event_t * e) {
@@ -991,7 +991,7 @@ static void transverter_shift_update_cb(lv_event_t * e) {
 
     params_lock();
     transverter->shift = lv_spinbox_get_value(obj) * 1000000L;
-    params_unlock(&transverter->durty.shift);
+    params_unlock(&transverter->dirty.shift);
 }
 
 static uint8_t make_transverter(uint8_t row, uint8_t n) {

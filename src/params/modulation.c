@@ -28,11 +28,11 @@
  *  Radio modes params (SSB, CW, etc)
  *********************/
 typedef struct {
-    int32_param_t         filter_low;
-    int32_param_t         filter_high;
+    params_int32_t         filter_low;
+    params_int32_t         filter_high;
 
-    uint16_param_t        freq_step;
-    int16_param_t         spectrum_factor;
+    params_uint16_t        freq_step;
+    params_int16_t         spectrum_factor;
 } params_mode_t;
 
 static get_lo_offset_t get_lo_offset = NULL;
@@ -132,7 +132,7 @@ uint32_t params_mode_filter_high_get(x6100_mode_t mode) {
 }
 uint32_t params_mode_filter_high_set(x6100_mode_t mode, int32_t val) {
     params_mode_t *mode_params = get_params_by_mode(mode);
-    int32_param_t *param = &mode_params->filter_high;
+    params_int32_t *param = &mode_params->filter_high;
     uint32_t lo_offset = LV_ABS(get_lo_offset());
     switch (mode) {
         case x6100_mode_cw:
@@ -175,7 +175,7 @@ uint32_t params_mode_filter_low_set(x6100_mode_t mode, int32_t val) {
             }
             return params_mode_filter_low_get(mode);
         default:;
-            int32_param_t *param = &mode_params->filter_low;
+            params_int32_t *param = &mode_params->filter_low;
             params_lock();
             if ((val != param->x) & (val >= 0) & (val < mode_params->filter_high.x)) {
                 param->x = val;
@@ -193,8 +193,8 @@ uint32_t params_mode_filter_bw_get(x6100_mode_t mode) {
 uint32_t params_mode_filter_bw_set(x6100_mode_t mode, int32_t val) {
     int32_t change;
     params_mode_t *mode_params = get_params_by_mode(mode);
-    int32_param_t *l_param = &mode_params->filter_low;
-    int32_param_t *h_param = &mode_params->filter_high;
+    params_int32_t *l_param = &mode_params->filter_low;
+    params_int32_t *h_param = &mode_params->filter_high;
     params_lock();
     int32_t cur_bw = h_param->x - l_param->x;
     change = (val - cur_bw) / 2;
@@ -222,7 +222,7 @@ uint16_t params_mode_freq_step_get(x6100_mode_t mode) {
     return get_params_by_mode(mode)->freq_step.x;
 }
 uint16_t params_mode_freq_step_set(x6100_mode_t mode, uint16_t val) {
-    uint16_param_t *param = &get_params_by_mode(mode)->freq_step;
+    params_uint16_t *param = &get_params_by_mode(mode)->freq_step;
     params_lock();
     if (val != param->x) {
         param->x = val;
@@ -237,7 +237,7 @@ int16_t params_mode_spectrum_factor_get(x6100_mode_t mode) {
 }
 
 int16_t params_mode_spectrum_factor_set(x6100_mode_t mode, int16_t val) {
-    int16_param_t *param = &get_params_by_mode(mode)->spectrum_factor;
+    params_int16_t *param = &get_params_by_mode(mode)->spectrum_factor;
     params_lock();
     if ((val != param->x) & (val >= 1) & (val <= 4)) {
         param->x = val;

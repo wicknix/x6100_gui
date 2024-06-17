@@ -22,9 +22,6 @@
 
 #define PX_BYTES    4
 
-float                   waterfall_auto_min;
-float                   waterfall_auto_max;
-
 static lv_obj_t         *obj;
 static lv_obj_t         *img;
 
@@ -36,8 +33,8 @@ static lv_coord_t       width;
 static lv_coord_t       height;
 static int32_t          width_hz = 100000;
 
-static int              grid_min = -70;
-static int              grid_max = -40;
+static float            grid_min = -70;
+static float            grid_max = -40;
 
 static lv_img_dsc_t     *frame;
 static lv_color_t       palette[256];
@@ -96,14 +93,11 @@ void waterfall_data(float *data_buf, uint16_t size) {
 
     scroll_down();
 
-    float min = params.waterfall_auto_min.x ? waterfall_auto_min + 3.0f : grid_min;
-    float max = params.waterfall_auto_max.x ? waterfall_auto_max + 3.0f : grid_max;
-
     int16_t offset = params_lo_offset_get() * width  / width_hz;
 
     for (int x = 0; x < width; x++) {
         uint16_t    index = x * size / width;
-        float       v = (data_buf[index] - min) / (max - min);
+        float       v = (data_buf[index] - grid_min) / (grid_max - grid_min);
 
         if (v < 0.0f) {
             v = 0.0f;
@@ -199,40 +193,32 @@ void waterfall_clear() {
 }
 
 void waterfall_band_set() {
-    grid_min = params_band.grid_min;
-    grid_max = params_band.grid_max;
+    grid_min = params_band_grid_min_get();
+    grid_max = params_band_grid_max_get();
 }
 
-void waterfall_change_max(int16_t d) {
-    int16_t x = params_band.grid_max + d;
-
-    if (x > S9_40) {
-        x = S9_40;
-    } else if (x < S8) {
-        x = S8;
+void waterfall_set_max(float db) {
+    if (!params.waterfall_auto_max.x) {
+        grid_max = db;
     }
-
-    params_lock();
-    params_band.grid_max = x;
-    params_unlock(&params_band.durty.grid_max);
-
-    grid_max = x;
 }
 
-void waterfall_change_min(int16_t d) {
-    int16_t x = params_band.grid_min + d;
-
-    if (x > S7) {
-        x = S7;
-    } else if (x < S_MIN) {
-        x = S_MIN;
+void waterfall_set_min(float db) {
+    if (!params.waterfall_auto_min.x) {
+        grid_min = db;
     }
+}
 
-    params_lock();
-    params_band.grid_min = x;
-    params_unlock(&params_band.durty.grid_min);
+void waterfall_update_max(float db) {
+    if (params.waterfall_auto_max.x) {
+        lpf(&grid_max, db + 3.0f, 0.85f, -1);
+    }
+}
 
-    grid_min = x;
+void waterfall_update_min(float db) {
+    if (params.waterfall_auto_min.x) {
+        lpf(&grid_min, db + 3.0f, 0.95f, -1);
+    }
 }
 
 void waterfall_change_freq(int64_t df) {

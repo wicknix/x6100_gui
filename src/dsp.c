@@ -291,18 +291,15 @@ static void dsp_calc_auto(float *data_buf, uint16_t size) {
     }
 
     if (auto_clear) {
-        spectrum_auto_min = min;
-        spectrum_auto_max = max;
-
-        waterfall_auto_min = min;
-        waterfall_auto_max = max;
-
+        spectrum_set_min(min);
+        spectrum_set_max(max);
+        waterfall_set_min(min);
+        waterfall_set_max(max);
         auto_clear = false;
     } else {
-        lpf(&spectrum_auto_min, min, 0.75f, -1);
-        lpf(&spectrum_auto_max, max, 0.55f, -1);
-
-        lpf(&waterfall_auto_min, min, 0.95f, -1);
-        lpf(&waterfall_auto_max, max, 0.85f, -1);
+        spectrum_update_min(min);
+        spectrum_update_max(max);
+        waterfall_update_min(min);
+        waterfall_update_max(max);
     }
 }

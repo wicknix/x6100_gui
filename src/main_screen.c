@@ -72,7 +72,7 @@ static void freq_update();
 void mem_load(uint16_t id) {
     params_memory_load(id);
 
-    if (params_bands_find(params_band.vfo_x[params_band.vfo].freq, &params.freq_band)) {
+    if (params_bands_find(params_band_cur_freq_get(), &params.freq_band)) {
         if (params.freq_band.type != 0) {
             params.band = params.freq_band.id;
         } else {
@@ -97,8 +97,9 @@ void mem_load(uint16_t id) {
     dsp_auto_clear();
     freq_update();
 
-    if (strlen(params_band.label) > 0) {
-        msg_set_text_fmt("%s", params_band.label);
+    const char * label = params_band_label_get();
+    if (strlen(label) > 0) {
+        msg_set_text_fmt("%s", label);
     } else if (id <= MEM_NUM) {
         msg_set_text_fmt("Loaded from memory %i", id);
     }
@@ -116,14 +117,14 @@ void mem_save(uint16_t id) {
 
 static void freq_update() {
     uint64_t    f;
-    x6100_vfo_t vfo = params_band.vfo;
+    x6100_vfo_t vfo = params_band_vfo_get();
     uint32_t    color = freq_lock ? 0xBBBBBB : 0xFFFFFF;
 
-    if (params_band.split && radio_get_state() == RADIO_TX) {
+    if (params_band_split_get() && radio_get_state() == RADIO_TX) {
         vfo = (vfo == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A;
     }
 
-    f = params_band.vfo_x[vfo].freq;
+    f = params_band_vfo_freq_get(vfo);
 
     uint16_t    mhz, khz, hz;
 
@@ -140,9 +141,9 @@ static void freq_update() {
         }
     }
 
-    if (params_band.split) {
+    if (params_band_split_get()) {
         uint16_t    mhz2, khz2, hz2;
-        uint64_t    f2 = params_band.vfo_x[(vfo == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A].freq;
+        uint64_t    f2 = params_band_vfo_freq_get((vfo == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A);
 
         split_freq(f2, &mhz2, &khz2, &hz2);
 
@@ -161,7 +162,7 @@ static void check_cross_band(uint64_t freq, uint64_t prev_freq) {
     if (params_bands_find(freq, &params.freq_band)) {
         if (params.freq_band.type != 0) {
             if (params.freq_band.id != params.band) {
-                params_band_freq_set(prev_freq);
+                params_band_cur_freq_set(prev_freq);
                 bands_activate(&params.freq_band, &freq);
                 info_params_set();
                 pannel_visible();
@@ -422,7 +423,7 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
         }
     }
 
-    radio_set_mode(params_band.vfo, next_mode);
+    radio_set_mode(params_band_vfo_get(), next_mode);
     radio_mode_setup();
     spectrum_mode_setup();
     info_params_set();
@@ -435,7 +436,7 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
 
 static void main_screen_keypad_cb(lv_event_t * e) {
     event_keypad_t *keypad = lv_event_get_param(e);
-    uint64_t prev_freq = params_band.vfo_x[params_band.vfo].freq;
+    uint64_t prev_freq = params_band_cur_freq_get();
 
     switch (keypad->key) {
         case KEYPAD_PRE:
@@ -493,7 +494,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                     msg_tiny_set_text_fmt("AGC: %s", info_params_agc());
                 }
             } else if (keypad->state == KEYPAD_LONG) {
-                radio_change_split();
+                radio_toggle_split();
                 info_params_set();
                 waterfall_clear();
                 spectrum_clear();
@@ -655,9 +656,9 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
         case KEYPAD_AB:
             if (keypad->state == KEYPAD_RELEASE) {
-                radio_change_vfo();
+                radio_toggle_vfo();
                 info_params_set();
-                waterfall_change_freq(params_band.vfo_x[params_band.vfo].freq - prev_freq);
+                waterfall_change_freq(params_band_cur_freq_get() - prev_freq);
                 spectrum_clear();
                 dsp_auto_clear();
                 main_screen_band_set();
@@ -666,10 +667,11 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                     msg_tiny_set_text_fmt("%s", info_params_vfo());
                 }
             } else if (keypad->state == KEYPAD_LONG) {
+                x6100_vfo_t cur_vfo = params_band_vfo_get();
                 params_band_vfo_clone();
                 radio_vfo_set();
-                msg_set_text_fmt("Clone VFO %s", params_band.vfo == X6100_VFO_A ? "A->B" : "B->A");
-                voice_say_text_fmt("V F O cloned %s", params_band.vfo == X6100_VFO_A ? "from A to B" : "from B to A");
+                msg_set_text_fmt("Clone VFO %s", cur_vfo == X6100_VFO_A ? "A->B" : "B->A");
+                voice_say_text_fmt("V F O cloned %s", cur_vfo == X6100_VFO_A ? "from A to B" : "from B to A");
             }
             break;
 
@@ -767,7 +769,7 @@ static void main_screen_hkey_cb(lv_event_t * e) {
 
         case HKEY_XFC:
             if (hkey->state == HKEY_RELEASE) {
-                radio_change_vfo();
+                radio_toggle_vfo();
                 info_params_set();
                 waterfall_clear();
                 spectrum_clear();
@@ -828,7 +830,7 @@ static void main_screen_hkey_cb(lv_event_t * e) {
 static void main_screen_radio_cb(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
 
-    if (params_band.split) {
+    if (params_band_split_get()) {
         freq_update();
     }
 
@@ -1068,13 +1070,12 @@ void main_screen_lock_mode(bool lock) {
 }
 
 void main_screen_set_freq(uint64_t freq) {
-    x6100_vfo_t vfo = params_band.vfo;
-    uint64_t    prev_freq = params_band.vfo_x[vfo].freq;
+    uint64_t    prev_freq = params_band_cur_freq_get();
 
     if (params_bands_find(freq, &params.freq_band)) {
         if (params.freq_band.type != 0) {
             if (params.freq_band.id != params.band) {
-                params_band_freq_set(prev_freq);
+                params_band_cur_freq_set(prev_freq);
                 bands_activate(&params.freq_band, &freq);
                 info_params_set();
                 pannel_visible();
