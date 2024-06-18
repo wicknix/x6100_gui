@@ -308,12 +308,17 @@ void spectrum_set_min(float db) {
 void spectrum_update_max(float db) {
     if (params.spectrum_auto_max.x) {
         lpf(&grid_max, db + 10.0f, 0.55f, DEFAULT_MAX);
+    } else {
+        // TODO: set min/max at param change
+        grid_max = params_band_grid_max_get();
     }
 }
 
 void spectrum_update_min(float db) {
     if (params.spectrum_auto_min.x) {
         lpf(&grid_min, db + 3.0f, 0.75f, DEFAULT_MIN);
+    } else {
+        grid_min = params_band_grid_min_get();
     }
 }
 

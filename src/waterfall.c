@@ -189,7 +189,6 @@ void draw_middle_line() {
     lv_obj_add_event_cb(obj, middle_line_cb, LV_EVENT_DRAW_POST_END, NULL);
 }
 
-
 void waterfall_clear() {
     waterfall_min_max_reset();
     memset(waterfall_cache, 0, frame->data_size);
@@ -225,12 +224,17 @@ void waterfall_set_min(float db) {
 void waterfall_update_max(float db) {
     if (params.waterfall_auto_max.x) {
         lpf(&grid_max, db + 3.0f, 0.85f, DEFAULT_MAX);
+    } else {
+        // TODO: set min/max at param change
+        grid_max = params_band_grid_max_get();
     }
 }
 
 void waterfall_update_min(float db) {
     if (params.waterfall_auto_min.x) {
         lpf(&grid_min, db + 3.0f, 0.95f, DEFAULT_MIN);
+    } else {
+        grid_min = params_band_grid_min_get();
     }
 }
 
