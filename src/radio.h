@@ -104,7 +104,7 @@ bool radio_start_swrscan();
 void radio_stop_swrscan();
 
 void radio_vfo_set();
-void radio_mode_setup();
+void radio_filters_setup();
 
 void radio_filter_get(int32_t *from_freq, int32_t *to_freq);
 void radio_poweroff();

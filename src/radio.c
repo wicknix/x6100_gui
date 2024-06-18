@@ -67,8 +67,7 @@ bool radio_tick() {
             delay = 0;
             clock_update_power(pack->vext * 0.1f, pack->vbat*0.1f, pack->batcap);
         }
-
-        dsp_samples(pack->samples, RADIO_SAMPLES);
+        dsp_samples(pack->samples, RADIO_SAMPLES, pack->flag.tx);
 
         switch (state) {
             case RADIO_RX:
@@ -193,7 +192,7 @@ void radio_vfo_set() {
     params_bands_find(params_band_cur_freq_get(), &params.freq_band);
 }
 
-void radio_mode_setup() {
+void radio_filters_setup() {
     x6100_mode_t    mode = radio_current_mode();
     int32_t low, high;
     params_current_mode_filter_get(&low, &high);
@@ -235,7 +234,7 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb, radio_st
     pack = malloc(sizeof(x6100_flow_t));
 
     radio_vfo_set();
-    radio_mode_setup();
+    radio_filters_setup();
     radio_load_atu();
 
     x6100_control_rxvol_set(params.vol);

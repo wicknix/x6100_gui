@@ -13,10 +13,10 @@
 
 #include "lvgl/lvgl.h"
 
-lv_obj_t * spectrum_init(lv_obj_t * parent);
-void spectrum_data(float *data_buf, uint16_t size);
-void spectrum_band_set();
-void spectrum_mode_setup();
+lv_obj_t * spectrum_init(lv_obj_t * parent, uint8_t factor);
+void spectrum_data(float *data_buf, uint16_t size, bool tx);
+void spectrum_min_max_reset();
+void spectrum_zoom_factor_set(uint8_t val);
 
 float spectrum_get_min();
 void spectrum_set_max(float db);

@@ -30,10 +30,10 @@ void bands_activate(band_t *band, uint64_t *freq) {
     }
 
     radio_vfo_set();
-    radio_mode_setup();
-    spectrum_mode_setup();
-    spectrum_band_set();
-    waterfall_band_set();
+    radio_filters_setup();
+    spectrum_zoom_factor_set(params_current_mode_spectrum_factor_get());
+    spectrum_min_max_reset();
+    waterfall_min_max_reset();
 }
 
 void bands_change(bool up) {
@@ -47,7 +47,6 @@ void bands_change(bool up) {
 
         waterfall_clear();
         spectrum_clear();
-        dsp_auto_clear();
         main_screen_band_set();
 
         voice_say_text_fmt("Band %s", band.name);

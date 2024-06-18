@@ -95,10 +95,10 @@ int main(void) {
     vol_change_mode(0);
     styles_init();
 
+    dsp_init(params_current_mode_spectrum_factor_get());
     lv_obj_t *main_obj = main_screen();
 
     cw_init();
-    dsp_init();
     rtty_init();
     radio_init(
         &main_screen_notify_tx,

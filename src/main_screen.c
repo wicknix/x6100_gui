@@ -83,10 +83,10 @@ void mem_load(uint16_t id) {
     }
 
     radio_vfo_set();
-    radio_mode_setup();
-    spectrum_mode_setup();
-    spectrum_band_set();
-    waterfall_band_set();
+    radio_filters_setup();
+    spectrum_zoom_factor_set(params_current_mode_spectrum_factor_get());
+    spectrum_min_max_reset();
+    waterfall_min_max_reset();
 
     radio_load_atu();
     info_params_set();
@@ -94,7 +94,6 @@ void mem_load(uint16_t id) {
 
     waterfall_clear();
     spectrum_clear();
-    dsp_auto_clear();
     freq_update();
 
     const char * label = params_band_label_get();
@@ -424,8 +423,8 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
     }
 
     radio_set_mode(params_band_vfo_get(), next_mode);
-    radio_mode_setup();
-    spectrum_mode_setup();
+    radio_filters_setup();
+    spectrum_zoom_factor_set(params_current_mode_spectrum_factor_get());
     info_params_set();
     pannel_visible();
 
@@ -498,7 +497,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                 info_params_set();
                 waterfall_clear();
                 spectrum_clear();
-                dsp_auto_clear();
                 main_screen_band_set();
 
                 if (params.mag_info.x) {
@@ -660,7 +658,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                 info_params_set();
                 waterfall_change_freq(params_band_cur_freq_get() - prev_freq);
                 spectrum_clear();
-                dsp_auto_clear();
                 main_screen_band_set();
 
                 if (params.mag_info.x) {
@@ -773,7 +770,6 @@ static void main_screen_hkey_cb(lv_event_t * e) {
                 info_params_set();
                 waterfall_clear();
                 spectrum_clear();
-                dsp_auto_clear();
                 main_screen_band_set();
             }
             break;
@@ -847,7 +843,6 @@ static void main_screen_update_cb(lv_event_t * e) {
 
     waterfall_clear();
     spectrum_clear();
-    dsp_auto_clear();
 }
 
 static void main_screen_atu_update_cb(lv_event_t * e) {
@@ -1103,13 +1098,13 @@ lv_obj_t * main_screen() {
     lv_obj_add_style(obj, &background_style, LV_PART_MAIN);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
 
-    spectrum = spectrum_init(obj);
+    spectrum = spectrum_init(obj, params_current_mode_spectrum_factor_get());
     main_screen_keys_enable(true);
 
     lv_obj_add_event_cb(spectrum, spectrum_key_cb, LV_EVENT_KEY, NULL);
     lv_obj_add_event_cb(spectrum, spectrum_pressed_cb, LV_EVENT_PRESSED, NULL);
 
-    spectrum_band_set();
+    spectrum_min_max_reset();
 
     lv_obj_set_y(spectrum, y);
     lv_obj_set_height(spectrum, spectrum_height);
@@ -1140,7 +1135,7 @@ lv_obj_t * main_screen() {
 
     waterfall = waterfall_init(obj);
 
-    waterfall_band_set();
+    waterfall_min_max_reset();
 
     lv_obj_set_y(waterfall, y);
     waterfall_set_height(480 - y);

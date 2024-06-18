@@ -21,6 +21,8 @@
 #include "util.h"
 
 #define PX_BYTES    4
+#define DEFAULT_MIN S1
+#define DEFAULT_MAX S9
 
 static lv_obj_t         *obj;
 static lv_obj_t         *img;
@@ -33,8 +35,8 @@ static lv_coord_t       width;
 static lv_coord_t       height;
 static int32_t          width_hz = 100000;
 
-static float            grid_min = -70;
-static float            grid_max = -40;
+static float            grid_min = DEFAULT_MIN;
+static float            grid_max = DEFAULT_MAX;
 
 static lv_img_dsc_t     *frame;
 static lv_color_t       palette[256];
@@ -47,12 +49,8 @@ static int              *x_offsets;
 static uint16_t         last_row_id;
 static uint8_t          *waterfall_cache;
 
-static uint8_t          *frame_buf;
-static size_t           buf_offset;
-
-lv_img_dsc_t* img_2buf_alloc(lv_coord_t w, lv_coord_t h, lv_img_cf_t cf);
 void draw_middle_line();
-void redraw();
+void redraw_cb(lv_event_t * e);
 
 
 lv_obj_t * waterfall_init(lv_obj_t * parent) {
@@ -80,7 +78,7 @@ static void scroll_lr(int16_t px) {
     }
 }
 
-void waterfall_data(float *data_buf, uint16_t size) {
+void waterfall_data(float *data_buf, uint16_t size, bool tx) {
     if (delay)
     {
         delay--;
@@ -92,12 +90,20 @@ void waterfall_data(float *data_buf, uint16_t size) {
     }
 
     scroll_down();
+    float min, max;
+    if (tx) {
+        min = DEFAULT_MIN;
+        max = DEFAULT_MAX;
+    } else {
+        min = grid_min;
+        max = grid_max;
+    }
 
     int16_t offset = params_lo_offset_get() * width  / width_hz;
 
     for (int x = 0; x < width; x++) {
         uint16_t    index = x * size / width;
-        float       v = (data_buf[index] - grid_min) / (grid_max - grid_min);
+        float       v = (data_buf[index] - min) / (max - min);
 
         if (v < 0.0f) {
             v = 0.0f;
@@ -109,8 +115,7 @@ void waterfall_data(float *data_buf, uint16_t size) {
         memcpy(&waterfall_cache[(last_row_id * width + width - 1 - x) * PX_BYTES], &palette[id], PX_BYTES);
         x_offsets[last_row_id] = offset;
     }
-
-    redraw();
+    event_send(img, LV_EVENT_REFRESH, NULL);
 }
 
 static void do_scroll_cb(lv_event_t * event) {
@@ -127,7 +132,7 @@ static void do_scroll_cb(lv_event_t * event) {
     }
     scroll_lr(px);
     scroll_hor -= px;
-    redraw();
+    event_send(img, LV_EVENT_REFRESH, NULL);
 }
 
 void waterfall_set_height(lv_coord_t h) {
@@ -140,9 +145,7 @@ void waterfall_set_height(lv_coord_t h) {
     width = 800;
     height = lv_obj_get_height(obj);
 
-    frame = img_2buf_alloc(width, height, LV_IMG_CF_TRUE_COLOR);
-    frame_buf = frame->data;
-    buf_offset = 0;
+    frame = lv_img_buf_alloc(width, height, LV_IMG_CF_TRUE_COLOR);
 
     styles_waterfall_palette(palette, 256);
 
@@ -159,8 +162,9 @@ void waterfall_set_height(lv_coord_t h) {
     memset(waterfall_cache, 0, frame->data_size);
 
     lv_obj_add_event_cb(img, do_scroll_cb, LV_EVENT_DRAW_POST_END, NULL);
+    lv_obj_add_event_cb(img, redraw_cb, LV_EVENT_DRAW_MAIN_BEGIN, NULL);
 
-    waterfall_band_set();
+    waterfall_min_max_reset();
     band_info_init(obj);
     draw_middle_line();
 }
@@ -187,14 +191,23 @@ void draw_middle_line() {
 
 
 void waterfall_clear() {
+    waterfall_min_max_reset();
     memset(waterfall_cache, 0, frame->data_size);
     scroll_hor = 0;
     scroll_hor_surplus = 0;
 }
 
-void waterfall_band_set() {
-    grid_min = params_band_grid_min_get();
-    grid_max = params_band_grid_max_get();
+void waterfall_min_max_reset() {
+    if (params.waterfall_auto_min.x) {
+        grid_min = DEFAULT_MIN;
+    } else {
+        grid_min = params_band_grid_min_get();
+    }
+    if (params.waterfall_auto_max.x) {
+        grid_max = DEFAULT_MAX;
+    } else {
+        grid_max = params_band_grid_max_get();
+    }
 }
 
 void waterfall_set_max(float db) {
@@ -211,13 +224,13 @@ void waterfall_set_min(float db) {
 
 void waterfall_update_max(float db) {
     if (params.waterfall_auto_max.x) {
-        lpf(&grid_max, db + 3.0f, 0.85f, -1);
+        lpf(&grid_max, db + 3.0f, 0.85f, DEFAULT_MAX);
     }
 }
 
 void waterfall_update_min(float db) {
     if (params.waterfall_auto_min.x) {
-        lpf(&grid_min, db + 3.0f, 0.95f, -1);
+        lpf(&grid_min, db + 3.0f, 0.95f, DEFAULT_MIN);
     }
 }
 
@@ -231,14 +244,12 @@ void waterfall_change_freq(int64_t df) {
     scroll_hor_surplus = df % hz_per_pixel;
 }
 
-void redraw() {
+void redraw_cb(lv_event_t * e) {
     int x_offset;
     size_t copy_n, copy_src, copy_dst;
     size_t clean_n, clean_from;
 
-    buf_offset = buf_offset == 0 ? frame->data_size : 0;
-
-    uint8_t * temp_buf = frame_buf + buf_offset;
+    uint8_t * temp_buf = frame->data;
 
     for (size_t i = 0; i < height; i++) {
         x_offset = x_offsets[i];
@@ -276,38 +287,4 @@ void redraw() {
             );
         }
     }
-    frame->data = temp_buf;
-    event_send(img, LV_EVENT_REFRESH, NULL);
-}
-
-
-lv_img_dsc_t* img_2buf_alloc(lv_coord_t w, lv_coord_t h, lv_img_cf_t cf) {
-    /*Allocate image descriptor*/
-    lv_img_dsc_t * dsc = lv_mem_alloc(sizeof(lv_img_dsc_t));
-    if(dsc == NULL)
-        return NULL;
-
-    lv_memset_00(dsc, sizeof(lv_img_dsc_t));
-
-    /*Get image data size*/
-    dsc->data_size = lv_img_buf_get_img_size(w, h, cf);
-    if(dsc->data_size == 0) {
-        lv_mem_free(dsc);
-        return NULL;
-    }
-
-    /*Allocate raw buffer*/
-    dsc->data = lv_mem_alloc(dsc->data_size * 2);
-    if(dsc->data == NULL) {
-        lv_mem_free(dsc);
-        return NULL;
-    }
-    lv_memset_00((uint8_t *)dsc->data, dsc->data_size * 2);
-
-    /*Fill in header*/
-    dsc->header.always_zero = 0;
-    dsc->header.w = w;
-    dsc->header.h = h;
-    dsc->header.cf = cf;
-    return dsc;
 }

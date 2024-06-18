@@ -65,16 +65,16 @@ void mfk_update(int16_t diff, bool voice) {
             }
             break;
 
-        case MFK_SPECTRUM_FACTOR:;
-            int16_t factor = params_current_mode_spectrum_factor_get();
+        case MFK_SPECTRUM_FACTOR:
+            i = params_current_mode_spectrum_factor_get();
             if (diff != 0) {
-                factor = params_current_mode_spectrum_factor_set(factor + diff);
-                spectrum_mode_setup();
+                i = params_current_mode_spectrum_factor_set(i + diff);
+                spectrum_zoom_factor_set(i);
             }
-            msg_set_text_fmt("#%3X Spectrum zoom: x%i", color, factor);
+            msg_set_text_fmt("#%3X Spectrum zoom: x%i", color, i);
 
             if (diff) {
-                voice_say_int("Spectrum zoom", factor);
+                voice_say_int("Spectrum zoom", i);
             } else if (voice) {
                 voice_say_text_fmt("Spectrum zoom");
             }
