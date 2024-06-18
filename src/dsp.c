@@ -63,7 +63,7 @@ static void dsp_update_min_max(float *data_buf, uint16_t size);
 /* * */
 
 void dsp_init(uint8_t factor) {
-    dc_block = iirfilt_cccf_create_dc_blocker(0.05f);
+    dc_block = iirfilt_cccf_create_dc_blocker(0.005f);
 
     spectrum_sg_rx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, nfft, nfft / 4);
     spgramcf_set_alpha(spectrum_sg_rx, 0.2f);
