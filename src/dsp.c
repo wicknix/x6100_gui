@@ -284,20 +284,12 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
         min_max_delay--;
         return;
     }
-
-    float       min = 0;
-    float       max = 0;
-    uint16_t    window = 30;
-
     qsort(data_buf, size, sizeof(float), compare_fft);
+    uint16_t    window = 15;
 
-    for (uint16_t i = 0; i < window; i++) {
-        min += data_buf[i];
-        max += data_buf[size - i - 1];
-    }
+    float       min = data_buf[window];
+    float       max = data_buf[size - window - 1];
 
-    min /= window;
-    max /= window;
 
     if (max > S9_40) {
         max = S9_40;
