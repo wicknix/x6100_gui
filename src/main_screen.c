@@ -91,8 +91,7 @@ void mem_load(uint16_t id) {
     radio_load_atu();
     info_params_set();
     pannel_visible();
-
-    waterfall_clear();
+    waterfall_set_freq(params_band_cur_freq_get());
     spectrum_clear();
     freq_update();
 
@@ -495,7 +494,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             } else if (keypad->state == KEYPAD_LONG) {
                 radio_toggle_split();
                 info_params_set();
-                waterfall_clear();
+                waterfall_set_freq(params_band_cur_freq_get());
                 spectrum_clear();
                 main_screen_band_set();
 
@@ -656,7 +655,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 radio_toggle_vfo();
                 info_params_set();
-                waterfall_change_freq(params_band_cur_freq_get() - prev_freq);
+                waterfall_set_freq(params_band_cur_freq_get());
                 spectrum_clear();
                 main_screen_band_set();
 
@@ -768,7 +767,7 @@ static void main_screen_hkey_cb(lv_event_t * e) {
             if (hkey->state == HKEY_RELEASE) {
                 radio_toggle_vfo();
                 info_params_set();
-                waterfall_clear();
+                waterfall_set_freq(params_band_cur_freq_get());
                 spectrum_clear();
                 main_screen_band_set();
             }
@@ -840,8 +839,7 @@ static void main_screen_radio_cb(lv_event_t * e) {
 static void main_screen_update_cb(lv_event_t * e) {
     freq_update();
     info_params_set();
-
-    waterfall_clear();
+    waterfall_set_freq(params_band_cur_freq_get());
     spectrum_clear();
 }
 
@@ -874,7 +872,7 @@ static void freq_shift(int16_t diff) {
     uint64_t        freq, prev_freq;
 
     freq = radio_change_freq(diff * params_current_mode_freq_step_get() * freq_accel(abs(diff)), &prev_freq);
-    waterfall_change_freq(freq - prev_freq);
+    waterfall_set_freq(freq);
     spectrum_change_freq(freq - prev_freq);
     freq_update();
     check_cross_band(freq, prev_freq);
@@ -1133,7 +1131,7 @@ lv_obj_t * main_screen() {
 
     y += freq_height;
 
-    waterfall = waterfall_init(obj);
+    waterfall = waterfall_init(obj, params_band_cur_freq_get());
 
     waterfall_min_max_reset();
 

@@ -13,15 +13,14 @@
 
 #include "lvgl/lvgl.h"
 
-lv_obj_t * waterfall_init(lv_obj_t * parent);
+lv_obj_t * waterfall_init(lv_obj_t * parent, uint64_t cur_freq);
 void waterfall_data(float *data_buf, uint16_t size, bool tx);
 void waterfall_set_height(lv_coord_t h);
-void waterfall_clear();
 void waterfall_min_max_reset();
 
 void waterfall_set_max(float db);
 void waterfall_set_min(float db);
 void waterfall_update_max(float db);
 void waterfall_update_min(float db);
-void waterfall_change_freq(int64_t df);
+void waterfall_set_freq(uint64_t freq);
 void waterfall_update_band(uint64_t f);

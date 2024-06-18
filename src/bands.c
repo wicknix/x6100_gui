@@ -44,8 +44,7 @@ void bands_change(bool up) {
         radio_load_atu();
         info_params_set();
         pannel_visible();
-
-        waterfall_clear();
+        waterfall_set_freq(params_band_cur_freq_get());
         spectrum_clear();
         main_screen_band_set();
 

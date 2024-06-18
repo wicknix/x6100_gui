@@ -40,20 +40,23 @@ static float            grid_max = DEFAULT_MAX;
 
 static lv_img_dsc_t     *frame;
 static lv_color_t       palette[256];
-static int16_t          scroll_hor = 0;
-static int16_t          scroll_hor_surplus = 0;
 static uint8_t          delay = 0;
 
-
-static int              *x_offsets;
+static uint32_t         *x_offsets;
 static uint16_t         last_row_id;
 static uint8_t          *waterfall_cache;
+
+static uint64_t         radio_center_freq = 0;
+static uint64_t         wf_center_freq = 0;
 
 void draw_middle_line();
 void redraw_cb(lv_event_t * e);
 
 
-lv_obj_t * waterfall_init(lv_obj_t * parent) {
+lv_obj_t * waterfall_init(lv_obj_t * parent, uint64_t cur_freq) {
+    radio_center_freq = cur_freq;
+    wf_center_freq = cur_freq;
+
     obj = lv_obj_create(parent);
 
     lv_obj_add_style(obj, &waterfall_style, 0);
@@ -72,24 +75,14 @@ static void scroll_down() {
     last_row_id = (last_row_id + 1) % height;
 }
 
-static void scroll_lr(int16_t px) {
-    for (size_t i = 0; i < height; i++) {
-        x_offsets[i] -= px;
-    }
-}
-
 void waterfall_data(float *data_buf, uint16_t size, bool tx) {
     if (delay)
     {
         delay--;
         return;
     }
-
-    if (scroll_hor) {
-        return;
-    }
-
     scroll_down();
+
     float min, max;
     if (tx) {
         min = DEFAULT_MIN;
@@ -99,7 +92,7 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
         max = grid_max;
     }
 
-    int16_t offset = params_lo_offset_get() * width  / width_hz;
+    x_offsets[last_row_id] = (radio_center_freq + params_lo_offset_get()) * width  / width_hz;
 
     for (int x = 0; x < width; x++) {
         uint16_t    index = x * size / width;
@@ -113,25 +106,19 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
 
         uint8_t id = v * 254 + 1;
         memcpy(&waterfall_cache[(last_row_id * width + width - 1 - x) * PX_BYTES], &palette[id], PX_BYTES);
-        x_offsets[last_row_id] = offset;
     }
     event_send(img, LV_EVENT_REFRESH, NULL);
 }
 
 static void do_scroll_cb(lv_event_t * event) {
-    int16_t px;
-
-    if (scroll_hor == 0) {
+    if (wf_center_freq == radio_center_freq) {
         return;
     }
-
     if (params.waterfall_smooth_scroll.x) {
-        px = ((abs(scroll_hor) / 10) + 1) * sign(scroll_hor);
+        wf_center_freq += ((int64_t)radio_center_freq - (int64_t)wf_center_freq) / 10 + 1;
     } else {
-        px = scroll_hor;
+        wf_center_freq = radio_center_freq;
     }
-    scroll_lr(px);
-    scroll_hor -= px;
     event_send(img, LV_EVENT_REFRESH, NULL);
 }
 
@@ -153,9 +140,10 @@ void waterfall_set_height(lv_coord_t h) {
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
     lv_img_set_src(img, frame);
 
-    x_offsets = malloc(height * sizeof(int));
+    x_offsets = malloc(height * sizeof(*x_offsets));
+    uint32_t initial_offset = (radio_center_freq + params_lo_offset_get()) * width  / width_hz;
     for (size_t i = 0; i < height; i++) {
-        x_offsets[i] = 0;
+        x_offsets[i] = initial_offset;
     }
     last_row_id = 0;
     waterfall_cache = malloc(frame->data_size);
@@ -187,13 +175,6 @@ void draw_middle_line() {
     lv_obj_add_style(middle_line, &middle_line_style, 0);
     lv_obj_center(middle_line);
     lv_obj_add_event_cb(obj, middle_line_cb, LV_EVENT_DRAW_POST_END, NULL);
-}
-
-void waterfall_clear() {
-    waterfall_min_max_reset();
-    memset(waterfall_cache, 0, frame->data_size);
-    scroll_hor = 0;
-    scroll_hor_surplus = 0;
 }
 
 void waterfall_min_max_reset() {
@@ -238,39 +219,36 @@ void waterfall_update_min(float db) {
     }
 }
 
-void waterfall_change_freq(int64_t df) {
+void waterfall_set_freq(uint64_t freq) {
     delay = 2;
-    uint16_t    hz_per_pixel = width_hz / width;
-
-    df += scroll_hor_surplus;
-    scroll_hor += df / hz_per_pixel;
-
-    scroll_hor_surplus = df % hz_per_pixel;
+    radio_center_freq = freq;
 }
 
 void redraw_cb(lv_event_t * e) {
-    int x_offset;
+    int32_t x_offset, w=width;
     size_t copy_n, copy_src, copy_dst;
     size_t clean_n, clean_from;
 
     uint8_t * temp_buf = frame->data;
 
+    uint32_t cur_freq_px = wf_center_freq * width / width_hz;
+
     for (size_t i = 0; i < height; i++) {
-        x_offset = x_offsets[i];
+        x_offset = (int32_t)x_offsets[i] - cur_freq_px;
         if (x_offset > 0) {
-            copy_n = LV_MAX(width - x_offset, 0);
+            copy_n = LV_MAX(w - x_offset, 0);
             copy_src = 0;
             copy_dst = x_offset;
 
             clean_n = LV_MIN(x_offset, width);
             clean_from = 0;
         } else if (x_offset < 0) {
-            copy_n = LV_MAX(width + x_offset, 0);
+            copy_n = LV_MAX(w + x_offset, 0);
             copy_src = -x_offset;
             copy_dst = 0;
 
             clean_n = LV_MIN(-x_offset, width);
-            clean_from = (width + x_offset);
+            clean_from = LV_MAX(w + x_offset, 0);
         } else {
             copy_n = width;
             copy_src = 0;
