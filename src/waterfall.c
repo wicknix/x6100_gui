@@ -21,8 +21,8 @@
 #include "util.h"
 
 #define PX_BYTES    4
-#define DEFAULT_MIN S1
-#define DEFAULT_MAX S9
+#define DEFAULT_MIN S4
+#define DEFAULT_MAX S9_20
 
 static lv_obj_t         *obj;
 static lv_obj_t         *img;

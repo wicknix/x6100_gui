@@ -20,8 +20,8 @@
 #include "rtty.h"
 #include "recorder.h"
 
-#define DEFAULT_MIN S1
-#define DEFAULT_MAX S9
+#define DEFAULT_MIN S4
+#define DEFAULT_MAX S9_20
 #define VISOR_HEIGHT_TX (100 - 61)
 #define VISOR_HEIGHT_RX 100
 

@@ -285,10 +285,11 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
         return;
     }
     qsort(data_buf, size, sizeof(float), compare_fft);
-    uint16_t    window = 15;
+    uint16_t    min_nth = 15;
+    uint16_t    max_nth = 10;
 
-    float       min = data_buf[window];
-    float       max = data_buf[size - window - 1];
+    float       min = data_buf[min_nth];
+    float       max = data_buf[size - max_nth - 1];
 
 
     if (max > S9_40) {
