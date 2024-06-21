@@ -5,13 +5,14 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
+#include "util.h"
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <sys/time.h>
 #include <time.h>
-#include <liquid/liquid.h>
-#include "util.h"
+
 
 uint64_t get_time() {
     struct timespec now;
@@ -153,4 +154,71 @@ int loop_modes(int16_t dir, int mode, uint64_t modes, int max_val) {
 
 int sign(int x) {
     return (x > 0) - (x < 0);
+}
+
+// Window rms
+
+struct wrms_s {
+    windowcf window;
+    size_t size;
+    size_t delay;
+    int16_t remain;
+};
+
+wrms_t wrms_create(size_t n, size_t delay) {
+    wrms_t wr = (wrms_t) malloc(sizeof(struct wrms_s));
+    wr->size = n;
+    wr->delay = delay;
+    wr->remain = wr->delay;
+    wr->window = windowcf_create(n);
+    return wr;
+}
+
+void wrms_destroy(wrms_t wr) {
+    windowcf_destroy(wr->window);
+    free(wr);
+}
+
+size_t wrms_size(wrms_t wr) {
+    return wr->size;
+}
+
+size_t wrms_delay(wrms_t wr) {
+    return wr->delay;
+}
+
+void wrms_push(wrms_t wr, liquid_float_complex x) {
+    if (wr->remain == 0) {
+        wr->remain = wr->delay;
+    }
+    wr->remain--;
+    windowcf_push(wr->window, x);
+}
+
+bool wrms_ready(wrms_t wr) {
+    return wr->remain == 0;
+}
+
+float wrms_get_val(wrms_t wr) {
+    float complex * r;
+    windowcf_read(wr->window, &r);
+    float rms = 0.0;
+    for (uint8_t i = 0; i < wr->size; i++) {
+        rms += crealf(r[i] * conjf(r[i]));
+    }
+    rms = sqrtf(rms / wr->size);
+    return rms;
+}
+
+size_t argmax(float * x, size_t n) {
+    float max = -INFINITY;
+    size_t pos;
+    for (size_t i = 0; i < n; i++)
+    {
+        if (x[i] > max) {
+            max = x[i];
+            pos = i;
+        }
+    }
+    return pos;
 }

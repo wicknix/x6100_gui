@@ -9,6 +9,9 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
+#include <sys/types.h>
+#include <liquid/liquid.h>
 
 uint64_t get_time();
 void get_time_str(char *str, size_t str_size);
@@ -25,3 +28,16 @@ void to_bcd(uint8_t bcd_data[], uint64_t data, uint8_t len);
 uint64_t from_bcd(const uint8_t bcd_data[], uint8_t len);
 int loop_modes(int16_t dir, int mode, uint64_t modes, const int max_val);
 int sign(int x);
+
+typedef struct wrms_s * wrms_t;
+
+wrms_t wrms_create(size_t n, size_t delay);
+void wrms_destroy(wrms_t wr);
+size_t wrms_size(wrms_t wr);
+size_t wrms_delay(wrms_t wr);
+
+void wrms_push(wrms_t wr, liquid_float_complex x);
+bool wrms_ready(wrms_t wr);
+float wrms_get_val(wrms_t wr);
+
+size_t argmax(float *x, size_t n);

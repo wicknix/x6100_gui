@@ -22,7 +22,6 @@
 #include "modulation.h"
 
 #define MAX_FILTER_FREQ 10000
-#define MAX_CW_BW 500
 
 /*********************
  *  Radio modes params (SSB, CW, etc)

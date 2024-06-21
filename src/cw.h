@@ -9,10 +9,12 @@
 #pragma once
 
 #include <stdint.h>
-#include <stdlib.h>
+#include <stdbool.h>
 #include <liquid/liquid.h>
 
 void cw_init();
+
+void cw_notify_change_key_tone();
 
 void cw_put_audio_samples(unsigned int n, float complex *samples);
 void cw_put_audio_int_samples(unsigned int n, int16_t *samples);

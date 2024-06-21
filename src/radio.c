@@ -22,6 +22,7 @@
 #include "tx_info.h"
 #include "info.h"
 #include "dialog_swrscan.h"
+#include "cw.h"
 
 #define FLOW_RESTART_TIMOUT 300
 #define IDLE_TIMEOUT        (3 * 1000)
@@ -816,6 +817,7 @@ uint16_t radio_change_key_tone(int16_t d) {
     radio_lock();
     x6100_control_key_tone_set(params.key_tone);
     radio_unlock();
+    cw_notify_change_key_tone();
 
     return params.key_tone;
 }

@@ -13,7 +13,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     dialog_ft8.c dialog_freq.c dialog_gps.c dialog_msg_cw.c
     dialog_msg_voice.c dialog_recorder.c dialog_qth.c dialog_callsign.c
     textarea_window.c cw_encoder.c buttons.c vol.c recorder.c
-    qth.c voice.cpp gfsk.c
+    qth.c voice.cpp gfsk.c cw_tune_ui.c
 )
 
 add_subdirectory(fonts)
@@ -30,8 +30,8 @@ find_package(Threads REQUIRED)
 target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer -fasynchronous-unwind-tables)
 target_link_options(${PROJECT_NAME} PRIVATE -g -rdynamic)
 
-#target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
-#target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-sanitize-recover -static-libasan -static-libubsan)
+# target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
+# target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-sanitize-recover -static-libasan -static-libubsan)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 target_link_libraries(${PROJECT_NAME} PRIVATE lvgl lvgl::drivers)

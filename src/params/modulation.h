@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+#define MAX_CW_BW 500
+
 typedef int32_t (* get_lo_offset_t)();
 
 uint32_t params_current_mode_filter_high_get();
