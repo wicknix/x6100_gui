@@ -26,16 +26,17 @@ typedef enum {
 
     PAGE_KEY_1,
     PAGE_KEY_2,
-    
+
     PAGE_CW_DECODER_1,
+    PAGE_CW_DECODER_2,
 
     PAGE_DFN_1,
     PAGE_DFN_2,
     PAGE_DFN_3,
-    
+
     PAGE_APP_1,
     PAGE_APP_2,
-    
+
     PAGE_RTTY,
     PAGE_SETTINGS,
     PAGE_SWRSCAN,

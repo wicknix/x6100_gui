@@ -10,8 +10,9 @@
 #include <stdbool.h>
 #include <lvgl/lvgl.h>
 
-void cw_tune_init(lv_obj_t * parent, bool on);
+void cw_tune_init(lv_obj_t * parent);
 
-void cw_tune_show(bool on);
+bool cw_tune_toggle(int16_t diff);
+void cw_tune_visible_update();
 
 void cw_tune_set_freq(float hz);

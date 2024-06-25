@@ -115,7 +115,7 @@ static button_item_t    buttons[] = {
 
     /* CW */
 
-    { .label = "(KEY 1:2)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_KEY_2, .prev = PAGE_CW_DECODER_1, .voice = "Key|page 1" },
+    { .label = "(KEY 1:2)",         .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_KEY_2, .prev = PAGE_CW_DECODER_2, .voice = "Key|page 1" },
     { .label = "Speed",             .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_SPEED },
     { .label = "Volume",            .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_VOL },
     { .label = "Train",             .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_TRAIN },
@@ -127,11 +127,17 @@ static button_item_t    buttons[] = {
     { .label = "QSK\nTime",         .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_QSK_TIME },
     { .label = "Ratio",             .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_KEY_RATIO },
 
-    { .label = "(CW 1:1)",          .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_KEY_1, .prev = PAGE_KEY_2, .voice = "CW page" },
+    { .label = "(CW 1:2)",          .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_CW_DECODER_2, .prev = PAGE_KEY_2, .voice = "CW|page 1" },
     { .label = "CW\nDecoder",       .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_DECODER },
+    { .label = "CW\nTune",          .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_TUNE },
     { .label = "CW\nSNR",           .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_DECODER_SNR },
+    { .label = "",                  .press = NULL },
+
+    { .label = "(CW 2:2)",          .press = button_next_page_cb,   .hold = button_prev_page_cb,    .next = PAGE_KEY_1, .prev = PAGE_CW_DECODER_1, .voice = "CW|page 2" },
     { .label = "CW Peak\nBeta",     .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_DECODER_PEAK_BETA },
     { .label = "CW Noise\nBeta",    .press = button_mfk_update_cb,  .hold = button_mfk_hold_cb,     .data = MFK_CW_DECODER_NOISE_BETA },
+    { .label = "",                  .press = NULL },
+    { .label = "",                  .press = NULL },
 
     /* DSP */
 

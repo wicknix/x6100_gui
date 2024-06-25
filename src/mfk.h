@@ -39,12 +39,13 @@ typedef enum {
     MFK_NB_WIDTH,
     MFK_NR,
     MFK_NR_LEVEL,
-    
+
     MFK_AGC_HANG,
     MFK_AGC_KNEE,
     MFK_AGC_SLOPE,
-    
+
     MFK_CW_DECODER,
+    MFK_CW_TUNE,
     MFK_CW_DECODER_SNR,
     MFK_CW_DECODER_PEAK_BETA,
     MFK_CW_DECODER_NOISE_BETA,

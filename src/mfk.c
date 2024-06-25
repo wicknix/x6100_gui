@@ -20,6 +20,7 @@
 #include "info.h"
 #include "backlight.h"
 #include "voice.h"
+#include "cw_tune_ui.h"
 
 mfk_state_t  mfk_state = MFK_STATE_EDIT;
 mfk_mode_t   mfk_mode = MFK_MIN_LEVEL;
@@ -486,6 +487,17 @@ void mfk_update(int16_t diff, bool voice) {
                 voice_say_bool("CW decoder", b);
             } else if (voice) {
                 voice_say_text_fmt("CW decoder switcher");
+            }
+            break;
+
+        case MFK_CW_TUNE:
+            b = cw_tune_toggle(diff);
+            msg_set_text_fmt("#%3X CW tune: %s", color, b ? "On" : "Off");
+
+            if (diff) {
+                voice_say_bool("CW tune", b);
+            } else if (voice) {
+                voice_say_text_fmt("CW tune switcher");
             }
             break;
 

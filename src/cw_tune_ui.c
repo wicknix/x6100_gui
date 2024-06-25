@@ -10,6 +10,7 @@
 
 #include <math.h>
 #include "styles.h"
+#include "params/params.h"
 
 #define BLOCK_W 5
 #define SPACING 4
@@ -30,7 +31,7 @@ static int8_t cur_freq=-100;
 
 static void update_cb(lv_event_t * e);
 
-void cw_tune_init(lv_obj_t *parent, bool on)
+void cw_tune_init(lv_obj_t *parent)
 {
     color_ok = lv_color_hex(0x99FF99);
     color_good = lv_color_hex(0xFFFF33);
@@ -51,12 +52,22 @@ void cw_tune_init(lv_obj_t *parent, bool on)
     lv_obj_add_style(obj, &cw_tune_style, 0);
 
     lv_obj_add_event_cb(obj, update_cb, LV_EVENT_DRAW_MAIN, NULL);
-    if (!on) {
-        lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
-    }
+    cw_tune_visible_update();
 }
 
-void cw_tune_show(bool on) {
+bool cw_tune_toggle(int16_t diff) {
+    if (diff) {
+        params_lock();
+        params.cw_tune = !params.cw_tune;
+        params_unlock(&params.dirty.cw_tune);
+    }
+    cw_tune_visible_update();
+    return params.cw_tune;
+}
+
+void cw_tune_visible_update() {
+    x6100_mode_t mode = radio_current_mode();
+    bool on = params.cw_tune && ((mode == x6100_mode_cw) || (mode == x6100_mode_cwr));
     if (on) {
         lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
     } else {

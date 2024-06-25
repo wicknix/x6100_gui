@@ -140,7 +140,7 @@ void cw_put_audio_samples(unsigned int n, float complex *samples) {
     if (!ready) {
         return;
     }
-    if (!params.cw_decoder) {
+    if ((!params.cw_decoder) && (!params.cw_tune)) {
         return;
     }
     float complex sample;

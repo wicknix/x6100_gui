@@ -427,8 +427,7 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
     spectrum_zoom_factor_set(params_current_mode_spectrum_factor_get());
     info_params_set();
     pannel_visible();
-    // TODO: add settings for cw tune
-    cw_tune_show((next_mode == x6100_mode_cw) || (next_mode == x6100_mode_cwr));
+    cw_tune_visible_update();
 
     if (params.mag_info.x) {
         msg_tiny_set_text_fmt("%s", info_params_mode());
@@ -1156,8 +1155,7 @@ lv_obj_t * main_screen() {
 
     main_screen_band_set();
 
-    x6100_mode_t cur_mode = radio_current_mode();
-    cw_tune_init(obj, (cur_mode == x6100_mode_cw) || (cur_mode == x6100_mode_cwr));
+    cw_tune_init(obj);
 
     msg_set_text_fmt("X6100 de R1CBU " VERSION);
     msg_set_timeout(2000);

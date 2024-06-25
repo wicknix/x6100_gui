@@ -156,6 +156,7 @@ typedef struct {
     /* CW decoder */
 
     bool                cw_decoder;
+    bool                cw_tune;
     float               cw_decoder_snr;
     float               cw_decoder_snr_gist;
     float               cw_decoder_peak_beta;
@@ -285,6 +286,7 @@ typedef struct {
         bool    key_ratio;
 
         bool    cw_decoder;
+        bool    cw_tune;
         bool    cw_decoder_snr;
         bool    cw_decoder_peak_beta;
         bool    cw_decoder_noise_beta;
