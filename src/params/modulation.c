@@ -190,30 +190,48 @@ uint32_t params_mode_filter_bw_get(x6100_mode_t mode) {
     return params->filter_high.x - params->filter_low.x;
 }
 uint32_t params_mode_filter_bw_set(x6100_mode_t mode, int32_t val) {
-    int32_t change;
+    int32_t new_low, new_high, change;
     params_mode_t *mode_params = get_params_by_mode(mode);
     params_int32_t *l_param = &mode_params->filter_low;
     params_int32_t *h_param = &mode_params->filter_high;
-    params_lock();
     int32_t cur_bw = h_param->x - l_param->x;
     change = (val - cur_bw) / 2;
-    if (h_param->x + change > MAX_FILTER_FREQ) {
-        change = MAX_FILTER_FREQ - h_param->x;
+    switch (mode) {
+        case x6100_mode_lsb:
+        case x6100_mode_usb:
+        case x6100_mode_lsb_dig:
+        case x6100_mode_usb_dig:
+            new_low = l_param->x - change;
+            new_high = h_param->x + change;
+            if (new_low < 0) {
+                new_high += -new_low;
+                new_low = 0;
+            }
+            break;
+        case x6100_mode_am:
+        case x6100_mode_nfm:
+            new_low = 0;
+            new_high = h_param->x + change * 2;
+            break;
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            new_low = 0;
+            new_high = LV_MIN(h_param->x + change * 2, MAX_CW_BW);
+            break;
     }
-    if (l_param->x - change < 0) {
-        change = LV_MIN(change, l_param->x);
-    }
-    if (cur_bw + 2 * change <= 20) {
-        change = 0;
-    }
-    if (change != 0) {
-        l_param->x -= change;
-        h_param->x += change;
+    new_high = LV_MIN(new_high, MAX_FILTER_FREQ);
+    new_high = LV_MAX(new_high, 50);
+    params_lock();
+    if ((new_low != l_param->x) && (new_low < new_high)) {
+        l_param->x = new_low;
         l_param->dirty = true;
+    }
+    if ((new_high != h_param->x) && (new_low < new_high)) {
+        h_param->x = new_high;
         h_param->dirty = true;
-        cur_bw = h_param->x - l_param->x;
     }
     params_unlock(NULL);
+    cur_bw = h_param->x - l_param->x;
     return cur_bw;
 }
 
