@@ -30,6 +30,8 @@ static lv_obj_t     *obj;
 static int8_t cur_freq=-100;
 
 static void update_cb(lv_event_t * e);
+static void mode_changed_cb(void * s, lv_msg_t * m);
+static void update_visibility();
 
 void cw_tune_init(lv_obj_t *parent)
 {
@@ -52,7 +54,8 @@ void cw_tune_init(lv_obj_t *parent)
     lv_obj_add_style(obj, &cw_tune_style, 0);
 
     lv_obj_add_event_cb(obj, update_cb, LV_EVENT_DRAW_MAIN, NULL);
-    cw_tune_visible_update();
+    lv_msg_subscribe(RADIO_MSG_MODE_CHAGED, mode_changed_cb, NULL);
+    update_visibility();
 }
 
 bool cw_tune_toggle(int16_t diff) {
@@ -61,18 +64,8 @@ bool cw_tune_toggle(int16_t diff) {
         params.cw_tune = !params.cw_tune;
         params_unlock(&params.dirty.cw_tune);
     }
-    cw_tune_visible_update();
+    update_visibility();
     return params.cw_tune;
-}
-
-void cw_tune_visible_update() {
-    x6100_mode_t mode = radio_current_mode();
-    bool on = params.cw_tune && ((mode == x6100_mode_cw) || (mode == x6100_mode_cwr));
-    if (on) {
-        lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
-    } else {
-        lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
-    }
 }
 
 void cw_tune_set_freq(float hz) {
@@ -119,5 +112,19 @@ static void update_cb(lv_event_t * e) {
         coords.y2 = coords.y1 + h;
         lv_area_move(&coords, offset.x1, offset.y1);
         lv_draw_rect(ctx, dsc, &coords);
+    }
+}
+
+static void mode_changed_cb(void * s, lv_msg_t * m){
+    update_visibility();
+}
+
+static void update_visibility() {
+    x6100_mode_t mode = radio_current_mode();
+    bool on = params.cw_tune && ((mode == x6100_mode_cw) || (mode == x6100_mode_cwr));
+    if (on) {
+        lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
     }
 }

@@ -615,4 +615,7 @@ extern uint32_t custom_tick_get(void);
 /*1: Enable grid navigation*/
 #define LV_USE_GRIDNAV  1
 
+/*1: Enable a published subscriber based messaging system */
+#define LV_USE_MSG 1
+
 #endif /*LV_CONF_H*/

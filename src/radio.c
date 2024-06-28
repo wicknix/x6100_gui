@@ -189,6 +189,7 @@ void radio_vfo_set() {
     x6100_control_split_set(params_band_split_get());
     x6100_control_rfg_set(params_band_rfg_get());
     radio_unlock();
+    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
 
     params_bands_find(params_band_cur_freq_get(), &params.freq_band);
 }
@@ -497,15 +498,12 @@ void radio_set_mode(x6100_vfo_t vfo, x6100_mode_t mode) {
     radio_lock();
     x6100_control_vfo_mode_set(vfo, mode);
     radio_unlock();
+    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
 }
 
 void radio_set_cur_mode(x6100_mode_t mode) {
     x6100_vfo_t vfo = params_band_vfo_get();
-    params_band_vfo_mode_set(vfo, mode);
-
-    radio_lock();
-    x6100_control_vfo_mode_set(vfo, mode);
-    radio_unlock();
+    radio_set_mode(vfo, mode);
 }
 
 x6100_mode_t radio_current_mode() {
@@ -667,6 +665,7 @@ bool radio_start_swrscan() {
     x6100_control_vfo_mode_set(params_band_vfo_get(), x6100_mode_am);
     x6100_control_txpwr_set(5.0f);
     x6100_control_swrscan_set(true);
+    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
 
     return true;
 }

@@ -13,6 +13,5 @@
 void cw_tune_init(lv_obj_t * parent);
 
 bool cw_tune_toggle(int16_t diff);
-void cw_tune_visible_update();
 
 void cw_tune_set_freq(float hz);

@@ -427,7 +427,6 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
     spectrum_zoom_factor_set(params_current_mode_spectrum_factor_get());
     info_params_set();
     pannel_visible();
-    cw_tune_visible_update();
 
     if (params.mag_info.x) {
         msg_tiny_set_text_fmt("%s", info_params_mode());
