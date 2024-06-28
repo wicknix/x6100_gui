@@ -209,14 +209,21 @@ void tx_info_update(float p, float s, float a) {
     // Use EMA for smoothing values
     const float beta = 0.9f;
 
-    lpf(&pwr, p, beta, 0.0f);
-    lpf(&alc, 10.0f - a, beta, 0.0f);
+    a = 10.f - a;
+    s = LV_MIN(max_swr, s);
 
-    if (s > max_swr) {
-        s = max_swr;
+    switch (radio_current_mode()) {
+        case x6100_mode_lsb_dig:
+        case x6100_mode_usb_dig:
+            pwr = p;
+            alc = a;
+            vswr = s;
+            break;
+        default:
+            lpf(&pwr, p, beta, 0.0f);
+            lpf(&alc, a, beta, 0.0f);
+            lpf(&vswr, s, beta, 0.0f);
     }
-
-    lpf(&vswr, s, beta, 0.0f);
 
     event_send(obj, LV_EVENT_REFRESH, NULL);
 
