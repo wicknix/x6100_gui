@@ -93,7 +93,7 @@ params_t params = {
     .key_ratio              = 30,
 
     .cw_decoder             = true,
-    .cw_tune                = true,
+    .cw_tune                = false,
     .cw_decoder_snr         = 10.0f,
     .cw_decoder_snr_gist    = 3.0f,
     .cw_decoder_peak_beta   = 0.10f,

@@ -972,6 +972,7 @@ x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo) {
     radio_lock();
     x6100_control_vfo_set(vfo);
     radio_unlock();
+    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
 }
 
 x6100_vfo_t radio_toggle_vfo() {
