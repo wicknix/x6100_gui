@@ -194,18 +194,42 @@ void radio_vfo_set() {
     params_bands_find(params_band_cur_freq_get(), &params.freq_band);
 }
 
-void radio_filters_setup() {
+/**
+ * Set radio BB filters
+ */
+static void radio_filter_set(int32_t * low, int32_t * high) {
     x6100_mode_t    mode = radio_current_mode();
+    radio_lock();
+    switch (mode) {
+        case x6100_mode_am:
+        case x6100_mode_nfm:
+            if (high != NULL) {
+                x6100_control_cmd(x6100_filter1_low, -*high);
+                x6100_control_cmd(x6100_filter2_low, -*high);
+                x6100_control_cmd(x6100_filter1_high, *high);
+                x6100_control_cmd(x6100_filter2_high, *high);
+            }
+            break;
+
+        default:
+            if (low != NULL) {
+                x6100_control_cmd(x6100_filter1_low, *low);
+                x6100_control_cmd(x6100_filter2_low, *low);
+            }
+            if (high != NULL) {
+                x6100_control_cmd(x6100_filter1_high, *high);
+                x6100_control_cmd(x6100_filter2_high, *high);
+            }
+            break;
+    }
+    radio_unlock();
+}
+
+void radio_filters_setup() {
+
     int32_t low, high;
     params_current_mode_filter_get(&low, &high);
-    radio_lock();
-
-    x6100_control_cmd(x6100_filter1_low, low);
-    x6100_control_cmd(x6100_filter2_low, low);
-    x6100_control_cmd(x6100_filter1_high, high);
-    x6100_control_cmd(x6100_filter2_high, high);
-
-    radio_unlock();
+    radio_filter_set(&low, &high);
     update_agc_time();
 }
 
@@ -515,11 +539,7 @@ uint32_t radio_change_filter_low(int32_t freq) {
         return freq;
     }
     int32_t new_freq = params_current_mode_filter_low_set(freq);
-
-    radio_lock();
-    x6100_control_cmd(x6100_filter1_low, new_freq);
-    x6100_control_cmd(x6100_filter2_low, new_freq);
-    radio_unlock();
+    radio_filter_set(&new_freq, NULL);
 
     return new_freq;
 }
@@ -530,10 +550,7 @@ uint32_t radio_change_filter_high(int32_t freq) {
     }
     int32_t new_freq = params_current_mode_filter_high_set(freq);
 
-    radio_lock();
-    x6100_control_cmd(x6100_filter1_high, new_freq);
-    x6100_control_cmd(x6100_filter2_high, new_freq);
-    radio_unlock();
+    radio_filter_set(NULL, &new_freq);
 
     return new_freq;
 }
@@ -546,12 +563,7 @@ uint32_t radio_change_filter_bw(int32_t bw) {
     uint32_t low_freq = params_current_mode_filter_low_get();
     uint32_t high_freq = params_current_mode_filter_high_get();
 
-    radio_lock();
-    x6100_control_cmd(x6100_filter1_low, low_freq);
-    x6100_control_cmd(x6100_filter2_low, low_freq);
-    x6100_control_cmd(x6100_filter1_high, high_freq);
-    x6100_control_cmd(x6100_filter2_high, high_freq);
-    radio_unlock();
+    radio_filter_set(&low_freq, &high_freq);
 
     return new_bw;
 }
