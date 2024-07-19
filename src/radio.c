@@ -102,10 +102,20 @@ bool radio_tick() {
                 break;
 
             case RADIO_ATU_RUN:
-                if (!pack->flag.tx) {
+                if (pack->flag.atu_status && !pack->flag.tx) {
                     params_atu_save(pack->atu_params);
                     radio_lock();
                     x6100_control_atu_tune(false);
+                    // Fix for no signal after tune
+                    x6100_vfo_t vfo = params_band_vfo_get();
+                    x6100_mode_t mode = params_band_vfo_mode_get(vfo);
+                    if ((mode != x6100_mode_usb_dig) && (mode != x6100_mode_lsb_dig)) {
+                        x6100_control_vfo_mode_set(vfo, x6100_mode_usb_dig);
+                        x6100_control_ptt_set(true);
+                        usleep(100000);
+                        x6100_control_ptt_set(false);
+                        x6100_control_vfo_mode_set(vfo, mode);
+                    }
                     radio_unlock();
                     notify_rx();
 
@@ -117,7 +127,7 @@ bool radio_tick() {
                         notify_atu_update();
                     }
                     state = RADIO_RX;
-                } else {
+                } else if (pack->flag.tx) {
                     tx_info_update(pack->tx_power * 0.1f, pack->vswr * 0.1f, pack->alc_level * 0.1f);
                 }
                 break;
@@ -159,9 +169,9 @@ static void * radio_thread(void *arg) {
         int32_t idle = now_time - idle_time;
 
         if (idle > IDLE_TIMEOUT && state == RADIO_RX) {
-            pthread_mutex_lock(&control_mux);
+            radio_lock();
             x6100_control_idle();
-            pthread_mutex_unlock(&control_mux);
+            radio_unlock();
 
             idle_time = now_time;
         }
