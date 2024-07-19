@@ -877,6 +877,8 @@ static void load_band() {
     }
 
     mem_load(mem_id + params.ft8_band);
+    // Force UDB-D for FT8
+    radio_set_cur_mode(x6100_mode_usb_dig);
 }
 
 static void clean() {
