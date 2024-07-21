@@ -619,12 +619,13 @@ static void tx_worker() {
 
     radio_set_ptt(true);
 
+    float gain_scale = -15.0f + log10f(params.pwr) * 5;
     while (true) {
         if (n_samples <= 0 || state != TX_PROCESS) {
             state = IDLE;
             break;
         }
-        audio_gain_db(ptr, part, -15.0f, ptr);
+        audio_gain_db(ptr, part, gain_scale, ptr);
         audio_play(ptr, part);
 
         n_samples -= part;

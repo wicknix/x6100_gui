@@ -36,7 +36,7 @@
 #include "mfk.h"
 #include "vol.h"
 
-#define DISP_BUF_SIZE (128 * 1024)
+#define DISP_BUF_SIZE (800 * 480 * 4)
 
 rotary_t                    *vol;
 encoder_t                   *mfk;
