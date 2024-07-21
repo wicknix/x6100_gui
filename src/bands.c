@@ -27,7 +27,14 @@ void bands_activate(band_t *band, uint64_t *freq) {
 
     if (freq) {
         params_band_cur_freq_set(*freq);
+    } else {
+        uint64_t new_freq = params_band_cur_freq_get();
+        if ((new_freq < band->start_freq) || (new_freq > band->stop_freq)) {
+            new_freq = (band->start_freq + band->stop_freq) / 2;
+            params_band_cur_freq_set(new_freq);
+        }
     }
+
 
     radio_vfo_set();
     radio_filters_setup();
