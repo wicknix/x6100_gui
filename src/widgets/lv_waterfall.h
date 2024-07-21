@@ -30,7 +30,7 @@ typedef struct {
 
     lv_color_t      *palette;
     uint16_t        palette_cnt;
-    
+
     int16_t         min;
     int16_t         max;
 } lv_waterfall_t;
@@ -52,6 +52,9 @@ void lv_waterfall_set_size(lv_obj_t * obj, lv_coord_t w, lv_coord_t h);
 
 void lv_waterfall_clear_data(lv_obj_t * obj);
 void lv_waterfall_add_data(lv_obj_t * obj, float * data, uint16_t cnt);
+
+void lv_waterfall_set_min(lv_obj_t *obj, int16_t val);
+void lv_waterfall_set_max(lv_obj_t *obj, int16_t val);
 
 #ifdef __cplusplus
 } /*extern "C"*/

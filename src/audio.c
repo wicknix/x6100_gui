@@ -5,6 +5,7 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
+#define _GNU_SOURCE
 
 #include <unistd.h>
 #include <stdio.h>
@@ -51,23 +52,24 @@ static void read_callback(pa_stream *s, size_t nbytes, void *udata) {
 }
 
 static void mixer_setup() {
+    int res;
     // overall level
-    system("amixer sset 'Headphone',0 58,58");
+    res = system("amixer sset 'Headphone',0 58,58");
     // Play level from app to radio (for FT8)
-    system("amixer sset 'AIF1 DA0',0 118,118");
+    res = system("amixer sset 'AIF1 DA0',0 160,160");
+    res = system("amixer sset 'DAC',0 147,147");
 
     // capture audio from radio
-    system("amixer sset 'Mic1',0 0,0 cap");
+    res = system("amixer sset 'Mic1',0 0,0 cap");
     // mic boost
-    system("amixer sset 'Mic1 Boost',0 1");
+    res = system("amixer sset 'Mic1 Boost',0 1");
     // disable capturing from mixer
-    system("amixer sset 'Mixer',0 nocap");
-    system("amixer sset 'ADC',0 160,160");
-    system("amixer sset 'ADC Gain',0 3");
-    system("amixer sset 'AIF1 AD0',0 160,160");
-    // or 'Mix Mono'
-    system("amixer sset 'AIF1 AD0 Stereo',0 'Sum Mono'");
-    system("amixer sset 'AIF1 Data Digital ADC',0 cap");
+    res = system("amixer sset 'Mixer',0 nocap");
+    res = system("amixer sset 'ADC',0 160,160");
+    res = system("amixer sset 'ADC Gain',0 3");
+    res = system("amixer sset 'AIF1 AD0',0 160,160");
+    res = system("amixer sset 'AIF1 AD0 Stereo',0 'Mix Mono'");
+    res = system("amixer sset 'AIF1 Data Digital ADC',0 cap");
 }
 
 void audio_init() {
@@ -174,28 +176,8 @@ void audio_play_wait() {
     pa_operation_unref(op);
 }
 
-int16_t* audio_gain(int16_t *buf, size_t samples, uint16_t gain) {
-    int16_t *out_samples = malloc(samples * sizeof(int16_t));
-
-    for (uint16_t i = 0; i < samples; i++) {
-        int32_t x = buf[i] * gain / 100;
-
-        if (x > 32767) {
-            x = 32767;
-        }
-
-        if (x < -32767) {
-            x = -32767;
-        }
-
-        out_samples[i] = x;
-    }
-
-    return out_samples;
-}
-
 void audio_gain_db(int16_t *buf, size_t samples, float gain, int16_t *out) {
-    uint16_t scale = exp10f(gain / 10.0f);
+    float scale = exp10f(gain / 10.0f);
 
     for (uint16_t i = 0; i < samples; i++) {
         int32_t x = buf[i] * scale;

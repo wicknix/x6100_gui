@@ -24,7 +24,6 @@
 #include "audio.h"
 #include "keyboard.h"
 #include "events.h"
-#include "radio.h"
 #include "buttons.h"
 #include "main_screen.h"
 #include "qth.h"
@@ -455,6 +454,12 @@ void static waterfall_process(float complex *frame, const size_t size) {
         uint32_t high_bin = waterfall_nfft / 2 + waterfall_nfft * params_current_mode_filter_high_get() / SAMPLE_RATE;
 
         spgramcf_get_psd(waterfall_sg, waterfall_psd);
+        // Normalize FFT
+        liquid_vectorf_addscalar(
+            &waterfall_psd[low_bin],
+            high_bin - low_bin,
+            -10.f * log10f(sqrtf(waterfall_nfft)) - 16.0f,
+            &waterfall_psd[low_bin]);
 
         lv_waterfall_add_data(waterfall, &waterfall_psd[low_bin], high_bin - low_bin);
         event_send(waterfall, LV_EVENT_REFRESH, NULL);
@@ -485,8 +490,8 @@ void static process(float complex *frame) {
                 int             src_bin = (bin * wf.freq_osr) + freq_sub;
                 complex float   freq = freq_buf[src_bin];
                 float           v = crealf(freq * conjf(freq));
-                float           db = 10.0f * log10f(v);
-                int             scaled = (int16_t) (db * 2.0f + 240.0f);
+                float           db = 5.0f * log10f(v);
+                int             scaled = (int16_t) (db * 4.0f + 240.0f);
 
                 if (scaled < 0) {
                     scaled = 0;
@@ -619,7 +624,7 @@ static void tx_worker() {
             state = IDLE;
             break;
         }
-
+        audio_gain_db(ptr, part, -15.0f, ptr);
         audio_play(ptr, part);
 
         n_samples -= part;
@@ -1131,6 +1136,7 @@ static void construct_cb(lv_obj_t *parent) {
     styles_waterfall_palette(palette, 256);
     lv_waterfall_set_palette(waterfall, palette, 256);
     lv_waterfall_set_size(waterfall, WIDTH, 325);
+    lv_waterfall_set_min(waterfall, -60);
 
     lv_obj_set_pos(waterfall, 13, 13);
 

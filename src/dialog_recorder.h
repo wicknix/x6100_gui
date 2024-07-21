@@ -19,3 +19,4 @@ void dialog_recorder_rename_cb(lv_event_t * e);
 void dialog_recorder_delete_cb(lv_event_t * e);
 
 void dialog_recorder_set_on(bool on);
+void dialog_recorder_set_peak(float val);

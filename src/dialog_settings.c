@@ -900,16 +900,16 @@ static void play_gain_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
 
     params_lock();
-    params.play_gain = lv_slider_get_value(obj);
-    params_unlock(&params.dirty.play_gain);
+    params.play_gain_db = lv_slider_get_value(obj);
+    params_unlock(&params.dirty.play_gain_db);
 }
 
 static void rec_gain_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
 
     params_lock();
-    params.rec_gain = lv_slider_get_value(obj);
-    params_unlock(&params.dirty.rec_gain);
+    params.rec_gain_db = lv_slider_get_value(obj);
+    params_unlock(&params.dirty.rec_gain_db);
 }
 
 static uint8_t make_audio_gain(uint8_t row) {
@@ -935,8 +935,8 @@ static uint8_t make_audio_gain(uint8_t row) {
     dialog_item(&dialog, obj);
 
     lv_slider_set_mode(obj, LV_SLIDER_MODE_NORMAL);
-    lv_slider_set_value(obj, params.play_gain, LV_ANIM_OFF);
-    lv_slider_set_range(obj, 25, 200);
+    lv_slider_set_value(obj, params.play_gain_db, LV_ANIM_OFF);
+    lv_slider_set_range(obj, -10, 10);
     lv_obj_set_width(obj, SMALL_3 - 30);
     lv_obj_center(obj);
 
@@ -955,8 +955,8 @@ static uint8_t make_audio_gain(uint8_t row) {
     dialog_item(&dialog, obj);
 
     lv_slider_set_mode(obj, LV_SLIDER_MODE_NORMAL);
-    lv_slider_set_value(obj, params.rec_gain, LV_ANIM_OFF);
-    lv_slider_set_range(obj, 25, 200);
+    lv_slider_set_value(obj, params.rec_gain_db, LV_ANIM_OFF);
+    lv_slider_set_range(obj, -10, 10);
     lv_obj_set_width(obj, SMALL_3 - 30);
     lv_obj_center(obj);
 

@@ -107,15 +107,15 @@ bool radio_tick() {
                     radio_lock();
                     x6100_control_atu_tune(false);
                     // Fix for no signal after tune
-                    x6100_vfo_t vfo = params_band_vfo_get();
-                    x6100_mode_t mode = params_band_vfo_mode_get(vfo);
-                    if ((mode != x6100_mode_usb_dig) && (mode != x6100_mode_lsb_dig)) {
-                        x6100_control_vfo_mode_set(vfo, x6100_mode_usb_dig);
-                        x6100_control_ptt_set(true);
-                        usleep(100000);
-                        x6100_control_ptt_set(false);
-                        x6100_control_vfo_mode_set(vfo, mode);
-                    }
+                    // x6100_vfo_t vfo = params_band_vfo_get();
+                    // x6100_mode_t mode = params_band_vfo_mode_get(vfo);
+                    // if ((mode != x6100_mode_usb_dig) && (mode != x6100_mode_lsb_dig)) {
+                    //     x6100_control_vfo_mode_set(vfo, x6100_mode_usb_dig);
+                    //     x6100_control_ptt_set(true);
+                    //     usleep(100000);
+                    //     x6100_control_ptt_set(false);
+                    //     x6100_control_vfo_mode_set(vfo, mode);
+                    // }
                     radio_unlock();
                     notify_rx();
 

@@ -18,7 +18,7 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
- 
+
 static void lv_waterfall_constructor(const lv_obj_class_t * class_p, lv_obj_t * obj);
 static void lv_waterfall_destructor(const lv_obj_class_t * class_p, lv_obj_t * obj);
 
@@ -54,10 +54,10 @@ void lv_waterfall_set_palette(lv_obj_t * obj, lv_color_t * palette, uint16_t cnt
     LV_ASSERT_NULL(palette);
 
     lv_waterfall_t * waterfall = (lv_waterfall_t *)obj;
-    
+
     waterfall->palette = lv_mem_realloc(waterfall->palette, cnt * sizeof(waterfall->palette[0]));
     waterfall->palette_cnt = cnt;
-    
+
     memcpy(waterfall->palette, palette, cnt * sizeof(waterfall->palette[0]));
 }
 
@@ -99,31 +99,42 @@ void lv_waterfall_add_data(lv_obj_t * obj, float * data, uint16_t cnt) {
 
     uint32_t        line_len = waterfall->line_len;
     uint8_t         *ptr = dsc->data + dsc->data_size - line_len * 2;
-    
+
     /* Scroll down */
-    
+
     for (uint16_t y = 0; y < dsc->header.h - 1; y++) {
         memcpy(ptr + line_len, ptr, line_len);
         ptr -= line_len;
     }
 
     /* Paint */
-    
+
     for (uint32_t x = 0; x < dsc->header.w; x++) {
         uint32_t    index = x * cnt / dsc->header.w;
         float       d = data[index];
         float       v = (d - waterfall->min) / (waterfall->max - waterfall->min);
-        
+
         if (v < 0.0f) {
             v = 0.0f;
         } else if (v > 1.0f) {
             v = 1.0f;
         }
-        
+
         uint8_t id = v * 255;
-        
+
         lv_img_buf_set_px_color(dsc, x, 0, waterfall->palette[id]);
     }
+}
+
+void lv_waterfall_set_min(lv_obj_t * obj, int16_t val) {
+    LV_ASSERT_OBJ(obj, MY_CLASS);
+    lv_waterfall_t * waterfall = (lv_waterfall_t *)obj;
+    waterfall->min = val;
+}
+void lv_waterfall_set_max(lv_obj_t * obj, int16_t val) {
+    LV_ASSERT_OBJ(obj, MY_CLASS);
+    lv_waterfall_t * waterfall = (lv_waterfall_t *)obj;
+    waterfall->max = val;
 }
 
 /**********************
@@ -142,14 +153,14 @@ static void lv_waterfall_constructor(const lv_obj_class_t * class_p, lv_obj_t * 
     waterfall->line_buf = NULL;
     waterfall->min = -40;
     waterfall->max = 0;
-    
+
     LV_TRACE_OBJ_CREATE("finished");
 }
 
 static void lv_waterfall_destructor(const lv_obj_class_t * class_p, lv_obj_t * obj) {
     LV_UNUSED(class_p);
     lv_waterfall_t * waterfall = (lv_waterfall_t *)obj;
-    
+
     if (waterfall->palette) lv_mem_free(waterfall->palette);
     if (waterfall->line_buf) lv_mem_free(waterfall->line_buf);
 }

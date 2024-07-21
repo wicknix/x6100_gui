@@ -207,8 +207,8 @@ typedef struct {
 
     /* Audio play/rec */
 
-    uint16_t            play_gain;
-    uint16_t            rec_gain;
+    int8_t              play_gain_db;
+    int8_t              rec_gain_db;
 
     /* Voice */
 
@@ -318,8 +318,8 @@ typedef struct {
         bool    long_f1;
         bool    long_f2;
 
-        bool    play_gain;
-        bool    rec_gain;
+        bool    play_gain_db;
+        bool    rec_gain_db;
     } dirty;
 } params_t;
 

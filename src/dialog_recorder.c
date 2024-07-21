@@ -32,8 +32,12 @@
 #include "buttons.h"
 
 #define BUF_SIZE 1024
+#define LEVEL_HEIGHT 25
+
+#define LEVEL_UPDATE_MS 100
 
 static lv_obj_t             *table;
+static lv_obj_t             *level;
 static int16_t              table_rows = 0;
 static SNDFILE              *file = NULL;
 static bool                 play_state = false;
@@ -42,11 +46,16 @@ static char                 *prev_filename;
 static pthread_t            thread;
 static int16_t              samples_buf[BUF_SIZE];
 
+static int32_t              level_db;
+static lv_timer_t           *level_timer;
+
 static void construct_cb(lv_obj_t *parent);
 static void destruct_cb();
 static void key_cb(lv_event_t * e);
 static void rec_stop_cb(lv_event_t * e);
 static void play_stop_cb(lv_event_t * e);
+
+static void update_level_cb(lv_timer_t * timer);
 
 static button_item_t button_rec_stop = { .label = "Rec\nStop", .press = rec_stop_cb };
 static button_item_t button_play_stop = { .label = "Play\nStop", .press = play_stop_cb };
@@ -137,10 +146,11 @@ static void play_item() {
         int res = sf_read_short(file, samples_buf, BUF_SIZE);
 
         if (res > 0) {
-            int16_t *samples = audio_gain(samples_buf, res, params.play_gain);
+            if (params.play_gain_db != 0) {
+                audio_gain_db(samples_buf, res, params.play_gain_db, samples_buf);
+            }
 
-            audio_play(samples, res);
-            free(samples);
+            audio_play(samples_buf, res);
         } else {
             play_state = false;
         }
@@ -210,7 +220,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     lv_obj_remove_style(table, NULL, LV_STATE_ANY | LV_PART_MAIN);
 
-    lv_obj_set_size(table, 775, 325);
+    lv_obj_set_size(table, 775, 320 - LEVEL_HEIGHT);
 
     lv_table_set_col_cnt(table, 1);
     lv_table_set_col_width(table, 0, 770);
@@ -232,7 +242,48 @@ static void construct_cb(lv_obj_t *parent) {
     lv_group_add_obj(keyboard_group, table);
     lv_group_set_editing(keyboard_group, true);
 
-    lv_obj_center(table);
+    // lv_obj_center(table);
+    // lv_obj_set_align(table, LV_ALIGN_TOP_MID);
+    lv_obj_align(table, LV_ALIGN_TOP_MID, 0, 10);
+
+    // Level
+    // lv_draw_rect_dsc_init(&level_draw_dsc);
+    // level_draw_dsc.bg_color = lv_color_hex(0x7f7f7f);
+    // level_draw_dsc.radius = 5;
+    // level_draw_dsc.bg_opa = LV_OPA_50;
+
+    // level = lv_obj_create(dialog.obj);
+    // lv_obj_set_size(table, 775, LEVEL_HEIGHT);
+    // lv_obj_add_event_cb(level, level_draw_cb, LV_EVENT_DRAW_MAIN, NULL);
+
+    static lv_style_t style_level_bg;
+    static lv_style_t style_level_indic;
+
+    lv_style_init(&style_level_bg);
+    lv_style_set_border_color(&style_level_bg, lv_palette_main(LV_PALETTE_BLUE));
+    lv_style_set_border_width(&style_level_bg, 2);
+    lv_style_set_pad_all(&style_level_bg, 6); /*To make the indicator smaller*/
+    lv_style_set_radius(&style_level_bg, 6);
+    lv_style_set_anim_time(&style_level_bg, 1000);
+
+    lv_style_init(&style_level_indic);
+    lv_style_set_bg_opa(&style_level_indic, LV_OPA_COVER);
+    lv_style_set_bg_color(&style_level_indic, lv_palette_main(LV_PALETTE_BLUE));
+    lv_style_set_radius(&style_level_indic, 3);
+
+    level = lv_bar_create(dialog.obj);
+    lv_obj_remove_style_all(level);  /*To have a clean start*/
+    lv_obj_add_style(level, &style_level_bg, 0);
+    lv_obj_add_style(level, &style_level_indic, LV_PART_INDICATOR);
+
+    lv_obj_set_size(level, 775, LEVEL_HEIGHT);
+    // lv_obj_set_align(level, LV_ALIGN_BOTTOM_MID);
+    lv_obj_align_to(level, table, LV_ALIGN_OUT_BOTTOM_MID, 0, 7);
+
+    lv_bar_set_range(level, -60, 0);
+    lv_bar_set_value(level, -6, LV_ANIM_OFF);
+
+    level_timer = lv_timer_create(update_level_cb, 30, NULL);
 
     mkdir(recorder_path, 0755);
     load_table();
@@ -247,6 +298,7 @@ static void destruct_cb() {
     audio_play_en(false);
     play_state = false;
     textarea_window_close();
+    lv_timer_del(level_timer);
 }
 
 static void key_cb(lv_event_t * e) {
@@ -327,4 +379,16 @@ void dialog_recorder_set_on(bool on) {
         buttons_load_page(PAGE_RECORDER);
         load_table();
     }
+}
+
+void dialog_recorder_set_peak(float val) {
+    if (!dialog.run) {
+        return;
+    }
+    level_db = (int32_t) val;
+
+}
+
+static void update_level_cb(lv_timer_t * timer) {
+    lv_bar_set_value(level, level_db, LV_ANIM_OFF);
 }
