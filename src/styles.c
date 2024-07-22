@@ -206,7 +206,7 @@ void styles_init() {
     lv_style_set_bg_color(&cw_tune_style, lv_color_black());
     lv_style_set_border_width(&cw_tune_style, 0);
     lv_style_set_opa(&cw_tune_style, LV_OPA_50);
-    lv_style_set_x(&cw_tune_style, 10);
+    lv_style_set_x(&cw_tune_style, 30);
     lv_style_set_y(&cw_tune_style, 70);
 }
 
