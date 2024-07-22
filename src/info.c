@@ -205,6 +205,12 @@ void info_params_set() {
         lv_obj_set_style_bg_opa(items[INFO_PRE], LV_OPA_0, 0);
     }
 
+    x6100_mode_t mode = radio_current_mode();
+    if ((mode == x6100_mode_lsb_dig) || (mode == x6100_mode_usb_dig)) {
+        lv_obj_set_style_text_color(items[INFO_MODE], lv_color_hex(COLOR_LIGHT_RED), 0);
+    }
+
+
     info_atu_update();
 }
 

@@ -11,6 +11,12 @@
 #include <unistd.h>
 #include "lvgl/lvgl.h"
 
+// COLORS
+
+#define COLOR_LIGHT_GREEN (0x80FF80)
+#define COLOR_LIGHT_YELLOW (0xFFFF30)
+#define COLOR_LIGHT_RED (0xFF8080)
+
 extern lv_color_t   bg_color;
 
 extern lv_style_t   background_style;

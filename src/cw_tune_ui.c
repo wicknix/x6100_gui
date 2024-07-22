@@ -35,9 +35,9 @@ static void update_visibility();
 
 void cw_tune_init(lv_obj_t *parent)
 {
-    color_ok = lv_color_hex(0x99FF99);
-    color_good = lv_color_hex(0xFFFF33);
-    color_bad = lv_color_hex(0xFF9999);
+    color_ok = lv_color_hex(COLOR_LIGHT_GREEN);
+    color_good = lv_color_hex(COLOR_LIGHT_YELLOW);
+    color_bad = lv_color_hex(COLOR_LIGHT_RED);
 
     lv_draw_rect_dsc_init(&rect_dsc);
     rect_dsc.bg_color = lv_color_hex(0x7f7f7f);
