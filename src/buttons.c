@@ -161,13 +161,13 @@ static button_item_t    buttons[] = {
 
     /* APP */
 
-    { .label = "(APP 1:2)",         .press = button_next_page_cb,   .next = PAGE_APP_2, .voice = "Application|page 1" },
+    { .label = "(APP 1:2)",         .press = button_next_page_cb,   .next = PAGE_APP_2, .prev = PAGE_APP_2, .voice = "Application|page 1" },
     { .label = "RTTY",              .press = button_app_page_cb,    .data = PAGE_RTTY },
     { .label = "FT8",               .press = button_app_page_cb,    .data = PAGE_FT8 },
     { .label = "SWR\nScan",         .press = button_app_page_cb,    .data = PAGE_SWRSCAN },
     { .label = "GPS",               .press = button_app_page_cb,    .data = PAGE_GPS },
 
-    { .label = "(APP 2:2)",         .press = button_next_page_cb,   .next = PAGE_APP_1, .voice = "Application|page 2" },
+    { .label = "(APP 2:2)",         .press = button_next_page_cb,   .next = PAGE_APP_1, .prev = PAGE_APP_1, .voice = "Application|page 2" },
     { .label = "Recorder",          .press = button_app_page_cb,    .data = PAGE_RECORDER },
     { .label = "QTH",               .press = button_action_cb,      .data = ACTION_APP_QTH },
     { .label = "Callsign",          .press = button_action_cb,      .data = ACTION_APP_CALLSIGN },
@@ -215,13 +215,13 @@ static button_item_t    buttons[] = {
 
     /* Msg CW */
 
-    { .label = "(MSG 1:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_CW_2 },
+    { .label = "(MSG 1:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_CW_2, .prev = PAGE_MSG_CW_2 },
     { .label = "Send",              .press = dialog_msg_cw_send_cb },
     { .label = "Beacon",            .press = dialog_msg_cw_beacon_cb },
     { .label = "Beacon\nPeriod",    .press = dialog_msg_cw_period_cb },
     { .label = "",                  .press = NULL },
 
-    { .label = "(MSG 2:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_CW_1 },
+    { .label = "(MSG 2:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_CW_1, .prev = PAGE_MSG_CW_1 },
     { .label = "New",               .press = dialog_msg_cw_new_cb },
     { .label = "Edit",              .press = dialog_msg_cw_edit_cb },
     { .label = "Delete",            .press = dialog_msg_cw_delete_cb },
@@ -229,13 +229,13 @@ static button_item_t    buttons[] = {
 
     /* Msg Voice */
 
-    { .label = "(MSG 1:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_VOICE_2 },
+    { .label = "(MSG 1:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_VOICE_2, .prev = PAGE_MSG_VOICE_2 },
     { .label = "Send",              .press = dialog_msg_voice_send_cb },
     { .label = "Beacon",            .press = dialog_msg_voice_beacon_cb },
     { .label = "Beacon\nPeriod",    .press = dialog_msg_voice_period_cb },
     { .label = "",                  .press = NULL },
 
-    { .label = "(MSG 2:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_VOICE_1 },
+    { .label = "(MSG 2:2)",         .press = button_next_page_cb,   .next = PAGE_MSG_VOICE_1, .prev = PAGE_MSG_VOICE_1 },
     { .label = "Rec",               .press = dialog_msg_voice_rec_cb },
     { .label = "Rename",            .press = dialog_msg_voice_rename_cb },
     { .label = "Delete",            .press = dialog_msg_voice_delete_cb },
@@ -417,4 +417,118 @@ void buttons_press(uint8_t n, bool hold) {
         lv_event_send(btn[n].obj, LV_EVENT_PRESSED, NULL);
         lv_event_send(btn[n].obj, LV_EVENT_RELEASED, NULL);
     }
+}
+
+static bool get_next_gen_page(button_page_t *next_page) {
+
+    for (size_t i = 0; i < sizeof(buttons) / sizeof(buttons[0]); i++)
+    {
+        if ((buttons_page == buttons[i].prev) && (buttons[i].press == button_next_page_cb)) {
+            *next_page = i / BUTTONS;
+            return true;
+        }
+    }
+    return false;
+
+}
+
+void buttons_load_page_group(button_group_t group) {
+    button_page_t next_page;
+    bool found_next_page = get_next_gen_page(&next_page);
+    switch (group) {
+        case GROUP_GEN:
+            switch (buttons_page) {
+                case PAGE_VOL_1:
+                case PAGE_VOL_2:
+                case PAGE_VOL_3:
+                case PAGE_VOL_4:
+                case PAGE_MFK_1:
+                case PAGE_MFK_2:
+                case PAGE_MFK_3:
+                case PAGE_MFK_4:
+                case PAGE_MEM_1:
+                case PAGE_MEM_2:
+                    if (!found_next_page) {
+                        next_page = PAGE_VOL_1;
+                    }
+                    break;
+                default:
+                    next_page = PAGE_VOL_1;
+                    break;
+            }
+            break;
+        case GROUP_APP:
+            switch (buttons_page) {
+                case PAGE_APP_1:
+                case PAGE_APP_2:
+                    if (!found_next_page) {
+                        next_page = PAGE_APP_1;
+                    }
+                    break;
+                default:
+                    next_page = PAGE_APP_1;
+                    break;
+            }
+            break;
+        case GROUP_KEY:
+            switch (buttons_page) {
+                case PAGE_KEY_1:
+                case PAGE_KEY_2:
+                case PAGE_CW_DECODER_1:
+                case PAGE_CW_DECODER_2:
+                    if (!found_next_page) {
+                        next_page = PAGE_KEY_1;
+                    }
+                    break;
+                default:
+                    next_page = PAGE_KEY_1;
+                    break;
+            }
+            break;
+        case GROUP_MSG_CW:
+            switch (buttons_page) {
+                case PAGE_MSG_CW_1:
+                case PAGE_MSG_CW_2:
+                    if (!found_next_page) {
+                        next_page = PAGE_MSG_CW_1;
+                    }
+                    break;
+                default:
+                    next_page = PAGE_MSG_CW_1;
+                    break;
+            }
+            break;
+        case GROUP_MSG_VOICE:
+            switch (buttons_page) {
+                case PAGE_MSG_VOICE_1:
+                case PAGE_MSG_VOICE_2:
+                    if (!found_next_page) {
+                        next_page = PAGE_MSG_VOICE_1;
+                    }
+                    break;
+                default:
+                    next_page = PAGE_MSG_VOICE_1;
+                    break;
+            }
+            break;
+        case GROUP_DFN:
+            switch (buttons_page) {
+                case PAGE_DFN_1:
+                case PAGE_DFN_2:
+                case PAGE_DFN_3:
+                    if (!found_next_page) {
+                        next_page = PAGE_DFN_1;
+                    }
+                    break;
+                default:
+                    next_page = PAGE_DFN_1;
+                    break;
+            }
+            break;
+        default:
+            LV_LOG_ERROR("Unknown page group: %u", group);
+            return;
+    }
+    buttons_unload_page();
+    buttons_load_page(next_page);
 }

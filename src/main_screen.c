@@ -569,8 +569,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_GEN:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_unload_page();
-                buttons_load_page(PAGE_VOL_1);
+                buttons_load_page_group(GROUP_GEN);
                 voice_say_text_fmt("General menu keys");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_gen);
@@ -580,8 +579,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_APP:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_unload_page();
-                buttons_load_page(PAGE_APP_1);
+                buttons_load_page_group(GROUP_APP);
                 voice_say_text_fmt("Application menu keys");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_app);
@@ -591,8 +589,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_KEY:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_unload_page();
-                buttons_load_page(PAGE_KEY_1);
+                buttons_load_page_group(GROUP_KEY);
                 voice_say_text_fmt("CW parameters");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_key);
@@ -604,12 +601,13 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                 switch (radio_current_mode()) {
                     case x6100_mode_cw:
                     case x6100_mode_cwr:
-                        apps_disable();
-                        buttons_unload_page();
+                        if (!dialog_type_is_run(dialog_msg_cw)) {
+                            apps_disable();
+                        }
 
                         pannel_hide();
                         dialog_construct(dialog_msg_cw, obj);
-                        buttons_load_page(PAGE_MSG_CW_1);
+                        buttons_load_page_group(GROUP_MSG_CW);
                         voice_say_text_fmt("CW messages window");
                         break;
 
@@ -617,12 +615,13 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                     case x6100_mode_usb:
                     case x6100_mode_am:
                     case x6100_mode_nfm:
-                        apps_disable();
-                        buttons_unload_page();
+                        if (!dialog_type_is_run(dialog_msg_voice)) {
+                            apps_disable();
+                        }
 
                         pannel_hide();
                         dialog_construct(dialog_msg_voice, obj);
-                        buttons_load_page(PAGE_MSG_VOICE_1);
+                        buttons_load_page_group(GROUP_MSG_VOICE);
                         voice_say_text_fmt("Voice messages window");
                         break;
 
@@ -638,8 +637,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_DFN:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_unload_page();
-                buttons_load_page(PAGE_DFN_1);
+                buttons_load_page_group(GROUP_DFN);
                 voice_say_text_fmt("DNF parameters");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_dfn);

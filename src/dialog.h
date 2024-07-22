@@ -32,6 +32,7 @@ void dialog_destruct();
 bool dialog_key(dialog_t *dialog, lv_event_t * e);
 void dialog_send(lv_event_code_t event_code, void *param);
 bool dialog_is_run();
+bool dialog_type_is_run(dialog_t *dialog);
 
 lv_obj_t * dialog_init(lv_obj_t *parent);
 void dialog_item(dialog_t *dialog, lv_obj_t *obj);

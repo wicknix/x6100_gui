@@ -49,6 +49,16 @@ typedef enum {
     PAGE_RECORDER,
 } button_page_t;
 
+typedef enum {
+    GROUP_GEN,
+    GROUP_APP,
+    GROUP_KEY,
+    GROUP_MSG_CW,
+    GROUP_MSG_VOICE,
+    GROUP_DFN
+
+} button_group_t;
+
 typedef void (*hold_cb_t)(void *);
 
 typedef struct {
@@ -66,3 +76,4 @@ void buttons_load(uint8_t n, button_item_t *item);
 void buttons_load_page(button_page_t page);
 void buttons_unload_page();
 void buttons_press(uint8_t n, bool hold);
+void buttons_load_page_group(button_group_t group);

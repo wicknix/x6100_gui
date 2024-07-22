@@ -20,17 +20,17 @@ void dialog_construct(dialog_t *dialog, lv_obj_t *parent) {
     if (dialog && !dialog->run) {
         main_screen_keys_enable(false);
         dialog->construct_cb(parent);
-        
+
         dialog->run = true;
     }
 
-    current_dialog = dialog;    
+    current_dialog = dialog;
 }
 
 void dialog_destruct() {
     if (current_dialog && current_dialog->run) {
         current_dialog->run = false;
-        
+
         if (current_dialog->destruct_cb) {
             current_dialog->destruct_cb();
         }
@@ -55,7 +55,7 @@ bool dialog_key(dialog_t *dialog, lv_event_t * e) {
         dialog->key_cb(e);
         return true;
     }
-    
+
     return false;
 }
 
@@ -63,9 +63,13 @@ bool dialog_is_run() {
     return (current_dialog != NULL) && current_dialog->run;
 }
 
+bool dialog_type_is_run(dialog_t *dialog) {
+    return (current_dialog == dialog) && current_dialog->run;
+}
+
 lv_obj_t * dialog_init(lv_obj_t *parent) {
     obj = lv_obj_create(parent);
-    
+
     lv_obj_remove_style_all(obj);
     lv_obj_add_style(obj, &dialog_style, 0);
 
@@ -88,9 +92,9 @@ void dialog_item(dialog_t *dialog, lv_obj_t *obj) {
     lv_obj_set_style_border_color(obj, lv_color_white(), LV_STATE_FOCUS_KEY | LV_PART_INDICATOR);
 
     lv_obj_add_flag(obj, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
-    
+
     lv_group_add_obj(keyboard_group, obj);
-    
+
     if (dialog->key_cb) {
         lv_obj_add_event_cb(obj, dialog->key_cb, LV_EVENT_KEY, NULL);
     }
