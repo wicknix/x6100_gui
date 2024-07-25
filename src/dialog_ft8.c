@@ -14,6 +14,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <errno.h>
 
 #include "lvgl/lvgl.h"
 #include "dialog.h"
@@ -183,6 +184,7 @@ static void tx_call_dis_cb(lv_event_t * e);
 static void tx_call_en_cb(lv_event_t * e);
 
 static void mode_auto_cb(lv_event_t * e);
+static void time_sync(lv_event_t * e);
 
 static void make_tx_msg(ft8_tx_msg_t msg, int16_t snr);
 static bool do_rx_msg(ft8_cell_t *cell, const char * msg, bool pressed);
@@ -201,6 +203,8 @@ static button_item_t button_tx_call_en = { .label = "TX Call\nEnabled", .press =
 
 static button_item_t button_auto_dis = { .label = "Auto\nDisabled", .press = mode_auto_cb };
 static button_item_t button_auto_en = { .label = "Auto\nEnabled", .press = mode_auto_cb };
+
+static button_item_t button_time_sync = { .label = "Time\nSync", .press = time_sync };
 
 static dialog_t             dialog = {
     .run = false,
@@ -1234,6 +1238,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     buttons_load(2, &button_tx_cq_dis);
     buttons_load(3, params.ft8_auto.x ? &button_auto_en : &button_auto_dis);
+    buttons_load(4, &button_time_sync);
 
     mem_save(MEM_BACKUP_ID);
     load_band();
@@ -1373,5 +1378,34 @@ static void audio_cb(unsigned int n, float complex *samples) {
         cbuffercf_write(audio_buf, samples, n);
         pthread_cond_broadcast(&audio_cond);
         pthread_mutex_unlock(&audio_mutex);
+    }
+}
+
+
+static void time_sync(lv_event_t * e) {
+    time_t now = time(NULL);
+    uint8_t sec = now % 60;
+    float drift, slot_time;
+    switch (params.ft8_protocol) {
+        case PROTO_FT4:
+            slot_time = FT4_SLOT_TIME;
+            break;
+
+        case PROTO_FT8:
+            slot_time = FT8_SLOT_TIME;
+            break;
+    }
+    drift = fmodf(sec + slot_time / 2, slot_time) - slot_time / 2;
+    struct timespec tp;
+
+    now -= (int) drift;
+    tp.tv_sec = now;
+    tp.tv_nsec = 0;
+
+    int res = clock_settime(CLOCK_REALTIME, &tp);
+    if (res != 0)
+    {
+        LV_LOG_ERROR("Can't set system time: %s\n", strerror(errno));
+        return;
     }
 }
