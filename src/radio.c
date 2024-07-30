@@ -1243,6 +1243,12 @@ void radio_set_ptt(bool tx) {
     radio_unlock();
 }
 
+void radio_set_modem(bool tx) {
+    radio_lock();
+    x6100_control_modem_set(tx);
+    radio_unlock();
+}
+
 int16_t radio_change_rit(int16_t d) {
     if (d == 0) {
         return params.rit;

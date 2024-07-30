@@ -113,6 +113,8 @@ void radio_filters_setup();
 void radio_filter_get(int32_t *from_freq, int32_t *to_freq);
 void radio_poweroff();
 void radio_set_ptt(bool tx);
+void radio_set_modem(bool tx);
+
 
 int16_t radio_change_xit(int16_t d);
 int16_t radio_change_rit(int16_t d);

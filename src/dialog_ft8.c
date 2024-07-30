@@ -155,7 +155,6 @@ static float                symbol_period;
 static uint32_t             block_size;
 static uint32_t             subblock_size;
 static uint16_t             nfft;
-static float                fft_norm;
 static waterfall_t          wf;
 
 static candidate_t          candidate_list[MAX_CANDIDATES];
@@ -242,7 +241,6 @@ static void init() {
     block_size = SAMPLE_RATE * symbol_period;
     subblock_size = block_size / TIME_OSR;
     nfft = block_size * FREQ_OSR;
-    fft_norm = 2.0f / nfft;
 
     const uint32_t max_blocks = slot_time / symbol_period;
     const uint32_t num_bins = SAMPLE_RATE * symbol_period / 2;
@@ -477,6 +475,7 @@ void static process(float complex *frame) {
     complex float   *frame_ptr;
     int             offset = wf.num_blocks * wf.block_stride;
     int             frame_pos = 0;
+    float           scaled_offset = 300.0f + 40.0f * log10f(2.0f / nfft);
 
     for (int time_sub = 0; time_sub < wf.time_osr; time_sub++) {
         windowcf_write(frame_window, &frame[frame_pos], subblock_size);
@@ -484,8 +483,7 @@ void static process(float complex *frame) {
 
         windowcf_read(frame_window, &frame_ptr);
 
-        for (uint32_t pos = 0; pos < nfft; pos++)
-            time_buf[pos] = rx_window[pos] * frame_ptr[pos];
+        liquid_vectorcf_mul(rx_window, frame_ptr, nfft, time_buf);
 
         fft_execute(fft);
 
@@ -494,8 +492,8 @@ void static process(float complex *frame) {
                 int             src_bin = (bin * wf.freq_osr) + freq_sub;
                 complex float   freq = freq_buf[src_bin];
                 float           v = crealf(freq * conjf(freq));
-                float           db = 5.0f * log10f(v);
-                int             scaled = (int16_t) (db * 4.0f + 240.0f);
+                float           db = 10.0f * log10f(v);
+                int             scaled = (int16_t) (db * 2.0f + scaled_offset);
 
                 if (scaled < 0) {
                     scaled = 0;
@@ -621,9 +619,9 @@ static void tx_worker() {
     int16_t     *ptr = samples;
     size_t      part = 1024 * 2;
 
-    radio_set_ptt(true);
+    radio_set_modem(true);
 
-    float gain_scale = -15.0f + log10f(params.pwr) * 5;
+    float gain_scale = -12.0f + log10f(params.pwr) * 5;
     while (true) {
         if (n_samples <= 0 || state != TX_PROCESS) {
             state = IDLE;
@@ -637,7 +635,7 @@ static void tx_worker() {
     }
 
     audio_play_wait();
-    radio_set_ptt(false);
+    radio_set_modem(false);
     free(samples);
 }
 
@@ -1141,7 +1139,7 @@ static void construct_cb(lv_obj_t *parent) {
     styles_waterfall_palette(palette, 256);
     lv_waterfall_set_palette(waterfall, palette, 256);
     lv_waterfall_set_size(waterfall, WIDTH, 325);
-    lv_waterfall_set_min(waterfall, -60);
+    lv_waterfall_set_min(waterfall, -70);
 
     lv_obj_set_pos(waterfall, 13, 13);
 
