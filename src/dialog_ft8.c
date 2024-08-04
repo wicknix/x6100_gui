@@ -43,6 +43,7 @@
 #include "ft8/encode.h"
 #include "ft8/crc.h"
 #include "gfsk.h"
+#include "adif.h"
 
 #define DECIM           4
 #define SAMPLE_RATE     (AUDIO_CAPTURE_RATE / DECIM)
@@ -159,7 +160,7 @@ static candidate_t          candidate_list[MAX_CANDIDATES];
 static message_t            decoded[MAX_DECODED];
 static message_t*           decoded_hashtable[MAX_DECODED];
 
-static FILE                 *log_fd = NULL;
+static adif_log             ft8_log;
 
 static void construct_cb(lv_obj_t *parent);
 static void key_cb(lv_event_t * e);
@@ -221,24 +222,13 @@ static void reset() {
     state = IDLE;
 }
 
-static void log_qso() {
-    struct timespec now;
-    struct tm       *ts;
-
-    if (log_fd == NULL) {
-        return;
-    }
-
-    clock_gettime(CLOCK_REALTIME, &now);
-    ts = localtime(&now.tv_sec);
-
-    fprintf(log_fd, "%04i.%02i.%02i %02i:%02i %s  %s   %s %s  RSTs: %+02i RSTr: %+02i\r\n",
-        ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday, ts->tm_hour, ts->tm_min, ts->tm_zone,
-        params_band_label_get(),
-        params.callsign.x, qso_item.remote_callsign,
-        qso_item.local_snr, qso_item.remote_snr);
-    fflush(log_fd);
-    msg_set_text_fmt("QSO in saved");
+static void save_qso() {
+    time_t now = time(NULL);
+    const char * mode = params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4";
+    float freq_mhz = params_band_cur_freq_get() / 1000000.0f;
+    adif_add_qso(ft8_log, params.callsign.x, qso_item.remote_callsign, now, mode,
+        qso_item.local_snr, qso_item.remote_snr, freq_mhz, params.qth.x, qso_item.remote_qth);
+    msg_set_text_fmt("QSO is saved");
 }
 
 static void init() {
@@ -321,13 +311,7 @@ static void init() {
     pthread_create(&thread, NULL, decode_thread, NULL);
 
     /* Logger */
-
-    log_fd = fopen("/mnt/ft_log.txt", "a");
-    if (log_fd == NULL) {
-        perror("Unable to open log file:");
-    } else {
-        fprintf(log_fd, "\r\n");
-    }
+    ft8_log = adif_log_init("/mnt/ft_log.adi");
 }
 
 static void done() {
@@ -348,9 +332,7 @@ static void done() {
     free(waterfall_psd);
 
     free(rx_window);
-    if (log_fd != NULL) {
-        fclose(log_fd);
-    }
+    adif_log_close(ft8_log);
 }
 
 static void add_info(const char * fmt, ...) {
@@ -1042,7 +1024,7 @@ static bool answer_rx_msg(ft8_cell_t *cell, const char * msg, bool pressed) {
 
         case MSG_TX_DONE:
             qso = QSO_IDLE;
-            log_qso();
+            save_qso();
             buttons_load(2, &button_tx_call_en);
             return true;
     }
