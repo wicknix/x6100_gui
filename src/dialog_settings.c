@@ -798,12 +798,14 @@ static action_items_t hmic_action_items[] = {
     { .label = " Step down ", .action = ACTION_STEP_DOWN },
     { .label = " Voice mode ", .action = ACTION_VOICE_MODE },
     { .label = " Battery info ", .action = ACTION_BAT_INFO },
+    { .label = " NR toggle ", .action = ACTION_BAT_INFO },
+    { .label = " NB toggle ", .action = ACTION_BAT_INFO },
     { .label = NULL, .action = ACTION_NONE }
 };
 
 static void hmic_action_update_cb(lv_event_t * e) {
     lv_obj_t    *obj = lv_event_get_target(e);
-    uint32_t    *i = lv_event_get_user_data(e);
+    uint8_t     *i = lv_event_get_user_data(e);
     uint8_t     val = hmic_action_items[lv_dropdown_get_selected(obj)].action;
 
     params_lock();
@@ -832,15 +834,21 @@ static void hmic_action_update_cb(lv_event_t * e) {
 }
 
 static uint8_t make_hmic_action(uint8_t row) {
-    char        *labels[] = { "HMic F1 press", "HMic F2 press", "HMic F1 long press", "HMic F2 long press" };
+    struct {char *label; uint8_t param;} items[] = {
+        {"HMic F1 press", params.press_f1},
+        {"HMic F2 press", params.press_f2},
+        {"HMic F1 long press", params.long_f1},
+        {"HMic F2 long press", params.long_f2}
+    };
+    size_t items_len = sizeof(items) / sizeof(items[0]);
     lv_obj_t    *obj;
 
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < items_len; i++) {
         row_dsc[row] = 54;
 
         obj = lv_label_create(grid);
 
-        lv_label_set_text(obj, labels[i]);
+        lv_label_set_text(obj, items[i].label);
         lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, row, 1);
 
         obj = lv_dropdown_create(grid);
@@ -856,19 +864,6 @@ static uint8_t make_hmic_action(uint8_t row) {
 
         lv_dropdown_set_symbol(obj, NULL);
 
-        uint8_t x;
-
-        switch (i) {
-            case 0: x = params.press_f1;    break;
-            case 1: x = params.press_f2;    break;
-            case 2: x = params.long_f1;     break;
-            case 3: x = params.long_f2;     break;
-
-            default:
-                x = ACTION_NONE;
-                break;
-        }
-
         lv_dropdown_clear_options(obj);
 
         uint8_t n = 0;
@@ -876,14 +871,14 @@ static uint8_t make_hmic_action(uint8_t row) {
         while (hmic_action_items[n].label) {
             lv_dropdown_add_option(obj, hmic_action_items[n].label, LV_DROPDOWN_POS_LAST);
 
-            if (hmic_action_items[n].action == x) {
+            if (hmic_action_items[n].action == items[i].param) {
                 lv_dropdown_set_selected(obj, n);
             }
 
             n++;
         }
 
-        uint32_t *param = malloc(sizeof(uint32_t));
+        uint8_t *param = malloc(sizeof(uint8_t));
         *param = i;
 
         lv_obj_add_event_cb(obj, hmic_action_update_cb, LV_EVENT_VALUE_CHANGED, param);

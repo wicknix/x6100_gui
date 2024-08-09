@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sqlite3.h>
+#include <string.h>
 
 #include "lvgl/lvgl.h"
 #include "params.h"

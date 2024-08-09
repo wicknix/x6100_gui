@@ -235,6 +235,7 @@ void main_screen_app(uint8_t page_app) {
 }
 
 void main_screen_action(press_action_t action) {
+    bool b;
     switch (action) {
         case ACTION_NONE:
             break;
@@ -271,6 +272,16 @@ void main_screen_action(press_action_t action) {
 
         case ACTION_STEP_DOWN:
             next_freq_step(false);
+            break;
+
+        case ACTION_NR_TOGGLE:
+            b = radio_change_nr(1);
+            msg_set_text_fmt("#FFFFFF NR: %s", b ? "On" : "Off");
+            break;
+
+        case ACTION_NB_TOGGLE:
+            b = radio_change_nb(1);
+            msg_set_text_fmt("#FFFFFF NB: %s", b ? "On" : "Off");
             break;
 
         case ACTION_APP_RTTY:
@@ -726,7 +737,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
 static void main_screen_hkey_cb(lv_event_t * e) {
     event_hkey_t *hkey = lv_event_get_param(e);
-
     switch (hkey->key) {
         case HKEY_1:
         case HKEY_2:
