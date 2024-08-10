@@ -60,8 +60,9 @@
 
 #define WIDTH           775
 
+#define UNKNOWN_SNR     99
+
 typedef enum {
-    NOT_READY = 0,
     IDLE,
     RX_PROCESS,
     TX_PROCESS,
@@ -69,58 +70,74 @@ typedef enum {
 } ft8_state_t;
 
 typedef enum {
-    QSO_IDLE = 0,
-    QSO_CQ,
-    QSO_ODD,
-    QSO_EVEN,
-} ft8_qso_t;
+    CELL_RX_INFO = 0,
+    CELL_RX_MSG,
+    CELL_RX_CQ,
+    CELL_RX_TO_ME,
+    CELL_TX_MSG
+} ft8_cell_type_t;
 
 typedef enum {
-    MSG_RX_INFO = 0,
-    MSG_RX_MSG,
-    MSG_RX_CQ,
-    MSG_RX_TO_ME,
-    MSG_TX_MSG
-} ft8_msg_type_t;
+    // "CQ CALL ..." or "CQ DX CALL ..." or "CQ EU CALL ..."
+    MSG_TYPE_CQ,
+    // "CALL1 CALL2 GRID"
+    MSG_TYPE_GRID,
+    // "CALL1 CALL2 +1"
+    MSG_TYPE_REPORT,
+    // "CALL1 CALL2 R+1"
+    MSG_TYPE_R_REPORT,
+    // "CALL1 CALL2 73"
+    MSG_TYPE_RR73,
+    // "CALL1 CALL2 RR73"
+    MSG_TYPE_73,
 
-typedef enum {
-    MSG_TX_INVALID = 0,
-    MSG_TX_CQ,
-    MSG_TX_CALLING,
-    MSG_TX_R_REPORT,
+    MSG_TYPE_OTHER,
+} msg_type_t;
 
-    MSG_TX_REPORT,
-    MSG_TX_RR73,
-
-    MSG_TX_DONE
-} ft8_tx_msg_t;
+/**
+ * Incoming message parse result.
+ */
+typedef struct {
+    msg_type_t  type;
+    char        call_from[32];
+    char        call_to[32];
+    char        extra[32];
+    int8_t      snr;
+} msg_t;
 
 typedef struct {
-    ft8_msg_type_t  type;
-    int16_t         snr;
+    ft8_cell_type_t cell_type;
+    int16_t         local_snr;
     int16_t         dist;
     bool            odd;
-} ft8_cell_t;
+    msg_t           msg;
+} msg_info_t;
 
 typedef struct {
-    char            *msg;
-    ft8_cell_t      *cell;
-} ft8_msg_t;
+    msg_info_t      *msg_info;
+    char            text[128];
+} cell_t;
+
 
 typedef struct {
     char        remote_callsign[32];
     char        remote_qth[32];
-    int16_t     remote_snr;
+    int16_t     rst_r;
+    int16_t     rst_s;
 
-    int16_t     local_snr;
+    int16_t     last_snr;
+    msg_t       *last_rx_msg;
+    bool        rx_odd;
 } ft8_qso_item_t;
 
-static ft8_state_t          state = NOT_READY;
-static ft8_qso_t            qso = QSO_IDLE;
+static ft8_state_t          state = IDLE;
 static bool                 odd;
+static bool                 tx_enabled=true;
+static bool                 cq_enabled=false;
+static bool                 tx_time_slot;
 
 static char                 tx_msg[64] = "";
-static ft8_qso_item_t       qso_item;
+static ft8_qso_item_t       qso_item = {.rst_s=UNKNOWN_SNR, .rst_r=UNKNOWN_SNR};
 
 static lv_obj_t             *table;
 static int16_t              table_rows;
@@ -184,9 +201,14 @@ static void tx_call_dis_cb(lv_event_t * e);
 static void mode_auto_cb(lv_event_t * e);
 static void time_sync(lv_event_t * e);
 
-static void make_tx_msg(ft8_tx_msg_t msg, int16_t snr);
-static bool answer_rx_msg(ft8_cell_t *cell, const char * msg, bool pressed);
+static void cell_press_cb(lv_event_t * e);
+
+static void add_info(const char * fmt, ...);
+static void add_tx_text(const char * text);
+static void make_cq_msg();
+static bool make_answer(msg_t *msg, int8_t snr, bool rx_odd);
 static bool get_time_slot(struct timespec now);
+static bool str_equal(const char * a, const char * b);
 
 // button label is current state, press action and name - next state
 static button_item_t button_show_cq = { .label = "Show\nAll", .press = show_cq_cb };
@@ -217,18 +239,56 @@ static dialog_t             dialog = {
 
 dialog_t                    *dialog_ft8 = &dialog;
 
-static void reset() {
-    wf.num_blocks = 0;
-    state = IDLE;
-}
-
 static void save_qso() {
+    if (
+        (qso_item.rst_s == UNKNOWN_SNR) ||
+        (qso_item.rst_r == UNKNOWN_SNR) ||
+        (strlen(qso_item.remote_callsign) == 0)
+    ) {
+        LV_LOG_INFO("Can't save QSO - not enough information");
+        return;
+    }
     time_t now = time(NULL);
     const char * mode = params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4";
     float freq_mhz = params_band_cur_freq_get() / 1000000.0f;
     adif_add_qso(ft8_log, params.callsign.x, qso_item.remote_callsign, now, mode,
-        qso_item.local_snr, qso_item.remote_snr, freq_mhz, params.qth.x, qso_item.remote_qth);
+        qso_item.rst_s, qso_item.rst_r, freq_mhz, params.qth.x, qso_item.remote_qth);
     msg_set_text_fmt("QSO is saved");
+}
+
+static void clear_qso() {
+    qso_item.remote_callsign[0] = 0;
+    qso_item.remote_qth[0] = 0;
+    qso_item.rst_r = UNKNOWN_SNR;
+    qso_item.rst_s = UNKNOWN_SNR;
+    if (qso_item.last_rx_msg != NULL) {
+        free(qso_item.last_rx_msg);
+        qso_item.last_rx_msg = NULL;
+    }
+}
+
+static void start_qso(msg_t * msg) {
+    if (!str_equal(qso_item.remote_callsign, msg->call_from)) {
+        clear_qso();
+        strcpy(qso_item.remote_callsign, msg->call_from);
+    }
+    if ((msg->type == MSG_TYPE_CQ) || (msg->type == MSG_TYPE_GRID)) {
+        strcpy(qso_item.remote_qth, msg->extra);
+    }
+    if ((msg->type == MSG_TYPE_REPORT) || (msg->type == MSG_TYPE_R_REPORT)) {
+        qso_item.rst_r = msg->snr;
+    }
+    add_info("Start QSO with %s", qso_item.remote_callsign);
+    buttons_load(2, &button_tx_call_dis);
+}
+
+static bool active_qso() {
+    return qso_item.remote_callsign[0] != 0;
+}
+
+static void reset() {
+    wf.num_blocks = 0;
+    state = IDLE;
 }
 
 static void init() {
@@ -288,8 +348,6 @@ static void init() {
     for (uint16_t i = 0; i < nfft; i++)
         rx_window[i] *= gain;
 
-    qso = QSO_IDLE;
-
     reset();
 
     struct timespec now;
@@ -319,6 +377,7 @@ static void done() {
 
     pthread_cancel(thread);
     pthread_join(thread, NULL);
+    radio_set_modem(false);
 
     free(wf.mag);
     windowcf_destroy(frame_window);
@@ -333,23 +392,8 @@ static void done() {
 
     free(rx_window);
     adif_log_close(ft8_log);
-}
-
-static void add_info(const char * fmt, ...) {
-    va_list     args;
-    char        buf[128];
-    ft8_msg_t   *msg = malloc(sizeof(ft8_msg_t));
-
-    va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
-    va_end(args);
-
-    msg->msg = strdup(buf);
-
-    msg->cell = lv_mem_alloc(sizeof(ft8_cell_t));
-    msg->cell->type = MSG_RX_INFO;
-
-    event_send(table, EVENT_FT8_MSG, msg);
+    clear_qso();
+    tx_msg[0] = 0;
 }
 
 static const char * find_qth(const char *str) {
@@ -364,104 +408,6 @@ static const char * find_qth(const char *str) {
     }
 
     return NULL;
-}
-
-static bool to_me(const char * text) {
-    int16_t         callsign_len = strlen(params.callsign.x);
-
-    return (callsign_len > 0) && (strncasecmp(text, params.callsign.x, callsign_len) == 0);
-}
-
-static void add_rx_text(int16_t snr, const char * text) {
-    ft8_msg_type_t  type;
-    int16_t         callsign_len = strlen(params.callsign.x);
-
-    if (to_me(text)) {
-        type = MSG_RX_TO_ME;
-    } else if (strncmp(text, "CQ ", 3) == 0) {
-        type = MSG_RX_CQ;
-    } else {
-        if (params.ft8_show_all) {
-            type = MSG_RX_MSG;
-        } else {
-            return;
-        }
-    }
-
-    ft8_msg_t *msg = malloc(sizeof(ft8_msg_t));
-
-    msg->msg = strdup(text);
-
-    msg->cell = lv_mem_alloc(sizeof(ft8_cell_t));
-    msg->cell->snr = snr;
-    msg->cell->type = type;
-    msg->cell->odd = odd;
-
-    if (params.qth.x[0] != 0) {
-        const char *qth = find_qth(text);
-
-        msg->cell->dist = qth ? grid_dist(qth) : 0;
-    } else {
-        msg->cell->dist = 0;
-    }
-
-    event_send(table, EVENT_FT8_MSG, msg);
-}
-
-static void add_tx_text(const char * text) {
-    ft8_msg_t   *msg = malloc(sizeof(ft8_msg_t));
-
-    msg->msg = strdup(text);
-
-    msg->cell = lv_mem_alloc(sizeof(ft8_cell_t));
-    msg->cell->type = MSG_TX_MSG;
-
-    event_send(table, EVENT_FT8_MSG, msg);
-}
-
-static void decode() {
-    uint16_t    num_candidates = ft8_find_sync(&wf, MAX_CANDIDATES, candidate_list, MIN_SCORE);
-
-    memset(decoded_hashtable, 0, sizeof(decoded_hashtable));
-    memset(decoded, 0, sizeof(decoded));
-
-    for (uint16_t idx = 0; idx < num_candidates; idx++) {
-        const candidate_t *cand = &candidate_list[idx];
-
-        if (cand->score < MIN_SCORE)
-            continue;
-
-        float freq_hz = (cand->freq_offset + (float) cand->freq_sub / wf.freq_osr) / symbol_period;
-        float time_sec = (cand->time_offset + (float) cand->time_sub / wf.time_osr) * symbol_period;
-
-        message_t       message;
-        decode_status_t status;
-
-        if (!ft8_decode(&wf, cand, &message, LDPC_ITER, &status)) {
-            continue;
-        }
-
-        uint16_t    idx_hash = message.hash % MAX_DECODED;
-        bool        found_empty_slot = false;
-        bool        found_duplicate = false;
-
-        do {
-            if (decoded_hashtable[idx_hash] == NULL) {
-                found_empty_slot = true;
-            } else if (decoded_hashtable[idx_hash]->hash == message.hash && strcmp(decoded_hashtable[idx_hash]->text, message.text) == 0) {
-                found_duplicate = true;
-            } else {
-                idx_hash = (idx_hash + 1) % MAX_DECODED;
-            }
-        } while (!found_empty_slot && !found_duplicate);
-
-        if (found_empty_slot) {
-            memcpy(&decoded[idx_hash], &message, sizeof(message));
-            decoded_hashtable[idx_hash] = &decoded[idx_hash];
-
-            add_rx_text(cand->snr, message.text);
-        }
-    }
 }
 
 void static waterfall_process(float complex *frame, const size_t size) {
@@ -527,180 +473,10 @@ void static process(float complex *frame) {
     wf.num_blocks++;
 }
 
-static bool get_time_slot(struct timespec now) {
-    bool cur_odd;
-    float sec = (now.tv_sec % 60) + now.tv_nsec / 1000000000.0f;
-
-    switch (params.ft8_protocol) {
-    case PROTO_FT4:
-        cur_odd = (int)(sec / FT4_SLOT_TIME) % 2;
-        break;
-
-    case PROTO_FT8:
-        cur_odd = (int)(sec / FT8_SLOT_TIME) % 2;
-        break;
-    }
-    return cur_odd;
-}
-
-
-static void rx_worker(bool new_slot) {
-    unsigned int    n;
-    float complex   *buf;
-    const size_t    size = block_size * DECIM;
-    if (new_slot) {
-        wf.num_blocks = 0;
-    }
-
-    pthread_mutex_lock(&audio_mutex);
-
-    while (cbuffercf_size(audio_buf) < size) {
-        pthread_cond_wait(&audio_cond, &audio_mutex);
-    }
-
-    while (cbuffercf_size(audio_buf) > size) {
-        cbuffercf_read(audio_buf, size, &buf, &n);
-
-        firdecim_crcf_execute_block(decim, buf, block_size, decim_buf);
-        cbuffercf_release(audio_buf, size);
-
-        waterfall_process(decim_buf, block_size);
-
-        process(decim_buf);
-
-        if (wf.num_blocks >= wf.max_blocks) {
-            decode();
-            reset();
-        }
-    }
-
-    pthread_mutex_unlock(&audio_mutex);
-}
-
-static void tx_worker() {
-    uint8_t tones[FT8_NN];
-    uint8_t packed[FTX_LDPC_K_BYTES];
-    int     rc = pack77(tx_msg, packed);
-
-    const uint16_t signal_freq = 1325;
-
-    if (rc < 0) {
-        LV_LOG_ERROR("Cannot parse message %i", rc);
-        state = IDLE;
-        return;
-    }
-
-    ft8_encode(packed, tones);
-
-    int32_t     n_samples = 0;
-    float       symbol_bt = (params.ft8_protocol == PROTO_FT4) ? FT4_SYMBOL_BT : FT8_SYMBOL_BT;
-    int16_t     *samples = gfsk_synth(tones, FT8_NN, signal_freq, symbol_bt, symbol_period, &n_samples);
-    int16_t     *ptr = samples;
-    size_t      part;
-
-    // Change freq before tx
-    uint64_t    radio_freq = params_band_cur_freq_get();
-
-    radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
-    radio_set_modem(true);
-
-    float gain_scale = -12.0f + log10f(params.pwr) * 5;
-    while (true) {
-        if (n_samples <= 0 || state != TX_PROCESS) {
-            state = IDLE;
-            break;
-        }
-        part = LV_MIN(1024 * 2, n_samples);
-        audio_gain_db(ptr, part, gain_scale, ptr);
-        audio_play(ptr, part);
-
-        n_samples -= part;
-        ptr += part;
-    }
-
-    audio_play_wait();
-    radio_set_modem(false);
-    // Restore freq
-    radio_set_freq(radio_freq);
-    free(samples);
-}
-
-static void * decode_thread(void *arg) {
-    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
-
-    struct timespec now;
-    bool            new_odd;
-    struct tm       *ts;
-    bool            new_slot=false;
-
-    while (true) {
-        clock_gettime(CLOCK_REALTIME, &now);
-        new_odd = get_time_slot(now);
-        new_slot = new_odd != odd;
-        switch (state) {
-            case IDLE:
-                if (new_slot) {
-                    switch (qso) {
-                        case QSO_IDLE:
-                            state = RX_PROCESS;
-                            break;
-
-                        case QSO_CQ:
-                            state = TX_PROCESS;
-                            qso = new_odd ? QSO_ODD : QSO_EVEN;
-                            break;
-
-                        case QSO_ODD:
-                            state = new_odd ? TX_PROCESS : RX_PROCESS;
-                            break;
-
-                        case QSO_EVEN:
-                            state = !new_odd ? TX_PROCESS : RX_PROCESS;
-                            break;
-                    }
-
-                    switch (state) {
-                        case RX_PROCESS:
-                            rx_worker(new_slot);
-                            if (qso == QSO_IDLE) {
-                                ts = localtime(&now.tv_sec);
-                                add_info("RX %s %02i:%02i:%02i", params_band_label_get(),
-                                    ts->tm_hour, ts->tm_min, ts->tm_sec);
-                            }
-                            break;
-
-                        case TX_PROCESS:
-                            add_tx_text(tx_msg);
-                            break;
-                    }
-                } else {
-                    rx_worker(new_slot);
-                }
-                break;
-
-            case RX_PROCESS:
-                rx_worker(new_slot);
-                break;
-
-            case TX_PROCESS:
-            case TX_STOP:
-                tx_worker();
-                break;
-
-            default:
-                break;
-        }
-        odd = new_odd;
-    }
-
-    return NULL;
-}
-
 static void add_msg_cb(lv_event_t * e) {
-    ft8_msg_t   *msg = (ft8_msg_t *) lv_event_get_param(e);
-    int16_t     row = 0;
-    int16_t     col = 0;
+    cell_t      *cell = (cell_t *) lv_event_get_param(e);
+    uint16_t    row = 0;
+    uint16_t    col = 0;
     bool        scroll;
 
     lv_table_get_selected_cell(table, &row, &col);
@@ -715,21 +491,16 @@ static void add_msg_cb(lv_event_t * e) {
     }
 #endif
 
-    lv_table_set_cell_value(table, table_rows, 0, msg->msg);
+    lv_table_set_cell_value(table, table_rows, 0, cell->text);
 
-    if (msg->cell) {
-        lv_table_set_cell_user_data(table, table_rows, 0, msg->cell);
-
-        if (params.ft8_auto.x && (msg->cell->type == MSG_RX_TO_ME)) {
-            answer_rx_msg(msg->cell, msg->msg, false);
-        }
+    if (cell->msg_info) {
+        lv_table_set_cell_user_data(table, table_rows, 0, cell->msg_info);
     }
 
     if (scroll) {
-        int32_t *c = malloc(sizeof(int32_t));
-        *c = LV_KEY_DOWN;
+        static int32_t c = LV_KEY_DOWN;
 
-        lv_event_send(table, LV_EVENT_KEY, c);
+        lv_event_send(table, LV_EVENT_KEY, &c);
     }
 
     table_rows++;
@@ -742,9 +513,9 @@ static void table_draw_part_begin_cb(lv_event_t * e) {
     if (dsc->part == LV_PART_ITEMS) {
         uint32_t    row = dsc->id / lv_table_get_col_cnt(obj);
         uint32_t    col = dsc->id - row * lv_table_get_col_cnt(obj);
-        ft8_cell_t  *cell = lv_table_get_cell_user_data(obj, row, col);
+        msg_info_t  *msg_info = lv_table_get_cell_user_data(obj, row, col);
 
-        if (cell == NULL) {
+        if (msg_info == NULL) {
             dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
             dsc->rect_dsc->bg_color = lv_color_white();
             dsc->rect_dsc->bg_opa = 128;
@@ -752,26 +523,28 @@ static void table_draw_part_begin_cb(lv_event_t * e) {
             return;
         }
 
-        switch (cell->type) {
-            case MSG_RX_INFO:
+        switch (msg_info->cell_type) {
+            case CELL_RX_INFO:
                 dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
                 dsc->rect_dsc->bg_color = lv_color_white();
                 dsc->rect_dsc->bg_opa = 128;
                 break;
 
-            case MSG_RX_CQ:
+            case CELL_RX_CQ:
                 dsc->rect_dsc->bg_color = lv_color_hex(0x00DD00);
                 dsc->rect_dsc->bg_opa = 128;
                 break;
 
-            case MSG_RX_TO_ME:
+            case CELL_RX_TO_ME:
                 dsc->rect_dsc->bg_color = lv_color_hex(0xFF0000);
                 dsc->rect_dsc->bg_opa = 128;
                 break;
 
-            case MSG_TX_MSG:
+            case CELL_TX_MSG:
                 dsc->rect_dsc->bg_color = lv_color_hex(0x0000DD);
                 dsc->rect_dsc->bg_opa = 128;
+                break;
+            default:
                 break;
         }
     }
@@ -784,13 +557,13 @@ static void table_draw_part_end_cb(lv_event_t * e) {
     if (dsc->part == LV_PART_ITEMS) {
         uint32_t    row = dsc->id / lv_table_get_col_cnt(obj);
         uint32_t    col = dsc->id - row * lv_table_get_col_cnt(obj);
-        ft8_cell_t  *cell = lv_table_get_cell_user_data(obj, row, col);
+        msg_info_t  *msg_info = lv_table_get_cell_user_data(obj, row, col);
 
-        if (cell == NULL) {
+        if (msg_info == NULL) {
             return;
         }
 
-        if (cell->type == MSG_RX_MSG || cell->type == MSG_RX_CQ || cell->type == MSG_RX_TO_ME) {
+        if (msg_info->cell_type == CELL_RX_MSG || msg_info->cell_type == CELL_RX_CQ || msg_info->cell_type == CELL_RX_TO_ME) {
             char                buf[64];
             const lv_coord_t    cell_top = lv_obj_get_style_pad_top(obj, LV_PART_ITEMS);
             const lv_coord_t    cell_bottom = lv_obj_get_style_pad_bottom(obj, LV_PART_ITEMS);
@@ -804,25 +577,18 @@ static void table_draw_part_end_cb(lv_event_t * e) {
             area.x2 = dsc->draw_area->x2 - 15;
             area.x1 = area.x2 - 120;
 
-            snprintf(buf, sizeof(buf), "%i dB", cell->snr);
+            snprintf(buf, sizeof(buf), "%i dB", msg_info->local_snr);
             lv_draw_label(dsc->draw_ctx, dsc->label_dsc, &area, buf, NULL);
 
-            if (cell->dist > 0) {
+            if (msg_info->dist > 0) {
                 area.x2 = area.x1 - 10;
                 area.x1 = area.x2 - 200;
 
-                snprintf(buf, sizeof(buf), "%i km", cell->dist);
+                snprintf(buf, sizeof(buf), "%i km", msg_info->dist);
                 lv_draw_label(dsc->draw_ctx, dsc->label_dsc, &area, buf, NULL);
             }
         }
     }
-}
-
-static void selected_msg_cb(lv_event_t * e) {
-    int16_t     row;
-    int16_t     col;
-
-    lv_table_get_selected_cell(table, &row, &col);
 }
 
 static void key_cb(lv_event_t * e) {
@@ -846,6 +612,7 @@ static void key_cb(lv_event_t * e) {
 }
 
 static void destruct_cb() {
+    // TODO: check free mem
     done();
 
     firdecim_crcf_destroy(decim);
@@ -900,140 +667,6 @@ static void clean() {
     *c = LV_KEY_UP;
 
     lv_event_send(table, LV_EVENT_KEY, c);
-}
-
-static void make_tx_msg(ft8_tx_msg_t msg, int16_t snr) {
-    char qth[5] = "";
-
-    if (strlen(params.qth.x) >= 4) {
-        strncpy(qth, params.qth.x, sizeof(qth) - 1);
-    }
-
-    switch (msg) {
-        case MSG_TX_CQ:
-            snprintf(tx_msg, sizeof(tx_msg) - 1, "CQ %s %s", params.callsign.x, qth);
-            break;
-
-        case MSG_TX_CALLING:
-            qso_item.local_snr = snr;
-            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s %s", qso_item.remote_callsign, params.callsign.x, qth);
-            break;
-
-        case MSG_TX_REPORT:
-            qso_item.local_snr = snr;
-            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s %+02i", qso_item.remote_callsign, params.callsign.x, qso_item.local_snr);
-            break;
-
-        case MSG_TX_R_REPORT:
-            qso_item.local_snr = snr;
-            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s R%+02i", qso_item.remote_callsign, params.callsign.x, qso_item.local_snr);
-            break;
-
-        case MSG_TX_RR73:
-            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s RR73", qso_item.remote_callsign, params.callsign.x);
-            break;
-
-        default:
-            return;
-    }
-
-    msg_set_text_fmt("Next TX: %s", tx_msg);
-}
-
-static ft8_tx_msg_t parse_rx_msg(const char * str) {
-    char            *s = strdup(str);
-    char            *call_to = NULL;
-    char            *call_de = NULL;
-    char            *extra = NULL;
-
-    /* Split */
-
-    call_to = strtok(s, " ");
-
-    if (call_to) {
-        call_de = strtok(NULL, " ");
-
-        if (call_de) {
-            extra = strtok(NULL, " ");
-        }
-    }
-
-    /* Analysis */
-
-    if (call_to && strcmp(call_to, "CQ") == 0) {
-        if (call_de && strcmp(call_de, "DX") == 0) {
-            call_de = extra;
-            extra = strtok(NULL, " ");
-        }
-        strcpy(qso_item.remote_callsign, call_de ? call_de : "");
-        strcpy(qso_item.remote_qth, extra ? extra : "");
-
-        free(s);
-        return MSG_TX_CALLING;
-    }
-
-    if (call_to && to_me(call_to)) {
-        if (extra && strcmp(extra, "RR73") == 0 || strcmp(extra, "73") == 0) {
-            buttons_load(2, &button_tx_cq_dis);
-
-            free(s);
-            return MSG_TX_DONE;
-        }
-
-        if (grid_check(extra)) {
-            strcpy(qso_item.remote_callsign, call_de);
-            strcpy(qso_item.remote_qth, extra);
-
-            free(s);
-            return MSG_TX_REPORT;
-        }
-
-        if (extra[0] == 'R' && (extra[1] == '-' || extra[1] == '+')) {
-            qso_item.remote_snr = atoi(extra + 1);
-            strcpy(qso_item.remote_callsign, call_de);
-
-            free(s);
-            return MSG_TX_RR73;
-        }
-
-        if (extra[0] == '-' || extra[0] == '+') {
-            qso_item.remote_snr = atoi(extra);
-            strcpy(qso_item.remote_callsign, call_de);
-
-            free(s);
-            return MSG_TX_R_REPORT;
-        }
-    }
-
-    free(s);
-    return MSG_TX_INVALID;
-}
-
-static bool answer_rx_msg(ft8_cell_t *cell, const char * msg, bool pressed) {
-    ft8_tx_msg_t next_msg = parse_rx_msg(msg);
-
-    switch (next_msg) {
-        case MSG_TX_CALLING:
-            if (pressed) {
-                add_info("Start QSO");
-            }
-            break;
-
-        case MSG_TX_INVALID:
-            return false;
-
-        case MSG_TX_DONE:
-            qso = QSO_IDLE;
-            save_qso();
-            buttons_load(2, &button_tx_call_en);
-            return true;
-    }
-
-    qso = cell->odd ? QSO_EVEN : QSO_ODD;   /* Must be reversed */
-    make_tx_msg(next_msg, cell->snr);
-
-    buttons_load(2, &button_tx_call_dis);
-    return true;
 }
 
 static void band_cb(lv_event_t * e) {
@@ -1173,8 +806,8 @@ static void construct_cb(lv_obj_t *parent) {
 
     lv_obj_remove_style(table, NULL, LV_STATE_ANY | LV_PART_MAIN);
     lv_obj_add_event_cb(table, add_msg_cb, EVENT_FT8_MSG, NULL);
-    lv_obj_add_event_cb(table, selected_msg_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_add_event_cb(table, tx_call_en_cb, LV_EVENT_PRESSED, NULL);
+    // lv_obj_add_event_cb(table, selected_msg_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(table, cell_press_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(table, key_cb, LV_EVENT_KEY, NULL);
     lv_obj_add_event_cb(table, table_draw_part_begin_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
     lv_obj_add_event_cb(table, table_draw_part_end_cb, LV_EVENT_DRAW_PART_END, NULL);
@@ -1317,8 +950,10 @@ static void tx_cq_en_cb(lv_event_t * e) {
     }
 
     buttons_load(2, &button_tx_cq_dis);
-    make_tx_msg(MSG_TX_CQ, 0);
-    qso = QSO_CQ;
+    make_cq_msg();
+    msg_set_text_fmt("Next TX: %s", tx_msg);
+    cq_enabled = true;
+    tx_enabled = true;
 }
 
 static void tx_cq_dis_cb(lv_event_t * e) {
@@ -1327,13 +962,14 @@ static void tx_cq_dis_cb(lv_event_t * e) {
     if (state == TX_PROCESS) {
         state = TX_STOP;
     }
-    qso = QSO_IDLE;
+    cq_enabled = false;
+    tx_enabled = false;
 }
 
 static void tx_call_off() {
     buttons_load(2, &button_tx_call_en);
     state = TX_STOP;
-    qso = QSO_IDLE;
+    tx_enabled = false;
 }
 
 static void tx_call_en_cb(lv_event_t * e) {
@@ -1342,21 +978,28 @@ static void tx_call_en_cb(lv_event_t * e) {
 
         return;
     }
+    buttons_load(2, &button_tx_call_dis);
+    tx_enabled = true;
+}
 
+static void cell_press_cb(lv_event_t * e) {
     if (state == TX_PROCESS) {
         tx_call_off();
     } else {
-        int16_t     row;
-        int16_t     col;
+        uint16_t     row;
+        uint16_t     col;
 
         lv_table_get_selected_cell(table, &row, &col);
 
-        ft8_cell_t  *cell = lv_table_get_cell_user_data(table, row, col);
+        msg_info_t  *msg_info = lv_table_get_cell_user_data(table, row, col);
 
-        if (cell == NULL || cell->type == MSG_TX_MSG || cell->type == MSG_RX_INFO) {
+        if (msg_info == NULL || msg_info->cell_type == CELL_TX_MSG || msg_info->cell_type == CELL_RX_INFO) {
             msg_set_text_fmt("What should I do about it?");
         } else {
-            if (!answer_rx_msg(cell, lv_table_get_cell_value(table, row, col), true)) {
+            if (make_answer(&msg_info->msg, msg_info->local_snr, msg_info->odd)) {
+                start_qso(&msg_info->msg);
+                tx_enabled = true;
+            } else {
                 msg_set_text_fmt("Invalid message");
                 tx_call_off();
             }
@@ -1370,7 +1013,7 @@ static void tx_call_dis_cb(lv_event_t * e) {
     if (state == TX_PROCESS) {
         state = TX_STOP;
     }
-    qso = QSO_IDLE;
+    tx_enabled = false;
 }
 
 static void audio_cb(unsigned int n, float complex *samples) {
@@ -1409,4 +1052,444 @@ static void time_sync(lv_event_t * e) {
         LV_LOG_ERROR("Can't set system time: %s\n", strerror(errno));
         return;
     }
+}
+
+static bool get_time_slot(struct timespec now) {
+    bool cur_odd;
+    float sec = (now.tv_sec % 60) + now.tv_nsec / 1000000000.0f;
+
+    switch (params.ft8_protocol) {
+    case PROTO_FT4:
+        cur_odd = (int)(sec / FT4_SLOT_TIME) % 2;
+        break;
+
+    case PROTO_FT8:
+        cur_odd = (int)(sec / FT8_SLOT_TIME) % 2;
+        break;
+    }
+    return cur_odd;
+}
+
+/**
+ * Compare 2 strings ignoring case
+ */
+static bool str_equal(const char * a, const char * b) {
+    size_t a_len = strlen(a);
+    if (a_len != strlen(b)) {
+        return false;
+    }
+    if (a_len == 0) {
+        return false;
+    }
+    return strncasecmp(a, b, a_len) == 0;
+}
+
+/**
+ * Create CQ TX message
+ */
+static void make_cq_msg() {
+    char qth[5] = "";
+
+    if (strlen(params.qth.x) >= 4) {
+        strncpy(qth, params.qth.x, sizeof(qth) - 1);
+    }
+    snprintf(tx_msg, sizeof(tx_msg) - 1, "CQ %s %s", params.callsign.x, qth);
+    tx_time_slot = !odd;
+}
+
+/**
+ * Create answer for incoming message.
+ */
+static bool make_answer(msg_t * msg, int8_t snr, bool rx_odd) {
+    char qth[5] = "";
+
+    if (strlen(params.qth.x) >= 4) {
+        strncpy(qth, params.qth.x, sizeof(qth) - 1);
+    }
+    switch(msg->type) {
+        case MSG_TYPE_CQ:
+            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s %s", msg->call_from, params.callsign.x, qth);
+            break;
+        case MSG_TYPE_GRID:
+            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s %+02i", msg->call_from, params.callsign.x, snr);
+            qso_item.rst_s = snr;
+            break;
+        case MSG_TYPE_REPORT:
+            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s R%+02i", msg->call_from, params.callsign.x, snr);
+            qso_item.rst_s = snr;
+            break;
+        case MSG_TYPE_R_REPORT:
+            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s RR73", msg->call_from, params.callsign.x);
+            break;
+        case MSG_TYPE_RR73:
+            snprintf(tx_msg, sizeof(tx_msg) - 1, "%s %s 73", msg->call_from, params.callsign.x);
+            break;
+        default:
+            return false;
+    }
+    tx_time_slot = !rx_odd;
+    msg_set_text_fmt("Next TX: %s", tx_msg);
+    return true;
+}
+
+
+static void tx_worker() {
+    uint8_t tones[FT8_NN];
+    uint8_t packed[FTX_LDPC_K_BYTES];
+    int     rc = pack77(tx_msg, packed);
+
+    const uint16_t signal_freq = 1325;
+
+    if (rc < 0) {
+        LV_LOG_ERROR("Cannot parse message %i", rc);
+        state = IDLE;
+        return;
+    }
+
+    ft8_encode(packed, tones);
+
+    uint32_t    n_samples = 0;
+    float       symbol_bt = (params.ft8_protocol == PROTO_FT4) ? FT4_SYMBOL_BT : FT8_SYMBOL_BT;
+    int16_t     *samples = gfsk_synth(tones, FT8_NN, signal_freq, symbol_bt, symbol_period, &n_samples);
+    int16_t     *ptr = samples;
+    size_t      part;
+
+    // Change freq before tx
+    uint64_t    radio_freq = params_band_cur_freq_get();
+
+    radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
+    radio_set_modem(true);
+
+    float gain_scale = -12.0f + log10f(params.pwr) * 5;
+    while (true) {
+        if (n_samples <= 0 || state != TX_PROCESS) {
+            state = IDLE;
+            break;
+        }
+        part = LV_MIN(1024 * 2, n_samples);
+        audio_gain_db(ptr, part, gain_scale, ptr);
+        audio_play(ptr, part);
+
+        n_samples -= part;
+        ptr += part;
+    }
+
+    audio_play_wait();
+    radio_set_modem(false);
+    // Restore freq
+    radio_set_freq(radio_freq);
+    free(samples);
+}
+
+/**
+ * Parse incoming text to msg
+ */
+static msg_t parse_rx_msg(const char * str) {
+    char            s[32];
+    char            *call_to = NULL;
+    char            *call_de = NULL;
+    char            *extra = NULL;
+
+    strcpy(s, str);
+
+    msg_t msg;
+    msg.type = MSG_TYPE_OTHER;
+    msg.call_from[0] = 0;
+    msg.call_to[0] = 0;
+    msg.extra[0] = 0;
+
+    /* Split */
+
+    call_to = strtok(s, " ");
+
+    if (call_to) {
+        call_de = strtok(NULL, " ");
+
+        if (call_de) {
+            extra = strtok(NULL, " ");
+        }
+    }
+
+    if (!call_to || !call_de) {
+        return msg;
+    }
+
+    /* Analysis */
+
+    if (strcmp(call_to, "CQ") == 0) {
+        if (strlen(call_de) == 2) {
+            call_de = extra;
+            extra = strtok(NULL, " ");
+        }
+        msg.type = MSG_TYPE_CQ;
+        strcpy(msg.call_from, call_de);
+        strcpy(msg.extra, extra ? extra : "");
+    } else {
+        strcpy(msg.call_from, call_de);
+        strcpy(msg.call_to, call_to);
+        strcpy(msg.extra, extra);
+
+        if (extra && strcmp(extra, "RR73") == 0) {
+            msg.type = MSG_TYPE_RR73;
+        } else if (strcmp(extra, "73") == 0) {
+            msg.type = MSG_TYPE_73;
+        } else if (grid_check(extra)) {
+            msg.type = MSG_TYPE_GRID;
+        } else if (extra[0] == 'R' && (extra[1] == '-' || extra[1] == '+')) {
+            msg.snr = atoi(extra + 1);
+            msg.type = MSG_TYPE_R_REPORT;
+        } else if (extra[0] == '-' || extra[0] == '+') {
+            msg.snr = atoi(extra);
+            msg.type = MSG_TYPE_REPORT;
+        }
+    }
+    return msg;
+}
+
+/**
+ * Add INFO message to the table
+ */
+static void add_info(const char * fmt, ...) {
+    va_list     args;
+    char        buf[128];
+    cell_t      *cell = malloc(sizeof(cell_t));
+    msg_info_t  *msg_info = malloc(sizeof(msg_info_t));
+    msg_info->cell_type = CELL_RX_INFO;
+
+    va_start(args, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+
+    strcpy(cell->text, buf);
+
+    cell->msg_info = msg_info;
+
+    event_send(table, EVENT_FT8_MSG, cell);
+}
+
+/**
+ * Add TX message to the table
+ */
+static void add_tx_text(const char * text) {
+    cell_t      *cell = malloc(sizeof(cell_t));
+    msg_info_t  *msg_info = malloc(sizeof(msg_info_t));
+    msg_info->cell_type = CELL_TX_MSG;
+
+    strcpy(cell->text, text);
+    cell->msg_info = msg_info;
+
+    event_send(table, EVENT_FT8_MSG, cell);
+}
+
+/**
+ * Parse and add RX messages to the table
+ */
+static void add_rx_text(int16_t snr, const char * text, bool odd) {
+    ft8_cell_type_t cell_type;
+
+    msg_t msg = parse_rx_msg(text);
+    msg_t * msg_p = malloc(sizeof(msg_t));
+    *msg_p = msg;
+
+    if (str_equal(msg.call_to, params.callsign.x)) {
+        cell_type = CELL_RX_TO_ME;
+        if (!active_qso()) {
+            // Use first decoded answer
+            strcpy(qso_item.remote_callsign, msg.call_from);
+        }
+        if (active_qso() && str_equal(msg.call_from, qso_item.remote_callsign)) {
+            qso_item.last_rx_msg = msg_p;
+            qso_item.last_snr = snr;
+            qso_item.rx_odd = odd;
+            if (msg.type == MSG_TYPE_GRID) {
+                strcpy(qso_item.remote_qth, msg.extra);
+            }
+            if ((msg.type == MSG_TYPE_REPORT) || (msg.type == MSG_TYPE_R_REPORT)) {
+                qso_item.rst_r = msg.snr;
+            }
+        }
+    } else if (msg.type == MSG_TYPE_CQ) {
+        cell_type = CELL_RX_CQ;
+    } else if (!params.ft8_show_all) {
+        return;
+    } else {
+        cell_type = CELL_RX_MSG;
+    }
+
+    cell_t *cell = malloc(sizeof(cell_t));
+    msg_info_t  *msg_info = malloc(sizeof(msg_info_t));
+
+    msg_info->cell_type = cell_type;
+    strcpy(cell->text, text);
+    msg_info->msg = msg;
+    msg_info->local_snr = snr;
+    msg_info->odd = odd;
+    if (params.qth.x[0] != 0) {
+        const char *qth = find_qth(text);
+
+        msg_info->dist = qth ? grid_dist(qth) : 0;
+    } else {
+        msg_info->dist = 0;
+    }
+    cell->msg_info = msg_info;
+    event_send(table, EVENT_FT8_MSG, cell);
+}
+
+static void decode(bool odd) {
+    uint16_t    num_candidates = ft8_find_sync(&wf, MAX_CANDIDATES, candidate_list, MIN_SCORE);
+
+    memset(decoded_hashtable, 0, sizeof(decoded_hashtable));
+    memset(decoded, 0, sizeof(decoded));
+
+    for (uint16_t idx = 0; idx < num_candidates; idx++) {
+        const candidate_t *cand = &candidate_list[idx];
+
+        if (cand->score < MIN_SCORE)
+            continue;
+
+        float freq_hz = (cand->freq_offset + (float) cand->freq_sub / wf.freq_osr) / symbol_period;
+        float time_sec = (cand->time_offset + (float) cand->time_sub / wf.time_osr) * symbol_period;
+
+        message_t       message;
+        decode_status_t status;
+
+        if (!ft8_decode(&wf, cand, &message, LDPC_ITER, &status)) {
+            continue;
+        }
+
+        uint16_t    idx_hash = message.hash % MAX_DECODED;
+        bool        found_empty_slot = false;
+        bool        found_duplicate = false;
+
+        do {
+            if (decoded_hashtable[idx_hash] == NULL) {
+                found_empty_slot = true;
+            } else if (decoded_hashtable[idx_hash]->hash == message.hash && strcmp(decoded_hashtable[idx_hash]->text, message.text) == 0) {
+                found_duplicate = true;
+            } else {
+                idx_hash = (idx_hash + 1) % MAX_DECODED;
+            }
+        } while (!found_empty_slot && !found_duplicate);
+
+        if (found_empty_slot) {
+            memcpy(&decoded[idx_hash], &message, sizeof(message));
+            decoded_hashtable[idx_hash] = &decoded[idx_hash];
+
+            add_rx_text(cand->snr, message.text, odd);
+        }
+    }
+}
+
+static void rx_worker(bool new_slot, bool odd) {
+    unsigned int    n;
+    float complex   *buf;
+    const size_t    size = block_size * DECIM;
+
+    if (new_slot) {
+        wf.num_blocks = 0;
+    }
+
+    pthread_mutex_lock(&audio_mutex);
+
+    while (cbuffercf_size(audio_buf) < size) {
+        pthread_cond_wait(&audio_cond, &audio_mutex);
+    }
+
+    while (cbuffercf_size(audio_buf) > size) {
+        cbuffercf_read(audio_buf, size, &buf, &n);
+
+        firdecim_crcf_execute_block(decim, buf, block_size, decim_buf);
+        cbuffercf_release(audio_buf, size);
+
+        waterfall_process(decim_buf, block_size);
+
+        process(decim_buf);
+
+        if (wf.num_blocks >= wf.max_blocks) {
+            decode(odd);
+            // add_rx_text(-1, "CQ UA1DX LO02", odd);
+            // add_rx_text(1, "R4AX UA0DX LO02", odd);
+            // add_rx_text(1, "UA2DX R5AX +2", odd);
+            // add_rx_text(1, "R2RFE UA3DX LO03", odd);
+            // add_rx_text(1, "R2RFE UA2DX R+5", odd);
+            // add_rx_text(1, "R2RFE UA2DX RR73", odd);
+            // add_rx_text(1, "R2RFE UA2DX 73", odd);
+            reset();
+        }
+    }
+    pthread_mutex_unlock(&audio_mutex);
+}
+
+static void generate_tx_msg() {
+    if (qso_item.last_rx_msg != NULL) {
+        if (!make_answer(qso_item.last_rx_msg, qso_item.last_snr, qso_item.rx_odd)) {
+            tx_msg[0] = 0;
+        } else {
+            cq_enabled = false;
+            if (tx_enabled) {
+                buttons_load(2, &button_tx_call_dis);
+            } else {
+                buttons_load(2, &button_tx_call_en);
+            }
+        }
+        switch (qso_item.last_rx_msg->type) {
+            case MSG_TYPE_RR73:
+            case MSG_TYPE_R_REPORT:
+                save_qso();
+                clear_qso();
+                break;
+            default:
+                break;
+        }
+        free(qso_item.last_rx_msg);
+        qso_item.last_rx_msg = NULL;
+    }
+}
+
+static void * decode_thread(void *arg) {
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+
+    struct timespec now;
+    bool            new_odd;
+    struct tm       *ts;
+    bool            new_slot=false;
+    bool            have_tx_msg=false;
+
+    while (true) {
+        clock_gettime(CLOCK_REALTIME, &now);
+        new_odd = get_time_slot(now);
+        new_slot = new_odd != odd;
+        if (!new_slot && state == IDLE) {
+            rx_worker(new_slot, odd);
+            odd = new_odd;
+            continue;
+        }
+
+        if (params.ft8_auto.x && new_slot) {
+            generate_tx_msg();
+        }
+        have_tx_msg = strlen(tx_msg) != 0;
+
+        if (new_slot && have_tx_msg && (tx_time_slot == new_odd) && tx_enabled) {
+            state = TX_PROCESS;
+            add_tx_text(tx_msg);
+            tx_worker();
+            if (!active_qso() && !cq_enabled) {
+                tx_msg[0] = 0;
+            }
+
+        } else {
+            state = RX_PROCESS;
+            rx_worker(new_slot, odd);
+            if ((!have_tx_msg || !tx_enabled) && new_slot) {
+                ts = localtime(&now.tv_sec);
+                add_info("RX %s %02i:%02i:%02i", params_band_label_get(),
+                    ts->tm_hour, ts->tm_min, ts->tm_sec);
+            }
+        }
+        odd = new_odd;
+    }
+
+    return NULL;
 }
