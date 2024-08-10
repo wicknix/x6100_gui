@@ -28,7 +28,7 @@ static void write_freq_band(FILE *fd, float freq_mhz);
 
 
 adif_log adif_log_init(const char * path) {
-    adif_log log = malloc(sizeof(adif_log));
+    adif_log log = (adif_log) malloc(sizeof(struct adif_log_s));
     bool new_file = false;
     if (access(path, F_OK) != 0) {
         new_file = true;
@@ -36,6 +36,7 @@ adif_log adif_log_init(const char * path) {
     FILE *log_fd = fopen(path, "a");
     if (log_fd == NULL) {
         perror("Unable to open log file:");
+        free(log);
         return NULL;
     } else {
         log->fd = log_fd;
