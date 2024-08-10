@@ -15,29 +15,29 @@
 
 typedef enum {
     KEYPAD_UNKNOWN = 0,
-    
-    KEYPAD_POWER,    
+
+    KEYPAD_POWER,
     KEYPAD_GEN,
     KEYPAD_APP,
     KEYPAD_KEY,
     KEYPAD_MSG,
     KEYPAD_DFN,
     KEYPAD_DFL,
-    
+
     KEYPAD_F1,
     KEYPAD_F2,
     KEYPAD_F3,
     KEYPAD_F4,
     KEYPAD_F5,
     KEYPAD_LOCK,
-    
+
     KEYPAD_PTT,
     KEYPAD_BAND_DOWN,
     KEYPAD_BAND_UP,
     KEYPAD_MODE_AM,
     KEYPAD_MODE_CW,
     KEYPAD_MODE_SSB,
-    
+
     KEYPAD_AB,
     KEYPAD_PRE,
     KEYPAD_ATU,
@@ -59,17 +59,10 @@ typedef struct {
 } event_keypad_t;
 
 typedef enum {
-    HKEY_UNKNOWN = 0,
 
-    HKEY_SPCH,
-    HKEY_TUNER,
-    HKEY_XFC,
-    HKEY_UP,
-    HKEY_DOWN,
-    HKEY_VM,
-    HKEY_NW,
-    HKEY_F1,
-    HKEY_F2,
+    HKEY_CE = LV_KEY_BACKSPACE,
+    HKEY_DOT = '.',
+    HKEY_0 = '0',
     HKEY_1,
     HKEY_2,
     HKEY_3,
@@ -79,12 +72,20 @@ typedef enum {
     HKEY_7,
     HKEY_8,
     HKEY_9,
-    HKEY_DOT,
-    HKEY_0, 
-    HKEY_CE,
+    HKEY_SPCH,
+    HKEY_TUNER,
+    HKEY_XFC,
+    HKEY_UP,
+    HKEY_DOWN,
+    HKEY_VM,
+    HKEY_NW,
+    HKEY_F1,
+    HKEY_F2,
     HKEY_MODE,
     HKEY_FIL,
-    HKEY_GENE
+    HKEY_GENE,
+
+    HKEY_UNKNOWN,
 } hkey_t;
 
 typedef enum {
@@ -102,15 +103,15 @@ typedef struct {
 typedef enum {
 //  LV_KEY_HOME             = 2,
 //  LV_KEY_END              = 3,
-    KEY_VOL_LEFT_EDIT       = 4,
-    KEY_VOL_RIGHT_EDIT      = 5,
-    KEY_VOL_LEFT_SELECT     = 6,
-    KEY_VOL_RIGHT_SELECT    = 7,
+    KEY_VOL_LEFT_EDIT       = HKEY_UNKNOWN + 1,
+    KEY_VOL_RIGHT_EDIT,
+    KEY_VOL_LEFT_SELECT,
+    KEY_VOL_RIGHT_SELECT,
 //  LV_KEY_BACKSPACE        = 8,
 //  LV_KEY_NEXT             = 9,
 //  LV_KEY_ENTER            = 10,
 //  LV_KEY_PREV             = 11,
-    HKEY_FINP               = 12
+    HKEY_FINP,
 //  LV_KEY_UP               = 17,
 //  LV_KEY_DOWN             = 18,
 //  LV_KEY_RIGHT            = 19,

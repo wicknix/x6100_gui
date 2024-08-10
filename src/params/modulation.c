@@ -138,6 +138,8 @@ uint32_t params_mode_filter_high_set(x6100_mode_t mode, int32_t val) {
         case x6100_mode_cwr:
             val = (val - lo_offset) * 2;
             val = LV_MIN(val, MAX_CW_BW);
+        default:
+            break;
     }
     params_lock();
     if ((val != param->x) & (val <= MAX_FILTER_FREQ) & (val > mode_params->filter_low.x)) {

@@ -106,7 +106,7 @@ static void params_mb_load(sqlite3_stmt *stmt) {
     bool copy_mode = true;
     bool copy_agc = true;
 
-    memset(params_band.label.x, 0, sizeof(params_band.label));
+    memset(params_band.label.x, 0, sizeof(params_band.label.x));
 
     while (sqlite3_step(stmt) != SQLITE_DONE) {
         const char *name = sqlite3_column_text(stmt, 0);

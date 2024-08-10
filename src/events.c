@@ -66,11 +66,11 @@ void event_obj_check() {
     while (queue_read != queue_write) {
         pthread_mutex_lock(&queue_mux);
         queue_read = (queue_read + 1) % QUEUE_SIZE;
-        
+
         item_t *item = queue[queue_read];
         queue[queue_read] = NULL;
         pthread_mutex_unlock(&queue_mux);
-        
+
         if (item) {
             if (item->event_code == LV_EVENT_REFRESH) {
                 if (backlight_is_on()) {
@@ -101,7 +101,7 @@ void event_send(lv_obj_t *obj, lv_event_code_t event_code, void *param) {
     }
 
     item_t *item = malloc(sizeof(item_t));
-    
+
     item->obj = obj;
     item->event_code = event_code;
     item->param = param;
@@ -115,6 +115,6 @@ void event_send(lv_obj_t *obj, lv_event_code_t event_code, void *param) {
 void event_send_key(int32_t key) {
     int32_t *c = malloc(sizeof(int32_t));
     *c = key;
-        
+
     event_send(lv_group_get_focused(keyboard_group), LV_EVENT_KEY, c);
 }
