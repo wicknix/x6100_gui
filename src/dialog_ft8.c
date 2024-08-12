@@ -484,6 +484,9 @@ static void add_msg_cb(lv_event_t * e) {
     lv_table_get_selected_cell(table, &row, &col);
     scroll = table_rows == (row + 1);
 
+    // Copy data, because original event data will be deleted
+    cell_data_t *cell_data_copy = malloc(sizeof(cell_data_t));
+    *cell_data_copy = *cell_data;
 #ifdef MAX_TABLE_MSG
     if (table_rows > MAX_TABLE_MSG) {
         for (uint16_t i = 1; i < table_rows; i++)
@@ -493,8 +496,8 @@ static void add_msg_cb(lv_event_t * e) {
     }
 #endif
 
-    lv_table_set_cell_value(table, table_rows, 0, cell_data->text);
-    lv_table_set_cell_user_data(table, table_rows, 0, cell_data);
+    lv_table_set_cell_value(table, table_rows, 0, cell_data_copy->text);
+    lv_table_set_cell_user_data(table, table_rows, 0, cell_data_copy);
 
     if (scroll) {
         static int32_t c = LV_KEY_DOWN;
@@ -808,7 +811,6 @@ static void construct_cb(lv_obj_t *parent) {
 
     lv_obj_remove_style(table, NULL, LV_STATE_ANY | LV_PART_MAIN);
     lv_obj_add_event_cb(table, add_msg_cb, EVENT_FT8_MSG, NULL);
-    // lv_obj_add_event_cb(table, selected_msg_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(table, cell_press_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(table, key_cb, LV_EVENT_KEY, NULL);
     lv_obj_add_event_cb(table, table_draw_part_begin_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
@@ -1256,15 +1258,13 @@ static msg_t parse_rx_msg(const char * str) {
  */
 static void add_info(const char * fmt, ...) {
     va_list     args;
-    char        buf[128];
     cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
     cell_data->cell_type = CELL_RX_INFO;
 
     va_start(args, fmt);
-    vsnprintf(buf, sizeof(buf), fmt, args);
+    vsnprintf(cell_data->text, sizeof(cell_data->text), fmt, args);
     va_end(args);
 
-    strcpy(cell_data->text, buf);
     event_send(table, EVENT_FT8_MSG, cell_data);
 }
 
