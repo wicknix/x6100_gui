@@ -798,8 +798,8 @@ static action_items_t hmic_action_items[] = {
     { .label = " Step down ", .action = ACTION_STEP_DOWN },
     { .label = " Voice mode ", .action = ACTION_VOICE_MODE },
     { .label = " Battery info ", .action = ACTION_BAT_INFO },
-    { .label = " NR toggle ", .action = ACTION_BAT_INFO },
-    { .label = " NB toggle ", .action = ACTION_BAT_INFO },
+    { .label = " NR toggle ", .action = ACTION_NR_TOGGLE },
+    { .label = " NB toggle ", .action = ACTION_NB_TOGGLE },
     { .label = NULL, .action = ACTION_NONE }
 };
 
