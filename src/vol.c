@@ -141,6 +141,8 @@ void vol_update(int16_t diff, bool voice) {
                 case x6100_mic_auto:
                     s = "Auto";
                     break;
+                default:
+                    s = "";
             }
 
             msg_set_text_fmt("#%3X MIC: %s", color, s);

@@ -5,15 +5,17 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
-
-#include <math.h>
-#include <pthread.h>
-#include "lvgl/lvgl.h"
 #include "rtty.h"
+
 #include "audio.h"
 #include "params/params.h"
 #include "pannel.h"
 #include "util.h"
+
+#include "lvgl/lvgl.h"
+
+#include <math.h>
+#include <pthread.h>
 
 #define SYMBOL_OVER         8
 #define SYMBOL_FACTOR       2

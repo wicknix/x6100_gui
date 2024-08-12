@@ -269,6 +269,7 @@ static void redraw_cb(lv_event_t * e) {
             copy_src = 0;
             copy_dst = 0;
             clean_n = 0;
+            clean_from = 0;
         }
         copy_src += i * width;
         copy_dst += ((height - i + last_row_id) % height) * width;
