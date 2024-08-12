@@ -105,20 +105,21 @@ typedef struct {
     int8_t      snr;
 } msg_t;
 
+/**
+ * LVGL cell user data
+ */
 typedef struct {
     ft8_cell_type_t cell_type;
     int16_t         local_snr;
     int16_t         dist;
     bool            odd;
     msg_t           msg;
-} msg_info_t;
-
-typedef struct {
-    msg_info_t      *msg_info;
     char            text[128];
-} cell_t;
+} cell_data_t;
 
-
+/**
+ * Current QSO item
+ */
 typedef struct {
     char        remote_callsign[32];
     char        remote_qth[32];
@@ -129,6 +130,7 @@ typedef struct {
     msg_t       *last_rx_msg;
     bool        rx_odd;
 } ft8_qso_item_t;
+
 
 static ft8_state_t          state = IDLE;
 static bool                 odd;
@@ -474,7 +476,7 @@ void static process(float complex *frame) {
 }
 
 static void add_msg_cb(lv_event_t * e) {
-    cell_t      *cell = (cell_t *) lv_event_get_param(e);
+    cell_data_t *cell_data = (cell_data_t *) lv_event_get_param(e);
     uint16_t    row = 0;
     uint16_t    col = 0;
     bool        scroll;
@@ -491,11 +493,8 @@ static void add_msg_cb(lv_event_t * e) {
     }
 #endif
 
-    lv_table_set_cell_value(table, table_rows, 0, cell->text);
-
-    if (cell->msg_info) {
-        lv_table_set_cell_user_data(table, table_rows, 0, cell->msg_info);
-    }
+    lv_table_set_cell_value(table, table_rows, 0, cell_data->text);
+    lv_table_set_cell_user_data(table, table_rows, 0, cell_data);
 
     if (scroll) {
         static int32_t c = LV_KEY_DOWN;
@@ -513,9 +512,9 @@ static void table_draw_part_begin_cb(lv_event_t * e) {
     if (dsc->part == LV_PART_ITEMS) {
         uint32_t    row = dsc->id / lv_table_get_col_cnt(obj);
         uint32_t    col = dsc->id - row * lv_table_get_col_cnt(obj);
-        msg_info_t  *msg_info = lv_table_get_cell_user_data(obj, row, col);
+        cell_data_t *cell_data = lv_table_get_cell_user_data(obj, row, col);
 
-        if (msg_info == NULL) {
+        if (cell_data == NULL) {
             dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
             dsc->rect_dsc->bg_color = lv_color_white();
             dsc->rect_dsc->bg_opa = 128;
@@ -523,7 +522,7 @@ static void table_draw_part_begin_cb(lv_event_t * e) {
             return;
         }
 
-        switch (msg_info->cell_type) {
+        switch (cell_data->cell_type) {
             case CELL_RX_INFO:
                 dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
                 dsc->rect_dsc->bg_color = lv_color_white();
@@ -557,13 +556,16 @@ static void table_draw_part_end_cb(lv_event_t * e) {
     if (dsc->part == LV_PART_ITEMS) {
         uint32_t    row = dsc->id / lv_table_get_col_cnt(obj);
         uint32_t    col = dsc->id - row * lv_table_get_col_cnt(obj);
-        msg_info_t  *msg_info = lv_table_get_cell_user_data(obj, row, col);
+        cell_data_t *cell_data = lv_table_get_cell_user_data(obj, row, col);
 
-        if (msg_info == NULL) {
+        if (cell_data == NULL) {
             return;
         }
 
-        if (msg_info->cell_type == CELL_RX_MSG || msg_info->cell_type == CELL_RX_CQ || msg_info->cell_type == CELL_RX_TO_ME) {
+        if ((cell_data->cell_type == CELL_RX_MSG) ||
+            (cell_data->cell_type == CELL_RX_CQ) ||
+            (cell_data->cell_type == CELL_RX_TO_ME)
+        ) {
             char                buf[64];
             const lv_coord_t    cell_top = lv_obj_get_style_pad_top(obj, LV_PART_ITEMS);
             const lv_coord_t    cell_bottom = lv_obj_get_style_pad_bottom(obj, LV_PART_ITEMS);
@@ -577,14 +579,14 @@ static void table_draw_part_end_cb(lv_event_t * e) {
             area.x2 = dsc->draw_area->x2 - 15;
             area.x1 = area.x2 - 120;
 
-            snprintf(buf, sizeof(buf), "%i dB", msg_info->local_snr);
+            snprintf(buf, sizeof(buf), "%i dB", cell_data->local_snr);
             lv_draw_label(dsc->draw_ctx, dsc->label_dsc, &area, buf, NULL);
 
-            if (msg_info->dist > 0) {
+            if (cell_data->dist > 0) {
                 area.x2 = area.x1 - 10;
                 area.x1 = area.x2 - 200;
 
-                snprintf(buf, sizeof(buf), "%i km", msg_info->dist);
+                snprintf(buf, sizeof(buf), "%i km", cell_data->dist);
                 lv_draw_label(dsc->draw_ctx, dsc->label_dsc, &area, buf, NULL);
             }
         }
@@ -991,13 +993,16 @@ static void cell_press_cb(lv_event_t * e) {
 
         lv_table_get_selected_cell(table, &row, &col);
 
-        msg_info_t  *msg_info = lv_table_get_cell_user_data(table, row, col);
+        cell_data_t  *cell_data = lv_table_get_cell_user_data(table, row, col);
 
-        if (msg_info == NULL || msg_info->cell_type == CELL_TX_MSG || msg_info->cell_type == CELL_RX_INFO) {
+        if ((cell_data == NULL) ||
+            (cell_data->cell_type == CELL_TX_MSG) ||
+            (cell_data->cell_type == CELL_RX_INFO)
+        ) {
             msg_set_text_fmt("What should I do about it?");
         } else {
-            if (make_answer(&msg_info->msg, msg_info->local_snr, msg_info->odd)) {
-                start_qso(&msg_info->msg);
+            if (make_answer(&cell_data->msg, cell_data->local_snr, cell_data->odd)) {
+                start_qso(&cell_data->msg);
                 tx_enabled = true;
             } else {
                 msg_set_text_fmt("Invalid message");
@@ -1252,33 +1257,27 @@ static msg_t parse_rx_msg(const char * str) {
 static void add_info(const char * fmt, ...) {
     va_list     args;
     char        buf[128];
-    cell_t      *cell = malloc(sizeof(cell_t));
-    msg_info_t  *msg_info = malloc(sizeof(msg_info_t));
-    msg_info->cell_type = CELL_RX_INFO;
+    cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
+    cell_data->cell_type = CELL_RX_INFO;
 
     va_start(args, fmt);
     vsnprintf(buf, sizeof(buf), fmt, args);
     va_end(args);
 
-    strcpy(cell->text, buf);
-
-    cell->msg_info = msg_info;
-
-    event_send(table, EVENT_FT8_MSG, cell);
+    strcpy(cell_data->text, buf);
+    event_send(table, EVENT_FT8_MSG, cell_data);
 }
 
 /**
  * Add TX message to the table
  */
 static void add_tx_text(const char * text) {
-    cell_t      *cell = malloc(sizeof(cell_t));
-    msg_info_t  *msg_info = malloc(sizeof(msg_info_t));
-    msg_info->cell_type = CELL_TX_MSG;
+    cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
+    cell_data->cell_type = CELL_TX_MSG;
 
-    strcpy(cell->text, text);
-    cell->msg_info = msg_info;
+    strcpy(cell_data->text, text);
 
-    event_send(table, EVENT_FT8_MSG, cell);
+    event_send(table, EVENT_FT8_MSG, cell_data);
 }
 
 /**
@@ -1315,24 +1314,21 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
     } else {
         cell_type = CELL_RX_MSG;
     }
+    cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
 
-    cell_t *cell = malloc(sizeof(cell_t));
-    msg_info_t  *msg_info = malloc(sizeof(msg_info_t));
-
-    msg_info->cell_type = cell_type;
-    strcpy(cell->text, text);
-    msg_info->msg = msg;
-    msg_info->local_snr = snr;
-    msg_info->odd = odd;
+    cell_data->cell_type = cell_type;
+    strcpy(cell_data->text, text);
+    cell_data->msg = msg;
+    cell_data->local_snr = snr;
+    cell_data->odd = odd;
     if (params.qth.x[0] != 0) {
         const char *qth = find_qth(text);
 
-        msg_info->dist = qth ? grid_dist(qth) : 0;
+        cell_data->dist = qth ? grid_dist(qth) : 0;
     } else {
-        msg_info->dist = 0;
+        cell_data->dist = 0;
     }
-    cell->msg_info = msg_info;
-    event_send(table, EVENT_FT8_MSG, cell);
+    event_send(table, EVENT_FT8_MSG, cell_data);
 }
 
 static void decode(bool odd) {
