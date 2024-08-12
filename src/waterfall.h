@@ -23,4 +23,5 @@ void waterfall_set_min(float db);
 void waterfall_update_max(float db);
 void waterfall_update_min(float db);
 void waterfall_set_freq(uint64_t freq);
-void waterfall_update_band(uint64_t f);
+void waterfall_refresh_reset();
+void waterfall_refresh_period_set(uint8_t k);

@@ -18,6 +18,7 @@ static dialog_t     *current_dialog = NULL;
 
 void dialog_construct(dialog_t *dialog, lv_obj_t *parent) {
     if (dialog && !dialog->run) {
+        waterfall_refresh_period_set(2);
         main_screen_keys_enable(false);
         dialog->construct_cb(parent);
 
@@ -29,6 +30,7 @@ void dialog_construct(dialog_t *dialog, lv_obj_t *parent) {
 
 void dialog_destruct() {
     if (current_dialog && current_dialog->run) {
+        waterfall_refresh_reset();
         current_dialog->run = false;
 
         if (current_dialog->destruct_cb) {

@@ -49,8 +49,12 @@ static uint8_t          *waterfall_cache;
 static uint64_t         radio_center_freq = 0;
 static uint64_t         wf_center_freq = 0;
 
-void draw_middle_line();
-void redraw_cb(lv_event_t * e);
+static uint8_t          refresh_period = 1;
+static uint8_t          refresh_counter = 0;
+
+static void refresh_waterfall();
+static void draw_middle_line();
+static void redraw_cb(lv_event_t * e);
 
 
 lv_obj_t * waterfall_init(lv_obj_t * parent, uint64_t cur_freq) {
@@ -107,7 +111,7 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
         uint8_t id = v * 254 + 1;
         memcpy(&waterfall_cache[(last_row_id * width + width - 1 - x) * PX_BYTES], &palette[id], PX_BYTES);
     }
-    event_send(img, LV_EVENT_REFRESH, NULL);
+    refresh_waterfall();
 }
 
 static void do_scroll_cb(lv_event_t * event) {
@@ -119,7 +123,7 @@ static void do_scroll_cb(lv_event_t * event) {
     } else {
         wf_center_freq = radio_center_freq;
     }
-    event_send(img, LV_EVENT_REFRESH, NULL);
+    refresh_waterfall();
 }
 
 void waterfall_set_height(lv_coord_t h) {
@@ -168,7 +172,7 @@ static void middle_line_cb(lv_event_t * event) {
     }
 }
 
-void draw_middle_line() {
+static void draw_middle_line() {
     middle_line_points[1].y = height;
     middle_line = lv_line_create(obj);
     lv_line_set_points(middle_line, middle_line_points, 2);
@@ -224,7 +228,18 @@ void waterfall_set_freq(uint64_t freq) {
     radio_center_freq = freq;
 }
 
-void redraw_cb(lv_event_t * e) {
+void waterfall_refresh_reset() {
+    refresh_period = 1;
+}
+
+void waterfall_refresh_period_set(uint8_t k) {
+    if (k == 0) {
+        return;
+    }
+    refresh_period = k;
+}
+
+static void redraw_cb(lv_event_t * e) {
     int32_t x_offset, w=width;
     size_t copy_n, copy_src, copy_dst;
     size_t clean_n, clean_from;
@@ -268,5 +283,13 @@ void redraw_cb(lv_event_t * e) {
                 copy_n * PX_BYTES
             );
         }
+    }
+}
+
+static void refresh_waterfall() {
+    refresh_counter++;
+    if (refresh_counter >= refresh_period) {
+        refresh_counter = 0;
+        event_send(img, LV_EVENT_REFRESH, NULL);
     }
 }
