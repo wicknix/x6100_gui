@@ -1296,7 +1296,7 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
             // Use first decoded answer
             strncpy(qso_item.remote_callsign, msg.call_from, sizeof(qso_item.remote_callsign) - 1);
         }
-        if (active_qso() && str_equal(msg.call_from, qso_item.remote_callsign)) {
+        if (active_qso() && (msg.type != MSG_TYPE_73) && str_equal(msg.call_from, qso_item.remote_callsign)) {
             if (qso_item.last_rx_msg != NULL) {
                 free(qso_item.last_rx_msg);
             }
