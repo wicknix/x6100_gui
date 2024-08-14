@@ -208,7 +208,7 @@ static void cell_press_cb(lv_event_t * e);
 static void add_info(const char * fmt, ...);
 static void add_tx_text(const char * text);
 static void make_cq_msg();
-static bool make_answer(msg_t *msg, int8_t snr, bool rx_odd);
+static bool make_answer(const msg_t *msg, int8_t snr, bool rx_odd);
 static bool get_time_slot(struct timespec now);
 static bool str_equal(const char * a, const char * b);
 
@@ -255,7 +255,7 @@ static void save_qso() {
     float freq_mhz = params_band_cur_freq_get() / 1000000.0f;
     adif_add_qso(ft8_log, params.callsign.x, qso_item.remote_callsign, now, mode,
         qso_item.rst_s, qso_item.rst_r, freq_mhz, params.qth.x, qso_item.remote_qth);
-    msg_set_text_fmt("QSO is saved");
+    msg_set_text_fmt("QSO saved");
 }
 
 static void clear_qso() {
@@ -272,10 +272,10 @@ static void clear_qso() {
 static void start_qso(msg_t * msg) {
     if (!str_equal(qso_item.remote_callsign, msg->call_from)) {
         clear_qso();
-        strcpy(qso_item.remote_callsign, msg->call_from);
+        strncpy(qso_item.remote_callsign, msg->call_from, sizeof(qso_item.remote_callsign) - 1);
     }
     if ((msg->type == MSG_TYPE_CQ) || (msg->type == MSG_TYPE_GRID)) {
-        strcpy(qso_item.remote_qth, msg->extra);
+        strncpy(qso_item.remote_qth, msg->extra, sizeof(qso_item.remote_qth) - 1);
     }
     if ((msg->type == MSG_TYPE_REPORT) || (msg->type == MSG_TYPE_R_REPORT)) {
         qso_item.rst_r = msg->snr;
@@ -314,7 +314,7 @@ static void init() {
     subblock_size = block_size / TIME_OSR;
     nfft = block_size * FREQ_OSR;
 
-    const uint32_t max_blocks = slot_time / symbol_period;
+    const uint32_t max_blocks = (slot_time - 0.5) / symbol_period;
     const uint32_t num_bins = SAMPLE_RATE * symbol_period / 2;
 
     size_t mag_size = max_blocks * TIME_OSR * FREQ_OSR * num_bins * sizeof(uint8_t);
@@ -1107,7 +1107,7 @@ static void make_cq_msg() {
 /**
  * Create answer for incoming message.
  */
-static bool make_answer(msg_t * msg, int8_t snr, bool rx_odd) {
+static bool make_answer(const msg_t * msg, int8_t snr, bool rx_odd) {
     char qth[5] = "";
 
     if (strlen(params.qth.x) >= 4) {
@@ -1197,7 +1197,7 @@ static msg_t parse_rx_msg(const char * str) {
     char            *call_de = NULL;
     char            *extra = NULL;
 
-    strcpy(s, str);
+    strncpy(s, str, sizeof(s) - 1);
 
     msg_t msg;
     msg.type = MSG_TYPE_OTHER;
@@ -1229,12 +1229,12 @@ static msg_t parse_rx_msg(const char * str) {
             extra = strtok(NULL, " ");
         }
         msg.type = MSG_TYPE_CQ;
-        strcpy(msg.call_from, call_de);
-        strcpy(msg.extra, extra ? extra : "");
+        strncpy(msg.call_from, call_de, sizeof(msg.call_from) - 1);
+        strncpy(msg.extra, extra ? extra : "", sizeof(msg.extra) - 1);
     } else {
-        strcpy(msg.call_from, call_de);
-        strcpy(msg.call_to, call_to);
-        strcpy(msg.extra, extra);
+        strncpy(msg.call_from, call_de, sizeof(msg.call_from) - 1);
+        strncpy(msg.call_to, call_to, sizeof(msg.call_to) - 1);
+        strncpy(msg.extra, extra, sizeof(msg.extra) - 1);
 
         if (extra && strcmp(extra, "RR73") == 0) {
             msg.type = MSG_TYPE_RR73;
@@ -1275,7 +1275,7 @@ static void add_tx_text(const char * text) {
     cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
     cell_data->cell_type = CELL_TX_MSG;
 
-    strcpy(cell_data->text, text);
+    strncpy(cell_data->text, text, sizeof(cell_data->text) - 1);
 
     event_send(table, EVENT_FT8_MSG, cell_data);
 }
@@ -1294,14 +1294,17 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
         cell_type = CELL_RX_TO_ME;
         if (!active_qso()) {
             // Use first decoded answer
-            strcpy(qso_item.remote_callsign, msg.call_from);
+            strncpy(qso_item.remote_callsign, msg.call_from, sizeof(qso_item.remote_callsign) - 1);
         }
         if (active_qso() && str_equal(msg.call_from, qso_item.remote_callsign)) {
+            if (qso_item.last_rx_msg != NULL) {
+                free(qso_item.last_rx_msg);
+            }
             qso_item.last_rx_msg = msg_p;
             qso_item.last_snr = snr;
             qso_item.rx_odd = odd;
             if (msg.type == MSG_TYPE_GRID) {
-                strcpy(qso_item.remote_qth, msg.extra);
+                strncpy(qso_item.remote_qth, msg.extra, sizeof(qso_item.remote_qth) - 1);
             }
             if ((msg.type == MSG_TYPE_REPORT) || (msg.type == MSG_TYPE_R_REPORT)) {
                 qso_item.rst_r = msg.snr;
@@ -1317,7 +1320,7 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
     cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
 
     cell_data->cell_type = cell_type;
-    strcpy(cell_data->text, text);
+    strncpy(cell_data->text, text, sizeof(cell_data->text) - 1);
     cell_data->msg = msg;
     cell_data->local_snr = snr;
     cell_data->odd = odd;
@@ -1403,13 +1406,6 @@ static void rx_worker(bool new_slot, bool odd) {
 
         if (wf.num_blocks >= wf.max_blocks) {
             decode(odd);
-            // add_rx_text(-1, "CQ UA1DX LO02", odd);
-            // add_rx_text(1, "R4AX UA0DX LO02", odd);
-            // add_rx_text(1, "UA2DX R5AX +2", odd);
-            // add_rx_text(1, "R2RFE UA3DX LO03", odd);
-            // add_rx_text(1, "R2RFE UA2DX R+5", odd);
-            // add_rx_text(1, "R2RFE UA2DX RR73", odd);
-            // add_rx_text(1, "R2RFE UA2DX 73", odd);
             reset();
         }
     }
