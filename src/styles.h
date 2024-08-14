@@ -17,6 +17,11 @@
 #define COLOR_LIGHT_YELLOW (0xFFFF30)
 #define COLOR_LIGHT_RED (0xFF8080)
 
+// Symbols
+
+#define SYMBOL_PLUG "\xEF\x87\xA6"  // F1E6
+#define SYMBOL_PLUG_CHARGE "\xEE\x95\x9B"  // E55B
+
 extern lv_color_t   bg_color;
 
 extern lv_style_t   background_style;

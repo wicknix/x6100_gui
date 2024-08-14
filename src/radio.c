@@ -66,7 +66,7 @@ bool radio_tick() {
 
         if (delay++ > 10) {
             delay = 0;
-            clock_update_power(pack->vext * 0.1f, pack->vbat*0.1f, pack->batcap);
+            clock_update_power(pack->vext * 0.1f, pack->vbat*0.1f, pack->batcap, pack->flag.charging);
         }
         dsp_samples(pack->samples, RADIO_SAMPLES, pack->flag.tx);
 
