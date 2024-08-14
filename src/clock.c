@@ -100,20 +100,20 @@ static void show_time() {
             pthread_mutex_lock(&power_mux);
             const char * bat_sym;
             const char * ext_sym;
-            switch (cap_bat) {
-                case 0 ... 10:
+            switch ((uint8_t)(v_bat * 10)) {
+                case 0 ... 56:
                     bat_sym = LV_SYMBOL_BATTERY_EMPTY;
                     break;
-                case 11 ... 37:
+                case 57 ... 63:
                     bat_sym = LV_SYMBOL_BATTERY_1;
                     break;
-                case 38 ... 62:
+                case 64 ... 70:
                     bat_sym = LV_SYMBOL_BATTERY_2;
                     break;
-                case 63 ... 89:
+                case 71 ... 77:
                     bat_sym = LV_SYMBOL_BATTERY_3;
                     break;
-                case 90 ... 100:
+                case 78 ... 100:
                     bat_sym = LV_SYMBOL_BATTERY_FULL;
                     break;
             }
