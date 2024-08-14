@@ -10,6 +10,17 @@
  * X6100 protocol implementation (Mfg 3087)
  */
 
+#include "cat.h"
+
+#include "radio.h"
+#include "params/params.h"
+#include "util.h"
+#include "events.h"
+#include "waterfall.h"
+#include "spectrum.h"
+
+#include <aether_radio/x6100_control/low/gpio.h>
+#include "lvgl/lvgl.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,16 +30,6 @@
 #include <pthread.h>
 #include <sys/poll.h>
 
-#include <aether_radio/x6100_control/low/gpio.h>
-#include "lvgl/lvgl.h"
-
-#include "cat.h"
-#include "radio.h"
-#include "params/params.h"
-#include "util.h"
-#include "events.h"
-#include "waterfall.h"
-#include "spectrum.h"
 
 #define FRAME_PRE       0xFE
 #define FRAME_END       0xFD
@@ -397,13 +398,13 @@ static void frame_parse(uint16_t len) {
                     break;
                 }
             } else {
-                LV_LOG_WARN("Unsuported %02X:%02X (Len %i)", frame[4], frame[5], len);
+                LV_LOG_WARN("Unsupported %02X:%02X (Len %i)", frame[4], frame[5], len);
                 send_code(CODE_NG);
             }
             break;
 
         default:
-            LV_LOG_WARN("Unsuported %02X:%02X (Len %i)", frame[4], frame[5], len);
+            LV_LOG_WARN("Unsupported %02X:%02X (Len %i)", frame[4], frame[5], len);
             send_code(CODE_NG);
             break;
     }

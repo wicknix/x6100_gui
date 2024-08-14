@@ -16,7 +16,7 @@
 #define RADIO_SAMPLES   (512)
 
 typedef enum {
-    RADIO_MSG_MODE_CHAGED,
+    RADIO_MSG_MODE_CHANGED,
 } radio_messages_t;
 
 typedef enum {

@@ -24,7 +24,7 @@
 #include "dialog_swrscan.h"
 #include "cw.h"
 
-#define FLOW_RESTART_TIMOUT 300
+#define FLOW_RESTART_TIMEOUT 300
 #define IDLE_TIMEOUT        (3 * 1000)
 
 static radio_state_change_t notify_tx;
@@ -106,16 +106,6 @@ bool radio_tick() {
                     params_atu_save(pack->atu_params);
                     radio_lock();
                     x6100_control_atu_tune(false);
-                    // Fix for no signal after tune
-                    // x6100_vfo_t vfo = params_band_vfo_get();
-                    // x6100_mode_t mode = params_band_vfo_mode_get(vfo);
-                    // if ((mode != x6100_mode_usb_dig) && (mode != x6100_mode_lsb_dig)) {
-                    //     x6100_control_vfo_mode_set(vfo, x6100_mode_usb_dig);
-                    //     x6100_control_ptt_set(true);
-                    //     usleep(100000);
-                    //     x6100_control_ptt_set(false);
-                    //     x6100_control_vfo_mode_set(vfo, mode);
-                    // }
                     radio_unlock();
                     notify_rx();
 
@@ -147,7 +137,7 @@ bool radio_tick() {
 
         hkey_put(pack->hkey);
     } else {
-        if (d > FLOW_RESTART_TIMOUT) {
+        if (d > FLOW_RESTART_TIMEOUT) {
             LV_LOG_WARN("Flow reset");
             prev_time = now_time;
             x6100_flow_restart();
@@ -163,7 +153,7 @@ static void * radio_thread(void *arg) {
         now_time = get_time();
 
         if (radio_tick()) {
-            usleep(5000);
+            usleep(15000);
         }
 
         int32_t idle = now_time - idle_time;
@@ -199,7 +189,7 @@ void radio_vfo_set() {
     x6100_control_split_set(params_band_split_get());
     x6100_control_rfg_set(params_band_rfg_get());
     radio_unlock();
-    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
+    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
 
     params_bands_find(params_band_cur_freq_get(), &params.freq_band);
 }
@@ -537,7 +527,7 @@ void radio_set_mode(x6100_vfo_t vfo, x6100_mode_t mode) {
     radio_lock();
     x6100_control_vfo_mode_set(vfo, mode);
     radio_unlock();
-    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
+    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
 }
 
 void radio_set_cur_mode(x6100_mode_t mode) {
@@ -692,7 +682,7 @@ bool radio_start_swrscan() {
     x6100_control_vfo_mode_set(params_band_vfo_get(), x6100_mode_am);
     x6100_control_txpwr_set(5.0f);
     x6100_control_swrscan_set(true);
-    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
+    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
 
     return true;
 }
@@ -999,7 +989,7 @@ x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo) {
     radio_lock();
     x6100_control_vfo_set(vfo);
     radio_unlock();
-    lv_msg_send(RADIO_MSG_MODE_CHAGED, NULL);
+    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
 }
 
 x6100_vfo_t radio_toggle_vfo() {
