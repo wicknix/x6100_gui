@@ -403,6 +403,13 @@ static void frame_parse(uint16_t len) {
             }
             break;
 
+        case C_RD_TRXID:
+            if (frame[5] == 0) {
+                frame[6] = 0xa4;
+                send_frame(8);
+            }
+            break;
+
         default:
             LV_LOG_WARN("Unsupported %02X:%02X (Len %i)", frame[4], frame[5], len);
             send_code(CODE_NG);
