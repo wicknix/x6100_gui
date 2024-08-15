@@ -314,7 +314,7 @@ static void init() {
     subblock_size = block_size / TIME_OSR;
     nfft = block_size * FREQ_OSR;
 
-    const uint32_t max_blocks = (slot_time - 0.5) / symbol_period;
+    const uint32_t max_blocks = slot_time / symbol_period;
     const uint32_t num_bins = SAMPLE_RATE * symbol_period / 2;
 
     size_t mag_size = max_blocks * TIME_OSR * FREQ_OSR * num_bins * sizeof(uint8_t);
@@ -1385,6 +1385,7 @@ static void rx_worker(bool new_slot, bool odd) {
     const size_t    size = block_size * DECIM;
 
     if (new_slot) {
+        decode(odd);
         wf.num_blocks = 0;
     }
 
