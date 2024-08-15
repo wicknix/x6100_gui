@@ -11,14 +11,21 @@
 #include "events.h"
 #include "params/params.h"
 #include "spectrum.h"
+#include "util.h"
 
 #define NUM_ITEMS   7
+#define METER_PEAK_HOLD 1500
+#define METER_PEAK_SPEED 10
 
 static int16_t          min_db = S1;
 static int16_t          max_db = S9_40;
 
 static uint8_t          meter_height = 62;
 static int16_t          meter_db = S1;
+
+static int16_t          meter_peak = S1;
+static int64_t          meter_peak_time;
+static int64_t          now;
 
 static lv_obj_t         *obj;
 
@@ -79,13 +86,21 @@ static void meter_draw_cb(lv_event_t * e) {
         } else {
             rect_dsc.bg_color = lv_color_hex(0xAA0000);
         }
-
         area.x1 = x1 + 30 + i * slice;
         area.x2 = area.x1 + slice - 3;
 
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
 
         db += slice_db;
+    }
+
+    /* Peak */
+    if (meter_peak > meter_db) {
+        area.x1 = x1 + 30 + len * (meter_peak  - min_db) / (max_db - min_db);
+        area.x2 = area.x1 + slice - 3;
+        rect_dsc.bg_opa = LV_OPA_50;
+        rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
+        lv_draw_rect(draw_ctx, &rect_dsc, &area);
     }
 
     /* Labels */
@@ -146,7 +161,13 @@ void meter_update(int16_t db, float beta) {
     } else if (db > max_db) {
         db = max_db;
     }
-
+    now = get_time();
+    if (db > meter_peak) {
+        meter_peak = db;
+        meter_peak_time = now;
+    } else if (now - meter_peak_time > METER_PEAK_HOLD) {
+        meter_peak -= (now - meter_peak_time - METER_PEAK_HOLD) * METER_PEAK_SPEED / 1000;
+    }
     meter_db = meter_db * beta + db * (1.0f - beta);
     event_send(obj, LV_EVENT_REFRESH, NULL);
 }
