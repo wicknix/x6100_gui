@@ -45,7 +45,7 @@ extern "C"
     typedef struct
     {
         // TODO: check again that this size is enough
-        char text[25]; ///< Plain text
+        char text[33]; ///< Plain text
         uint16_t hash; ///< Hash value to be used in hash table and quick checking for duplicates
     } message_t;
 

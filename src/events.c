@@ -12,7 +12,7 @@
 #include "backlight.h"
 #include "keyboard.h"
 
-#define QUEUE_SIZE  32
+#define QUEUE_SIZE  64
 
 uint32_t        EVENT_ROTARY;
 uint32_t        EVENT_KEYPAD;

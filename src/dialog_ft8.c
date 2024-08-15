@@ -63,10 +63,8 @@
 #define UNKNOWN_SNR     99
 
 typedef enum {
-    IDLE,
     RX_PROCESS,
     TX_PROCESS,
-    TX_STOP,
 } ft8_state_t;
 
 typedef enum {
@@ -132,7 +130,7 @@ typedef struct {
 } ft8_qso_item_t;
 
 
-static ft8_state_t          state = IDLE;
+static ft8_state_t          state = RX_PROCESS;
 static bool                 odd;
 static bool                 tx_enabled=true;
 static bool                 cq_enabled=false;
@@ -156,8 +154,7 @@ static float                *waterfall_psd;
 static uint8_t              waterfall_fps_ms = (1000 / 5);
 static uint64_t             waterfall_time;
 
-static pthread_cond_t       audio_cond;
-static pthread_mutex_t      audio_mutex;
+static pthread_mutex_t      audio_mutex = PTHREAD_MUTEX_INITIALIZER;
 static cbuffercf            audio_buf;
 static pthread_t            thread;
 
@@ -252,8 +249,17 @@ static void save_qso() {
     }
     time_t now = time(NULL);
     const char * mode = params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4";
+
+    // strip < and > from remote call
+    size_t remote_callsign_len = strlen(qso_item.remote_callsign);
+    char * remote_callsign = qso_item.remote_callsign;
+    if ((remote_callsign[0] == '<') && (remote_callsign[remote_callsign_len - 1] == '>')) {
+        remote_callsign[remote_callsign_len - 1] = 0;
+        remote_callsign++;
+    }
+
     float freq_mhz = params_band_cur_freq_get() / 1000000.0f;
-    adif_add_qso(ft8_log, params.callsign.x, qso_item.remote_callsign, now, mode,
+    adif_add_qso(ft8_log, params.callsign.x, remote_callsign, now, mode,
         qso_item.rst_s, qso_item.rst_r, freq_mhz, params.qth.x, qso_item.remote_qth);
     msg_set_text_fmt("QSO saved");
 }
@@ -290,7 +296,6 @@ static bool active_qso() {
 
 static void reset() {
     wf.num_blocks = 0;
-    state = IDLE;
 }
 
 static void init() {
@@ -366,8 +371,6 @@ static void init() {
 
     /* Worker */
 
-    pthread_mutex_init(&audio_mutex, NULL);
-    pthread_cond_init(&audio_cond, NULL);
     pthread_create(&thread, NULL, decode_thread, NULL);
 
     /* Logger */
@@ -375,7 +378,7 @@ static void init() {
 }
 
 static void done() {
-    state = IDLE;
+    state = RX_PROCESS;
 
     pthread_cancel(thread);
     pthread_join(thread, NULL);
@@ -438,6 +441,10 @@ void static waterfall_process(float complex *frame, const size_t size) {
 }
 
 void static process(float complex *frame) {
+    if (wf.num_blocks >= wf.max_blocks) {
+        LV_LOG_ERROR("FT8 wf is full");
+        return;
+    }
     complex float   *frame_ptr;
     int             offset = wf.num_blocks * wf.block_stride;
     int             frame_pos = 0;
@@ -766,7 +773,7 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_add_event_cb(dialog.obj, band_cb, EVENT_BAND_DOWN, NULL);
 
     decim = firdecim_crcf_create_kaiser(DECIM, 16, 40.0f);
-    audio_buf = cbuffercf_create(AUDIO_CAPTURE_RATE);
+    audio_buf = cbuffercf_create(AUDIO_CAPTURE_RATE * 3);
 
     /* Waterfall */
 
@@ -964,7 +971,7 @@ static void tx_cq_dis_cb(lv_event_t * e) {
     buttons_load(2, &button_tx_cq_en);
 
     if (state == TX_PROCESS) {
-        state = TX_STOP;
+        state = RX_PROCESS;
     }
     cq_enabled = false;
     tx_enabled = false;
@@ -972,7 +979,7 @@ static void tx_cq_dis_cb(lv_event_t * e) {
 
 static void tx_call_off() {
     buttons_load(2, &button_tx_call_en);
-    state = TX_STOP;
+    state = RX_PROCESS;
     tx_enabled = false;
 }
 
@@ -1018,16 +1025,15 @@ static void tx_call_dis_cb(lv_event_t * e) {
     buttons_load(2, &button_tx_call_en);
 
     if (state == TX_PROCESS) {
-        state = TX_STOP;
+        state = RX_PROCESS;
     }
     tx_enabled = false;
 }
 
 static void audio_cb(unsigned int n, float complex *samples) {
-    if (state == IDLE || state == RX_PROCESS) {
+    if (state == RX_PROCESS) {
         pthread_mutex_lock(&audio_mutex);
         cbuffercf_write(audio_buf, samples, n);
-        pthread_cond_broadcast(&audio_cond);
         pthread_mutex_unlock(&audio_mutex);
     }
 }
@@ -1149,7 +1155,7 @@ static void tx_worker() {
 
     if (rc < 0) {
         LV_LOG_ERROR("Cannot parse message %i", rc);
-        state = IDLE;
+        state = RX_PROCESS;
         return;
     }
 
@@ -1170,7 +1176,7 @@ static void tx_worker() {
     float gain_scale = -12.0f + log10f(params.pwr) * 5;
     while (true) {
         if (n_samples <= 0 || state != TX_PROCESS) {
-            state = IDLE;
+            state = RX_PROCESS;
             break;
         }
         part = LV_MIN(1024 * 2, n_samples);
@@ -1192,7 +1198,7 @@ static void tx_worker() {
  * Parse incoming text to msg
  */
 static msg_t parse_rx_msg(const char * str) {
-    char            s[32];
+    char            s[33];
     char            *call_to = NULL;
     char            *call_de = NULL;
     char            *extra = NULL;
@@ -1234,19 +1240,20 @@ static msg_t parse_rx_msg(const char * str) {
     } else {
         strncpy(msg.call_from, call_de, sizeof(msg.call_from) - 1);
         strncpy(msg.call_to, call_to, sizeof(msg.call_to) - 1);
-        strncpy(msg.extra, extra, sizeof(msg.extra) - 1);
-
-        if (extra && strcmp(extra, "RR73") == 0) {
+        if (extra) {
+            strncpy(msg.extra, extra, sizeof(msg.extra) - 1);
+        }
+        if ((strcmp(msg.extra, "RR73") == 0) || (strcmp(msg.extra, "RRR") == 0)) {
             msg.type = MSG_TYPE_RR73;
-        } else if (strcmp(extra, "73") == 0) {
+        } else if (strcmp(msg.extra, "73") == 0) {
             msg.type = MSG_TYPE_73;
-        } else if (grid_check(extra)) {
+        } else if (grid_check(msg.extra)) {
             msg.type = MSG_TYPE_GRID;
-        } else if (extra[0] == 'R' && (extra[1] == '-' || extra[1] == '+')) {
-            msg.snr = atoi(extra + 1);
+        } else if (msg.extra[0] == 'R' && (msg.extra[1] == '-' || msg.extra[1] == '+')) {
+            msg.snr = atoi(msg.extra + 1);
             msg.type = MSG_TYPE_R_REPORT;
-        } else if (extra[0] == '-' || extra[0] == '+') {
-            msg.snr = atoi(extra);
+        } else if (msg.extra[0] == '-' || msg.extra[0] == '+') {
+            msg.snr = atoi(msg.extra);
             msg.type = MSG_TYPE_REPORT;
         }
     }
@@ -1384,16 +1391,7 @@ static void rx_worker(bool new_slot, bool odd) {
     float complex   *buf;
     const size_t    size = block_size * DECIM;
 
-    if (new_slot) {
-        decode(odd);
-        wf.num_blocks = 0;
-    }
-
     pthread_mutex_lock(&audio_mutex);
-
-    while (cbuffercf_size(audio_buf) < size) {
-        pthread_cond_wait(&audio_cond, &audio_mutex);
-    }
 
     while (cbuffercf_size(audio_buf) > size) {
         cbuffercf_read(audio_buf, size, &buf, &n);
@@ -1411,6 +1409,13 @@ static void rx_worker(bool new_slot, bool odd) {
         }
     }
     pthread_mutex_unlock(&audio_mutex);
+
+    if (new_slot) {
+        if (wf.num_blocks > (wf.max_blocks * 0.75f)) {
+            decode(odd);
+        }
+        reset();
+    }
 }
 
 static void generate_tx_msg() {
@@ -1453,33 +1458,31 @@ static void * decode_thread(void *arg) {
         clock_gettime(CLOCK_REALTIME, &now);
         new_odd = get_time_slot(now);
         new_slot = new_odd != odd;
-        if (!new_slot && state == IDLE) {
-            rx_worker(new_slot, odd);
-            odd = new_odd;
-            continue;
-        }
+        rx_worker(new_slot, odd);
 
-        if (params.ft8_auto.x && new_slot) {
-            generate_tx_msg();
-        }
-        have_tx_msg = strlen(tx_msg) != 0;
-
-        if (new_slot && have_tx_msg && (tx_time_slot == new_odd) && tx_enabled) {
-            state = TX_PROCESS;
-            add_tx_text(tx_msg);
-            tx_worker();
-            if (!active_qso() && !cq_enabled) {
-                tx_msg[0] = 0;
+        if (new_slot) {
+            if (params.ft8_auto.x) {
+                generate_tx_msg();
             }
+            have_tx_msg = strlen(tx_msg) != 0;
 
+            if (have_tx_msg && (tx_time_slot == new_odd) && tx_enabled) {
+                state = TX_PROCESS;
+                add_tx_text(tx_msg);
+                tx_worker();
+                if (!active_qso() && !cq_enabled) {
+                    tx_msg[0] = 0;
+                }
+            } else {
+                state = RX_PROCESS;
+                if ((!have_tx_msg || !tx_enabled)) {
+                    ts = localtime(&now.tv_sec);
+                    add_info("RX %s %02i:%02i:%02i", params_band_label_get(),
+                        ts->tm_hour, ts->tm_min, ts->tm_sec);
+                }
+            }
         } else {
-            state = RX_PROCESS;
-            rx_worker(new_slot, odd);
-            if ((!have_tx_msg || !tx_enabled) && new_slot) {
-                ts = localtime(&now.tv_sec);
-                add_info("RX %s %02i:%02i:%02i", params_band_label_get(),
-                    ts->tm_hour, ts->tm_min, ts->tm_sec);
-            }
+            usleep(30000);
         }
         odd = new_odd;
     }
