@@ -15,7 +15,7 @@
 
 #define NUM_ITEMS   7
 #define METER_PEAK_HOLD 1500
-#define METER_PEAK_SPEED 10
+#define METER_PEAK_SPEED 20
 
 static int16_t          min_db = S1;
 static int16_t          max_db = S9_40;
@@ -54,12 +54,13 @@ static void meter_draw_cb(lv_event_t * e) {
     lv_coord_t x1 = obj->coords.x1 + 7;
     lv_coord_t y1 = obj->coords.y1 + 17;
 
-    lv_coord_t w = lv_obj_get_width(obj);
+    lv_coord_t w = lv_obj_get_width(obj) - 80;
     lv_coord_t h = lv_obj_get_height(obj) - 1;
 
     uint8_t     slice_db = 3;
-    uint8_t     slice = 10;
-    lv_coord_t  len = slice * (max_db - min_db) / slice_db;
+    uint8_t     slices_total = (max_db - min_db) / slice_db;
+    uint8_t     slice_w = w / slices_total;
+    uint8_t     slice_spacing = slice_w * 2 / 10;
 
     /* Rects */
 
@@ -67,9 +68,11 @@ static void meter_draw_cb(lv_event_t * e) {
 
     rect_dsc.bg_opa = LV_OPA_80;
 
-    uint32_t count = slice_db * slice * (meter_db - min_db) / (max_db - min_db);
+    // uint32_t count = slice_db * slice * (meter_db - min_db) / (max_db - min_db);
+    uint32_t count = (meter_db - min_db) / slice_db;
+    count = LV_MIN(count, slices_total);
 
-    area.y1 = y1 - slice / 2;
+    area.y1 = y1 - 5;
     area.y2 = y1 + 32;
 
     int16_t db = s_items[0].db;
@@ -86,8 +89,8 @@ static void meter_draw_cb(lv_event_t * e) {
         } else {
             rect_dsc.bg_color = lv_color_hex(0xAA0000);
         }
-        area.x1 = x1 + 30 + i * slice;
-        area.x2 = area.x1 + slice - 3;
+        area.x1 = x1 + 30 + i * slice_w - slice_w / 2 + slice_spacing / 2;
+        area.x2 = area.x1 + slice_w - slice_spacing;
 
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
 
@@ -96,8 +99,8 @@ static void meter_draw_cb(lv_event_t * e) {
 
     /* Peak */
     if (meter_peak > meter_db) {
-        area.x1 = x1 + 30 + len * (meter_peak  - min_db) / (max_db - min_db);
-        area.x2 = area.x1 + slice - 3;
+        area.x1 = x1 + 30  - slice_w / 2 + slice_w * ((meter_peak - min_db) / slice_db);
+        area.x2 = area.x1 + slice_w - slice_spacing;
         rect_dsc.bg_opa = LV_OPA_50;
         rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
@@ -126,7 +129,7 @@ static void meter_draw_cb(lv_event_t * e) {
 
         lv_txt_get_size(&label_size, label, label_dsc.font, 0, 0, LV_COORD_MAX, 0);
 
-        area.x1 = x1 + 30 + len * (db  - min_db) / (max_db - min_db) - (label_size.x / 2);
+        area.x1 = x1 + 30 + slice_w * ((db  - min_db) / slice_db) - label_size.x / 2;
         area.x2 = area.x1 + label_size.x;
 
         lv_draw_label(draw_ctx, &label_dsc, &area, label, NULL);
