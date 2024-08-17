@@ -237,11 +237,6 @@ void radio_bb_reset() {
     x6100_gpio_set(x6100_pin_bb_reset, 1);
     usleep(100000);
     x6100_gpio_set(x6100_pin_bb_reset, 0);
-    usleep(6000000);
-    radio_lock();
-    x6100_control_idle();
-    radio_unlock();
-    x6100_flow_restart();
 }
 
 void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb, radio_state_change_t atu_update_cb) {
