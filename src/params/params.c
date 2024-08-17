@@ -881,7 +881,7 @@ bool params_bands_find_next(uint64_t freq, bool up, band_t *band) {
     int             rc;
 
     if (up) {
-        rc = sqlite3_prepare_v2(db, "SELECT id,name,start_freq,stop_freq,type FROM bands WHERE (? - 1 < start_freq AND type != 0) ORDER BY start_freq ASC", -1, &stmt, 0);
+        rc = sqlite3_prepare_v2(db, "SELECT id,name,start_freq,stop_freq,type FROM bands WHERE (? < start_freq AND type != 0) ORDER BY start_freq ASC", -1, &stmt, 0);
     } else {
         rc = sqlite3_prepare_v2(db, "SELECT id,name,start_freq,stop_freq,type FROM bands WHERE (? > stop_freq AND type != 0) ORDER BY start_freq DESC", -1, &stmt, 0);
     }
