@@ -1147,11 +1147,11 @@ static bool make_answer(const msg_t * msg, int8_t snr, bool rx_odd) {
 
 
 static void tx_worker() {
-    uint8_t tones[FT8_NN];
     uint8_t packed[FTX_LDPC_K_BYTES];
     int     rc = pack77(tx_msg, packed);
+    uint8_t tones[FT4_NN];
+    uint8_t n_tones;
 
-    const uint16_t signal_freq = 1325;
 
     if (rc < 0) {
         LV_LOG_ERROR("Cannot parse message %i", rc);
@@ -1159,11 +1159,18 @@ static void tx_worker() {
         return;
     }
 
-    ft8_encode(packed, tones);
+    if (params.ft8_protocol == PROTO_FT8) {
+        n_tones = FT8_NN;
+        ft8_encode(packed, tones);
+    } else if (params.ft8_protocol == PROTO_FT4) {
+        n_tones = FT4_NN;
+        ft4_encode(packed, tones);
+    }
 
+    const uint16_t signal_freq = 1325;
     uint32_t    n_samples = 0;
     float       symbol_bt = (params.ft8_protocol == PROTO_FT4) ? FT4_SYMBOL_BT : FT8_SYMBOL_BT;
-    int16_t     *samples = gfsk_synth(tones, FT8_NN, signal_freq, symbol_bt, symbol_period, &n_samples);
+    int16_t     *samples = gfsk_synth(tones, n_tones, signal_freq, symbol_bt, symbol_period, &n_samples);
     int16_t     *ptr = samples;
     size_t      part;
 
