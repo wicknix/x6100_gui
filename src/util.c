@@ -162,7 +162,7 @@ int sign(int x) {
 // Window rms
 
 struct wrms_s {
-    windowcf window;
+    windowf window;
     size_t size;
     size_t delay;
     int16_t remain;
@@ -170,15 +170,17 @@ struct wrms_s {
 
 wrms_t wrms_create(size_t n, size_t delay) {
     wrms_t wr = (wrms_t) malloc(sizeof(struct wrms_s));
+    // window size
     wr->size = n;
+    // step size
     wr->delay = delay;
     wr->remain = wr->delay;
-    wr->window = windowcf_create(n);
+    wr->window = windowf_create(n);
     return wr;
 }
 
 void wrms_destroy(wrms_t wr) {
-    windowcf_destroy(wr->window);
+    windowf_destroy(wr->window);
     free(wr);
 }
 
@@ -190,12 +192,16 @@ size_t wrms_delay(wrms_t wr) {
     return wr->delay;
 }
 
-void wrms_push(wrms_t wr, liquid_float_complex x) {
+void wrms_pushcf(wrms_t wr, liquid_float_complex x) {
     if (wr->remain == 0) {
         wr->remain = wr->delay;
     }
     wr->remain--;
-    windowcf_push(wr->window, x);
+    float x_db = 10.0f * log10f(sqrt(crealf(x * conjf(x))));
+    if (x_db < -121.0f) {
+        x_db = -121.0f;
+    }
+    windowf_push(wr->window, x_db);
 }
 
 bool wrms_ready(wrms_t wr) {
@@ -203,13 +209,13 @@ bool wrms_ready(wrms_t wr) {
 }
 
 float wrms_get_val(wrms_t wr) {
-    float complex * r;
-    windowcf_read(wr->window, &r);
+    float * r;
+    windowf_read(wr->window, &r);
     float rms = 0.0;
     for (uint8_t i = 0; i < wr->size; i++) {
-        rms += crealf(r[i] * conjf(r[i]));
+        rms += r[i];
     }
-    rms = sqrtf(rms / wr->size);
+    rms = rms / wr->size;
     return rms;
 }
 

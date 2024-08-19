@@ -36,7 +36,7 @@ void wrms_destroy(wrms_t wr);
 size_t wrms_size(wrms_t wr);
 size_t wrms_delay(wrms_t wr);
 
-void wrms_push(wrms_t wr, liquid_float_complex x);
+void wrms_pushcf(wrms_t wr, liquid_float_complex x);
 bool wrms_ready(wrms_t wr);
 float wrms_get_val(wrms_t wr);
 

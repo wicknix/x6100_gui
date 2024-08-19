@@ -95,8 +95,8 @@ params_t params = {
 
     .cw_decoder             = true,
     .cw_tune                = false,
-    .cw_decoder_snr         = 10.0f,
-    .cw_decoder_snr_gist    = 3.0f,
+    .cw_decoder_snr         = 5.0f,
+    .cw_decoder_snr_gist    = 1.0f,
     .cw_decoder_peak_beta   = 0.10f,
     .cw_decoder_noise_beta  = 0.80f,
 
@@ -281,7 +281,7 @@ static bool params_load() {
             params.cw_decoder = i;
         } else if (strcmp(name, "cw_tune") == 0) {
             params.cw_tune = i;
-        } else if (strcmp(name, "cw_decoder_snr") == 0) {
+        } else if (strcmp(name, "cw_decoder_snr_2") == 0) {
             params.cw_decoder_snr = i * 0.1f;
         } else if (strcmp(name, "cw_decoder_peak_beta") == 0) {
             params.cw_decoder_peak_beta = i * 0.01f;
@@ -471,7 +471,7 @@ static void params_save() {
 
     if (params.dirty.cw_decoder)            params_write_int("cw_decoder", params.cw_decoder, &params.dirty.cw_decoder);
     if (params.dirty.cw_tune)               params_write_int("cw_tune", params.cw_tune, &params.dirty.cw_tune);
-    if (params.dirty.cw_decoder_snr)        params_write_int("cw_decoder_snr", params.cw_decoder_snr * 10, &params.dirty.cw_decoder_snr);
+    if (params.dirty.cw_decoder_snr)        params_write_int("cw_decoder_snr_2", params.cw_decoder_snr * 10, &params.dirty.cw_decoder_snr);
     if (params.dirty.cw_decoder_peak_beta)  params_write_int("cw_decoder_peak_beta", params.cw_decoder_peak_beta * 100, &params.dirty.cw_decoder_peak_beta);
     if (params.dirty.cw_decoder_noise_beta) params_write_int("cw_decoder_noise_beta", params.cw_decoder_noise_beta * 100, &params.dirty.cw_decoder_noise_beta);
 
