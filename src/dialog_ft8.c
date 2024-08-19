@@ -383,6 +383,7 @@ static void done() {
     pthread_cancel(thread);
     pthread_join(thread, NULL);
     radio_set_modem(false);
+    pthread_mutex_unlock(&audio_mutex);
 
     free(wf.mag);
     windowcf_destroy(frame_window);
