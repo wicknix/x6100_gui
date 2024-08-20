@@ -58,7 +58,7 @@
 #define FT8_BANDS       11
 #define FT4_BANDS       9
 
-#define WIDTH           775
+#define WIDTH           771
 
 #define UNKNOWN_SNR     99
 
@@ -524,37 +524,40 @@ static void table_draw_part_begin_cb(lv_event_t * e) {
         uint32_t    row = dsc->id / lv_table_get_col_cnt(obj);
         uint32_t    col = dsc->id - row * lv_table_get_col_cnt(obj);
         cell_data_t *cell_data = lv_table_get_cell_user_data(obj, row, col);
+        uint16_t    selected_row, selected_col;
+        lv_table_get_selected_cell(obj, &selected_row, &selected_col);
+
+        if (selected_row == row) {
+            dsc->rect_dsc->bg_opa = LV_OPA_70;
+        } else {
+            dsc->rect_dsc->bg_opa = LV_OPA_50;
+        }
 
         if (cell_data == NULL) {
             dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
-            dsc->rect_dsc->bg_color = lv_color_white();
-            dsc->rect_dsc->bg_opa = 128;
-
+            dsc->rect_dsc->bg_color = lv_color_hex(0x303030);
             return;
         }
 
         switch (cell_data->cell_type) {
             case CELL_RX_INFO:
                 dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
-                dsc->rect_dsc->bg_color = lv_color_white();
-                dsc->rect_dsc->bg_opa = 128;
+                dsc->rect_dsc->bg_color = lv_color_hex(0x303030);
                 break;
 
             case CELL_RX_CQ:
                 dsc->rect_dsc->bg_color = lv_color_hex(0x00DD00);
-                dsc->rect_dsc->bg_opa = 128;
                 break;
 
             case CELL_RX_TO_ME:
                 dsc->rect_dsc->bg_color = lv_color_hex(0xFF0000);
-                dsc->rect_dsc->bg_opa = 128;
                 break;
 
             case CELL_TX_MSG:
-                dsc->rect_dsc->bg_color = lv_color_hex(0x0000DD);
-                dsc->rect_dsc->bg_opa = 128;
+                dsc->rect_dsc->bg_color = lv_color_hex(0x0000FF);
                 break;
             default:
+                dsc->rect_dsc->bg_color = lv_color_hex(0x050505);
                 break;
         }
     }
@@ -828,7 +831,7 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_set_pos(table, 13, 13 + 55);
 
     lv_table_set_col_cnt(table, 1);
-    lv_table_set_col_width(table, 0, WIDTH - 5);
+    lv_table_set_col_width(table, 0, WIDTH - 2);
 
     lv_obj_set_style_border_width(table, 0, LV_PART_ITEMS);
 
@@ -838,16 +841,11 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_set_style_border_color(table, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_border_opa(table, 128, LV_PART_MAIN);
 
-    lv_obj_set_style_bg_opa(table, LV_OPA_TRANSP, LV_PART_ITEMS);
-    lv_obj_set_style_text_color(table, lv_color_white(), LV_PART_ITEMS);
+    lv_obj_set_style_text_color(table, lv_color_hex(0xC0C0C0), LV_PART_ITEMS);
     lv_obj_set_style_pad_top(table, 3, LV_PART_ITEMS);
     lv_obj_set_style_pad_bottom(table, 3, LV_PART_ITEMS);
     lv_obj_set_style_pad_left(table, 5, LV_PART_ITEMS);
     lv_obj_set_style_pad_right(table, 0, LV_PART_ITEMS);
-
-    lv_obj_set_style_text_color(table, lv_color_black(), LV_PART_ITEMS | LV_STATE_EDITED);
-    lv_obj_set_style_bg_color(table, lv_color_white(), LV_PART_ITEMS | LV_STATE_EDITED);
-    lv_obj_set_style_bg_opa(table, 128, LV_PART_ITEMS | LV_STATE_EDITED);
 
     lv_table_set_cell_value(table, 0, 0, "Wait sync");
 
