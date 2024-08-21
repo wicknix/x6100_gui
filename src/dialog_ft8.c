@@ -524,41 +524,41 @@ static void table_draw_part_begin_cb(lv_event_t * e) {
         uint32_t    row = dsc->id / lv_table_get_col_cnt(obj);
         uint32_t    col = dsc->id - row * lv_table_get_col_cnt(obj);
         cell_data_t *cell_data = lv_table_get_cell_user_data(obj, row, col);
-        uint16_t    selected_row, selected_col;
-        lv_table_get_selected_cell(obj, &selected_row, &selected_col);
 
-        if (selected_row == row) {
-            dsc->rect_dsc->bg_opa = LV_OPA_70;
-        } else {
-            dsc->rect_dsc->bg_opa = LV_OPA_50;
-        }
+        dsc->rect_dsc->bg_opa = LV_OPA_50;
 
         if (cell_data == NULL) {
             dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
             dsc->rect_dsc->bg_color = lv_color_hex(0x303030);
-            return;
+        } else {
+            switch (cell_data->cell_type) {
+                case CELL_RX_INFO:
+                    dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
+                    dsc->rect_dsc->bg_color = lv_color_hex(0x303030);
+                    break;
+
+                case CELL_RX_CQ:
+                    dsc->rect_dsc->bg_color = lv_color_hex(0x00DD00);
+                    break;
+
+                case CELL_RX_TO_ME:
+                    dsc->rect_dsc->bg_color = lv_color_hex(0xFF0000);
+                    break;
+
+                case CELL_TX_MSG:
+                    dsc->rect_dsc->bg_color = lv_color_hex(0x0000FF);
+                    break;
+                default:
+                    dsc->rect_dsc->bg_color = lv_color_black();
+                    break;
+            }
         }
 
-        switch (cell_data->cell_type) {
-            case CELL_RX_INFO:
-                dsc->label_dsc->align = LV_TEXT_ALIGN_CENTER;
-                dsc->rect_dsc->bg_color = lv_color_hex(0x303030);
-                break;
+        uint16_t    selected_row, selected_col;
+        lv_table_get_selected_cell(obj, &selected_row, &selected_col);
 
-            case CELL_RX_CQ:
-                dsc->rect_dsc->bg_color = lv_color_hex(0x00DD00);
-                break;
-
-            case CELL_RX_TO_ME:
-                dsc->rect_dsc->bg_color = lv_color_hex(0xFF0000);
-                break;
-
-            case CELL_TX_MSG:
-                dsc->rect_dsc->bg_color = lv_color_hex(0x0000FF);
-                break;
-            default:
-                dsc->rect_dsc->bg_color = lv_color_hex(0x050505);
-                break;
+        if (selected_row == row) {
+            dsc->rect_dsc->bg_color = lv_color_lighten(dsc->rect_dsc->bg_color, 20);
         }
     }
 }
