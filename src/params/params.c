@@ -118,6 +118,7 @@ params_t params = {
     .ft8_band               = 5,
     .ft8_tx_freq            = { .x = 1325,      .name = "ft8_tx_freq" },
     .ft8_auto               = { .x = true,      .name = "ft8_auto" },
+    .ft8_output_gain_offset = 0.0f,
 
     .long_gen               = ACTION_SCREENSHOT,
     .long_app               = ACTION_APP_RECORDER,
@@ -696,6 +697,11 @@ void params_init() {
     pthread_create(&thread, NULL, params_thread, NULL);
     pthread_detach(thread);
     params_modulation_setup(&params_lo_offset_get);
+
+    // Fix for different output poser on different devices
+    if (access("/mnt/.fix_ft8_power", F_OK) == 0) {
+        params.ft8_output_gain_offset = -4.0f;
+    }
 }
 
 int32_t params_lo_offset_get() {

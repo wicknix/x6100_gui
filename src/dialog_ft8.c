@@ -672,6 +672,7 @@ static void load_band() {
 static void clean() {
     reset();
 
+    lv_table_set_row_cnt(table, 0);
     lv_table_set_row_cnt(table, 1);
     lv_table_set_cell_value(table, 0, 0, "Wait sync");
 
@@ -1179,7 +1180,8 @@ static void tx_worker() {
     radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
     radio_set_modem(true);
 
-    float gain_scale = -12.0f + log10f(params.pwr) * 5;
+    float gain_scale = -8.2f + params.ft8_output_gain_offset + log10f(params.pwr) * 5;
+
     while (true) {
         if (n_samples <= 0 || state != TX_PROCESS) {
             state = RX_PROCESS;

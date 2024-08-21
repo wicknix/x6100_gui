@@ -191,6 +191,9 @@ typedef struct {
     params_uint16_t     ft8_tx_freq;
     params_bool_t       ft8_auto;
 
+    // Temporal fix for different output power on FT8
+    float               ft8_output_gain_offset;
+
     /* Long press actions */
 
     uint8_t             long_gen;
