@@ -6,14 +6,16 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
+#include "tx_info.h"
+
 #include <stdio.h>
 
-#include "tx_info.h"
 #include "styles.h"
 #include "events.h"
 #include "msg_tiny.h"
 #include "params/params.h"
 #include "util.h"
+#include "dialog.h"
 
 #define NUM_PWR_ITEMS   6
 #define NUM_VSWR_ITEMS  5
@@ -29,6 +31,7 @@ static float            vswr = 5.0f;
 static float            alc;
 
 static lv_obj_t         *obj;
+static lv_obj_t         *alc_label;
 static lv_grad_dsc_t    grad;
 
 typedef struct {
@@ -166,6 +169,10 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
 }
 
+static void update_alc_label_cb(lv_event_t * e) {
+    lv_label_set_text_fmt(alc_label, "ALC: %1.1f", alc);
+}
+
 static void tx_cb(lv_event_t * e) {
     pwr = 0;
     vswr = 0;
@@ -202,6 +209,14 @@ lv_obj_t * tx_info_init(lv_obj_t *parent) {
     grad.stops[2].frac  = 128 + 10;
     grad.stops[3].frac  = 255;
 
+    // Small alc indicator
+    alc_label = lv_label_create(obj);
+    lv_obj_set_style_text_font(alc_label, &sony_20, 0);
+    lv_obj_align(alc_label, LV_ALIGN_BOTTOM_RIGHT, -10, 13);
+    lv_obj_set_style_text_color(alc_label, lv_color_white(), 0);
+    lv_label_set_text(alc_label, "");
+    lv_obj_add_event_cb(alc_label, update_alc_label_cb, EVENT_MSG_UPDATE, NULL);
+
     return obj;
 }
 
@@ -229,5 +244,8 @@ void tx_info_update(float p, float s, float a) {
 
     if (params.mag_alc.x) {
         msg_tiny_set_text_fmt("ALC: %.1f", alc);
+    }
+    if (dialog_is_run() || !params.mag_alc.x) {
+        event_send(alc_label, EVENT_MSG_UPDATE, NULL);
     }
 }
