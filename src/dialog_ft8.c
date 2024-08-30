@@ -62,6 +62,8 @@
 
 #define UNKNOWN_SNR     99
 
+#define MAX_PWR         5.0f
+
 typedef enum {
     RX_PROCESS,
     TX_PROCESS,
@@ -899,9 +901,9 @@ static void construct_cb(lv_obj_t *parent) {
 
     init();
 
-    if (params.pwr > 5.0f) {
-        radio_set_pwr(5.0f);
-        msg_set_text_fmt("Power was limited to 5W");
+    if (params.pwr > MAX_PWR) {
+        radio_set_pwr(MAX_PWR);
+        msg_set_text_fmt("Power was limited to %0.0fW", MAX_PWR);
     }
 }
 
@@ -1180,7 +1182,7 @@ static void tx_worker() {
     radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
     radio_set_modem(true);
 
-    float gain_scale = -8.2f + params.ft8_output_gain_offset + log10f(params.pwr) * 5;
+    float gain_scale = -8.2f + params.ft8_output_gain_offset + log10f(LV_MIN(params.pwr, MAX_PWR)) * 5;
 
     while (true) {
         if (n_samples <= 0 || state != TX_PROCESS) {
