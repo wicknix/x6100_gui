@@ -8,3 +8,5 @@ add_custom_command(
     COMMAND sqlite3 ${MAIN_DB_FN} < params.sql
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+install(FILES ${MAIN_DB_FN} DESTINATION share/x6100 RENAME params.default.db)

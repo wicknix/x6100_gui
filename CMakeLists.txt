@@ -12,5 +12,5 @@ add_subdirectory(src)
 add_subdirectory(sql)
 
 install(TARGETS ${PROJECT_NAME} DESTINATION sbin)
-install(DIRECTORY rootfs/ DESTINATION target/)
+install(DIRECTORY rootfs/ DESTINATION /)
 install(DIRECTORY images DESTINATION share/x6100)
