@@ -21,6 +21,7 @@ static uint16_t         bands_count = 0;
 static uint64_t         freq;
 static lv_anim_t        fade;
 static bool             fade_run = false;
+static uint8_t          zoom = 1;
 
 static lv_timer_t       *timer = NULL;
 
@@ -52,8 +53,8 @@ static void band_info_draw_cb(lv_event_t * e) {
 
         lv_border_side_t border_side = LV_BORDER_SIDE_NONE;
 
-        int32_t start = (int64_t)(band->start_freq - freq) * w / width_hz;
-        int32_t stop = (int64_t)(band->stop_freq - freq) * w / width_hz;
+        int32_t start = (int64_t)(band->start_freq - freq) * w / width_hz * zoom;
+        int32_t stop = (int64_t)(band->stop_freq - freq) * w / width_hz * zoom;
 
         start += w / 2;
         stop += w / 2;
@@ -172,4 +173,8 @@ void band_info_update(uint64_t f) {
         timer = lv_timer_create(band_info_timer, 2000, NULL);
         lv_timer_set_repeat_count(timer, 1);
     }
+}
+
+void band_info_zoom_factor_set(uint8_t zoom_val) {
+    zoom = zoom_val;
 }

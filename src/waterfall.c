@@ -20,7 +20,7 @@
 #include "dsp.h"
 #include "util.h"
 
-#define PX_BYTES    4
+#define PX_BYTES    sizeof(lv_color_t)
 #define DEFAULT_MIN S4
 #define DEFAULT_MAX S9_20
 
@@ -51,6 +51,8 @@ static uint64_t         wf_center_freq = 0;
 
 static uint8_t          refresh_period = 1;
 static uint8_t          refresh_counter = 0;
+
+static uint8_t          zoom = 1;
 
 static void refresh_waterfall();
 static void draw_middle_line();
@@ -239,50 +241,32 @@ void waterfall_refresh_period_set(uint8_t k) {
     refresh_period = k;
 }
 
+void waterfall_zoom_factor_set(uint8_t zoom_val) {
+    zoom = zoom_val;
+}
+
 static void redraw_cb(lv_event_t * e) {
-    int32_t x_offset, w=width;
-    size_t copy_n, copy_src, copy_dst;
-    size_t clean_n, clean_from;
+    int32_t x_offset;
+    size_t src_y, src_x, dst_y, dst_x;
 
     uint8_t * temp_buf = frame->data;
 
     uint32_t cur_freq_px = wf_center_freq * width / width_hz;
 
-    for (size_t i = 0; i < height; i++) {
-        x_offset = (int32_t)x_offsets[i] - cur_freq_px;
-        if (x_offset > 0) {
-            copy_n = LV_MAX(w - x_offset, 0);
-            copy_src = 0;
-            copy_dst = x_offset;
+    lv_color_t black = lv_color_black();
+    lv_color_t px_color;
 
-            clean_n = LV_MIN(x_offset, width);
-            clean_from = 0;
-        } else if (x_offset < 0) {
-            copy_n = LV_MAX(w + x_offset, 0);
-            copy_src = -x_offset;
-            copy_dst = 0;
-
-            clean_n = LV_MIN(-x_offset, width);
-            clean_from = LV_MAX(w + x_offset, 0);
-        } else {
-            copy_n = width;
-            copy_src = 0;
-            copy_dst = 0;
-            clean_n = 0;
-            clean_from = 0;
-        }
-        copy_src += i * width;
-        copy_dst += ((height - i + last_row_id) % height) * width;
-        clean_from += ((height - i + last_row_id) % height) * width;
-        if (clean_n > 0){
-            memset(temp_buf + clean_from * PX_BYTES, 0, clean_n * PX_BYTES);
-        }
-        if (copy_n > 0){
-            memcpy(
-                temp_buf + copy_dst * PX_BYTES,
-                waterfall_cache + copy_src * PX_BYTES,
-                copy_n * PX_BYTES
-            );
+    for (src_y = 0; src_y < height; src_y++) {
+        dst_y = ((height - src_y + last_row_id) % height);
+        x_offset = (int32_t)x_offsets[src_y] - cur_freq_px;
+        for (dst_x = 0; dst_x < width; dst_x++) {
+            src_x = ((int32_t)dst_x - width / 2) / zoom + width / 2 - x_offset;
+            if ((src_x < 0) || (src_x > width)) {
+                px_color = black;
+            } else {
+                px_color = *((lv_color_t*)waterfall_cache + (src_y * width + src_x));
+            }
+            *((lv_color_t*)temp_buf + (dst_y * width + dst_x)) = px_color;
         }
     }
 }
