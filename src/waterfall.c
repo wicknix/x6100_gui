@@ -245,8 +245,10 @@ void waterfall_zoom_factor_set(uint8_t zoom_val) {
     zoom = zoom_val;
 }
 
+
 static void redraw_cb(lv_event_t * e) {
     int32_t x_offset;
+    float   f;
     size_t src_y, src_x, dst_y, dst_x;
 
     uint8_t * temp_buf = frame->data;
@@ -256,12 +258,17 @@ static void redraw_cb(lv_event_t * e) {
     lv_color_t black = lv_color_black();
     lv_color_t px_color;
 
+    size_t mapping[width];
+    for (size_t i = 0; i < width; i++) {
+        mapping[i] = ((int32_t)i - width / 2) / zoom + width / 2;
+    }
+
     for (src_y = 0; src_y < height; src_y++) {
         dst_y = ((height - src_y + last_row_id) % height);
         x_offset = (int32_t)x_offsets[src_y] - cur_freq_px;
         for (dst_x = 0; dst_x < width; dst_x++) {
-            src_x = ((int32_t)dst_x - width / 2) / zoom + width / 2 - x_offset;
-            if ((src_x < 0) || (src_x > width)) {
+            src_x = mapping[dst_x] - x_offset;
+            if ((src_x < 0) || (src_x >= width)) {
                 px_color = black;
             } else {
                 px_color = *((lv_color_t*)waterfall_cache + (src_y * width + src_x));
