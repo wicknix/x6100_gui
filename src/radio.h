@@ -16,10 +16,6 @@
 #define RADIO_SAMPLES   (512)
 
 typedef enum {
-    RADIO_MSG_MODE_CHANGED,
-} radio_messages_t;
-
-typedef enum {
     RADIO_RX = 0,
     RADIO_TX,
     RADIO_ATU_START,

@@ -5,10 +5,8 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
-
-#include <stdlib.h>
-
 #include "waterfall.h"
+
 #include "styles.h"
 #include "radio.h"
 #include "events.h"
@@ -19,6 +17,9 @@
 #include "backlight.h"
 #include "dsp.h"
 #include "util.h"
+#include "pubsub_ids.h"
+
+#include <stdlib.h>
 
 #define PX_BYTES    sizeof(lv_color_t)
 #define DEFAULT_MIN S4
@@ -57,6 +58,7 @@ static uint8_t          zoom = 1;
 static void refresh_waterfall();
 static void draw_middle_line();
 static void redraw_cb(lv_event_t * e);
+static void zoom_changed_cd(void * s, lv_msg_t * m);
 
 
 lv_obj_t * waterfall_init(lv_obj_t * parent, uint64_t cur_freq) {
@@ -73,6 +75,8 @@ lv_obj_t * waterfall_init(lv_obj_t * parent, uint64_t cur_freq) {
     lv_style_set_line_width(&middle_line_style, 1);
     lv_style_set_line_color(&middle_line_style, lv_color_hex(0xAAAAAA));
     lv_style_set_line_opa(&middle_line_style, LV_OPA_60);
+
+    lv_msg_subscribe(MSG_SPECTRUM_ZOOM_CHANGED, zoom_changed_cd, NULL);
 
     return obj;
 }
@@ -241,14 +245,8 @@ void waterfall_refresh_period_set(uint8_t k) {
     refresh_period = k;
 }
 
-void waterfall_zoom_factor_set(uint8_t zoom_val) {
-    zoom = zoom_val;
-}
-
-
 static void redraw_cb(lv_event_t * e) {
     int32_t x_offset;
-    float   f;
     size_t src_y, src_x, dst_y, dst_x;
 
     uint8_t * temp_buf = frame->data;
@@ -260,7 +258,7 @@ static void redraw_cb(lv_event_t * e) {
 
     size_t mapping[width];
     for (size_t i = 0; i < width; i++) {
-        mapping[i] = ((int32_t)i - width / 2) / zoom + width / 2;
+        mapping[i] = ((int32_t)i - (width + zoom) / 2) / zoom + width / 2;
     }
 
     for (src_y = 0; src_y < height; src_y++) {
@@ -284,4 +282,8 @@ static void refresh_waterfall() {
         refresh_counter = 0;
         event_send(img, LV_EVENT_REFRESH, NULL);
     }
+}
+
+static void zoom_changed_cd(void * s, lv_msg_t * m) {
+    zoom = *(uint16_t *) lv_msg_get_payload(m);
 }

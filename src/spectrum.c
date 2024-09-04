@@ -6,11 +6,9 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-#include <stdlib.h>
-#include <pthread.h>
+#include "spectrum.h"
 
 #include "styles.h"
-#include "spectrum.h"
 #include "radio.h"
 #include "events.h"
 #include "dsp.h"
@@ -19,6 +17,10 @@
 #include "meter.h"
 #include "rtty.h"
 #include "recorder.h"
+#include "pubsub_ids.h"
+
+#include <stdlib.h>
+#include <pthread.h>
 
 #define DEFAULT_MIN S4
 #define DEFAULT_MAX S9_20
@@ -49,6 +51,8 @@ typedef struct {
 static peak_t           *spectrum_peak;
 
 static pthread_mutex_t  data_mux;
+
+static void zoom_changed_cd(void * s, lv_msg_t * m);
 
 static void spectrum_draw_cb(lv_event_t * e) {
     lv_obj_t            *obj = lv_event_get_target(e);
@@ -85,6 +89,8 @@ static void spectrum_draw_cb(lv_event_t * e) {
 
     lv_coord_t w = lv_obj_get_width(obj);
     lv_coord_t h = lv_obj_get_height(obj);
+
+    x1 += params_lo_offset_get() * zoom_factor * w / width_hz;
 
     lv_point_t main_a, main_b;
     lv_point_t peak_a, peak_b;
@@ -211,8 +217,11 @@ static void spectrum_draw_cb(lv_event_t * e) {
     main_b.x = main_a.x;
     main_b.y = y1 + h;
 
+    x6100_mode_t cur_mode = params_band_cur_mode_get();
     if (recorder_is_on()) {
         main_line_dsc.color = lv_color_hex(0xFF0000);
+    } else if (cur_mode == x6100_mode_cw || cur_mode == x6100_mode_cwr) {
+        main_line_dsc.opa = LV_OPA_20;
     }
 
     lv_draw_line(draw_ctx, &main_line_dsc, &main_a, &main_b);
@@ -226,11 +235,10 @@ static void rx_cb(lv_event_t * e) {
     visor_height = VISOR_HEIGHT_RX;
 }
 
-lv_obj_t * spectrum_init(lv_obj_t * parent, uint8_t factor) {
+lv_obj_t * spectrum_init(lv_obj_t * parent) {
     pthread_mutex_init(&data_mux, NULL);
     spectrum_buf = malloc(spectrum_size * sizeof(float));
     spectrum_peak = malloc(spectrum_size * sizeof(peak_t));
-    spectrum_zoom_factor_set(factor);
     spectrum_min_max_reset();
 
     obj = lv_obj_create(parent);
@@ -239,6 +247,8 @@ lv_obj_t * spectrum_init(lv_obj_t * parent, uint8_t factor) {
     lv_obj_add_event_cb(obj, spectrum_draw_cb, LV_EVENT_DRAW_MAIN_END, NULL);
     lv_obj_add_event_cb(obj, tx_cb, EVENT_RADIO_TX, NULL);
     lv_obj_add_event_cb(obj, rx_cb, EVENT_RADIO_RX, NULL);
+
+    lv_msg_subscribe(MSG_SPECTRUM_ZOOM_CHANGED, zoom_changed_cd, NULL);
 
     return obj;
 }
@@ -281,12 +291,6 @@ void spectrum_min_max_reset() {
     } else {
         grid_max = params_band_grid_max_get();
     }
-}
-
-void spectrum_zoom_factor_set(uint8_t val) {
-    zoom_factor = val;
-    dsp_set_spectrum_factor(zoom_factor);
-    spectrum_clear();
 }
 
 float spectrum_get_min() {
@@ -383,4 +387,11 @@ void spectrum_change_freq(int16_t df) {
             }
         }
     }
+}
+
+
+static void zoom_changed_cd(void * s, lv_msg_t * m) {
+    zoom_factor = *(uint16_t *) lv_msg_get_payload(m);
+    dsp_set_spectrum_factor(zoom_factor);
+    spectrum_clear();
 }

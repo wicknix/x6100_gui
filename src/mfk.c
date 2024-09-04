@@ -21,6 +21,7 @@
 #include "voice.h"
 #include "cw_tune_ui.h"
 #include "band_info.h"
+#include "pubsub_ids.h"
 
 #include "lvgl/lvgl.h"
 
@@ -72,9 +73,7 @@ void mfk_update(int16_t diff, bool voice) {
             i = params_current_mode_spectrum_factor_get();
             if (diff != 0) {
                 i = params_current_mode_spectrum_factor_set(i + diff);
-                spectrum_zoom_factor_set(i);
-                waterfall_zoom_factor_set(i);
-                band_info_zoom_factor_set(i);
+                lv_msg_send(MSG_SPECTRUM_ZOOM_CHANGED, &i);
             }
             msg_set_text_fmt("#%3X Spectrum zoom: x%i", color, i);
 

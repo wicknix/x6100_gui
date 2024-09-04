@@ -25,5 +25,3 @@ void waterfall_update_min(float db);
 void waterfall_set_freq(uint64_t freq);
 void waterfall_refresh_reset();
 void waterfall_refresh_period_set(uint8_t k);
-
-void waterfall_zoom_factor_set(uint8_t zoom_val);

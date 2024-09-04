@@ -59,16 +59,14 @@ static float complex    *audio;
 static bool             ready = false;
 
 static void dsp_update_min_max(float *data_buf, uint16_t size);
+static void setup_spectrum_spgram();
 
 /* * */
 
 void dsp_init(uint8_t factor) {
     dc_block = iirfilt_cccf_create_dc_blocker(0.005f);
 
-    spectrum_sg_rx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, nfft, nfft / 4);
-    spgramcf_set_alpha(spectrum_sg_rx, 0.2f);
-    spectrum_sg_tx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, nfft, nfft / 4);
-    spgramcf_set_alpha(spectrum_sg_tx, 0.2f);
+    setup_spectrum_spgram();
 
     spectrum_psd = malloc(nfft * sizeof(float));
     spectrum_psd_filtered = malloc(nfft * sizeof(float));
@@ -121,8 +119,9 @@ static bool update_spectrum(spgramcf sp_sg, uint64_t now, bool tx) {
     if ((now - spectrum_time > spectrum_fps_ms) && (!psd_delay)) {
         spgramcf_get_psd(sp_sg, spectrum_psd);
         liquid_vectorf_addscalar(spectrum_psd, nfft, -30.0f, spectrum_psd);
-
-        lpf_block(spectrum_psd_filtered, spectrum_psd, spectrum_beta, nfft);
+        // Decrease beta for high zoom
+        float new_beta = powf(spectrum_beta, ((float) spectrum_factor - 1.0f) / 2.0f + 1.0f);
+        lpf_block(spectrum_psd_filtered, spectrum_psd, new_beta, nfft);
         spectrum_data(spectrum_psd_filtered, nfft, tx);
         spectrum_time = now;
         return true;
@@ -205,10 +204,13 @@ void dsp_set_spectrum_factor(uint8_t x) {
 
     spectrum_factor = x;
 
+    setup_spectrum_spgram();
+
     if (spectrum_decim_rx) {
         firdecim_crcf_destroy(spectrum_decim_rx);
         spectrum_decim_rx = NULL;
     }
+
     if (spectrum_decim_tx) {
         firdecim_crcf_destroy(spectrum_decim_tx);
         spectrum_decim_tx = NULL;
@@ -308,4 +310,21 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
 
     spectrum_update_max(max);
     waterfall_update_max(max);
+}
+
+static void setup_spectrum_spgram() {
+    if (spectrum_sg_rx) {
+        spgramcf_destroy(spectrum_sg_rx);
+    }
+    if (spectrum_sg_tx) {
+        spgramcf_destroy(spectrum_sg_tx);
+    }
+    uint16_t window = nfft * 3 / 2 / spectrum_factor;
+    if (nfft < window) {
+        window = nfft;
+    }
+    spectrum_sg_rx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, window, nfft / 4);
+    spgramcf_set_alpha(spectrum_sg_rx, 0.4f);
+    spectrum_sg_tx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, window, nfft / 4);
+    spgramcf_set_alpha(spectrum_sg_tx, 0.4f);
 }

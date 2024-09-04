@@ -6,8 +6,8 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-#include "lvgl/lvgl.h"
 #include "bands.h"
+
 #include "params/params.h"
 #include "radio.h"
 #include "info.h"
@@ -17,6 +17,9 @@
 #include "pannel.h"
 #include "voice.h"
 #include "dsp.h"
+#include "pubsub_ids.h"
+
+#include "lvgl/lvgl.h"
 
 void bands_activate(band_t *band, uint64_t *freq) {
     params_lock();
@@ -38,7 +41,8 @@ void bands_activate(band_t *band, uint64_t *freq) {
 
     radio_vfo_set();
     radio_filters_setup();
-    spectrum_zoom_factor_set(params_current_mode_spectrum_factor_get());
+    uint16_t zoom_factor = params_current_mode_spectrum_factor_get();
+    lv_msg_send(MSG_SPECTRUM_ZOOM_CHANGED, &zoom_factor);
     spectrum_min_max_reset();
     waterfall_min_max_reset();
 }

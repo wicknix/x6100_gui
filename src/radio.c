@@ -5,17 +5,9 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
-
-#include <unistd.h>
-#include <stdio.h>
-#include <pthread.h>
-#include <string.h>
-
-#include <aether_radio/x6100_control/low/flow.h>
-#include <aether_radio/x6100_control/low/gpio.h>
+#include "radio.h"
 
 #include "util.h"
-#include "radio.h"
 #include "dsp.h"
 #include "params/params.h"
 #include "hkey.h"
@@ -23,6 +15,17 @@
 #include "info.h"
 #include "dialog_swrscan.h"
 #include "cw.h"
+#include "pubsub_ids.h"
+
+#include <aether_radio/x6100_control/low/flow.h>
+#include <aether_radio/x6100_control/low/gpio.h>
+
+#include <unistd.h>
+#include <stdio.h>
+#include <pthread.h>
+#include <string.h>
+
+
 
 #define FLOW_RESTART_TIMEOUT 300
 #define IDLE_TIMEOUT        (3 * 1000)
@@ -189,7 +192,7 @@ void radio_vfo_set() {
     x6100_control_split_set(params_band_split_get());
     x6100_control_rfg_set(params_band_rfg_get());
     radio_unlock();
-    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
+    lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 
     params_bands_find(params_band_cur_freq_get(), &params.freq_band);
 }
@@ -522,7 +525,7 @@ void radio_set_mode(x6100_vfo_t vfo, x6100_mode_t mode) {
     radio_lock();
     x6100_control_vfo_mode_set(vfo, mode);
     radio_unlock();
-    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
+    lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 }
 
 void radio_set_cur_mode(x6100_mode_t mode) {
@@ -677,7 +680,7 @@ bool radio_start_swrscan() {
     x6100_control_vfo_mode_set(params_band_vfo_get(), x6100_mode_am);
     x6100_control_txpwr_set(5.0f);
     x6100_control_swrscan_set(true);
-    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
+    lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 
     return true;
 }
@@ -984,7 +987,7 @@ x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo) {
     radio_lock();
     x6100_control_vfo_set(vfo);
     radio_unlock();
-    lv_msg_send(RADIO_MSG_MODE_CHANGED, NULL);
+    lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 }
 
 x6100_vfo_t radio_toggle_vfo() {

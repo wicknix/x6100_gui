@@ -8,9 +8,11 @@
 
 #include "cw_tune_ui.h"
 
-#include <math.h>
 #include "styles.h"
 #include "params/params.h"
+#include "pubsub_ids.h"
+
+#include <math.h>
 
 #define BLOCK_W 5
 #define SPACING 4
@@ -54,7 +56,7 @@ void cw_tune_init(lv_obj_t *parent)
     lv_obj_add_style(obj, &cw_tune_style, 0);
 
     lv_obj_add_event_cb(obj, update_cb, LV_EVENT_DRAW_MAIN, NULL);
-    lv_msg_subscribe(RADIO_MSG_MODE_CHANGED, mode_changed_cb, NULL);
+    lv_msg_subscribe(MSG_RADIO_MODE_CHANGED, mode_changed_cb, NULL);
     update_visibility();
 }
 
