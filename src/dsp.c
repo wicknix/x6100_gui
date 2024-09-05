@@ -24,7 +24,8 @@
 #include "dialog_msg_voice.h"
 #include "recorder.h"
 
-static int32_t          nfft = 800;
+static int32_t          spectrum_nfft = 800;
+static int32_t          waterfall_nfft = 1024;
 static iirfilt_cccf     dc_block;
 
 static pthread_mutex_t  spectrum_mux = PTHREAD_MUTEX_INITIALIZER;
@@ -68,16 +69,16 @@ void dsp_init(uint8_t factor) {
 
     setup_spectrum_spgram();
 
-    spectrum_psd = malloc(nfft * sizeof(float));
-    spectrum_psd_filtered = malloc(nfft * sizeof(float));
+    spectrum_psd = malloc(spectrum_nfft * sizeof(float));
+    spectrum_psd_filtered = malloc(spectrum_nfft * sizeof(float));
     dsp_set_spectrum_factor(factor);
 
-    waterfall_sg_rx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, nfft, nfft / 4);
+    waterfall_sg_rx = spgramcf_create(waterfall_nfft, LIQUID_WINDOW_HANN, waterfall_nfft, waterfall_nfft / 4);
     spgramcf_set_alpha(waterfall_sg_rx, 0.2f);
-    waterfall_sg_tx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, nfft, nfft / 4);
+    waterfall_sg_tx = spgramcf_create(waterfall_nfft, LIQUID_WINDOW_HANN, waterfall_nfft, waterfall_nfft / 4);
     spgramcf_set_alpha(waterfall_sg_tx, 0.2f);
 
-    waterfall_psd = malloc(nfft * sizeof(float));
+    waterfall_psd = malloc(waterfall_nfft * sizeof(float));
 
     spectrum_time = get_time();
     waterfall_time = get_time();
@@ -118,11 +119,11 @@ static void process_samples(
 static bool update_spectrum(spgramcf sp_sg, uint64_t now, bool tx) {
     if ((now - spectrum_time > spectrum_fps_ms) && (!psd_delay)) {
         spgramcf_get_psd(sp_sg, spectrum_psd);
-        liquid_vectorf_addscalar(spectrum_psd, nfft, -30.0f, spectrum_psd);
+        liquid_vectorf_addscalar(spectrum_psd, spectrum_nfft, -30.0f, spectrum_psd);
         // Decrease beta for high zoom
         float new_beta = powf(spectrum_beta, ((float) spectrum_factor - 1.0f) / 2.0f + 1.0f);
-        lpf_block(spectrum_psd_filtered, spectrum_psd, new_beta, nfft);
-        spectrum_data(spectrum_psd_filtered, nfft, tx);
+        lpf_block(spectrum_psd_filtered, spectrum_psd, new_beta, spectrum_nfft);
+        spectrum_data(spectrum_psd_filtered, spectrum_nfft, tx);
         spectrum_time = now;
         return true;
     }
@@ -132,8 +133,8 @@ static bool update_spectrum(spgramcf sp_sg, uint64_t now, bool tx) {
 static bool update_waterfall(spgramcf wf_sg, uint64_t now, bool tx) {
     if ((now - waterfall_time > waterfall_fps_ms) && (!psd_delay)) {
         spgramcf_get_psd(wf_sg, waterfall_psd);
-        liquid_vectorf_addscalar(waterfall_psd, nfft, -30.0f, waterfall_psd);
-        waterfall_data(waterfall_psd, nfft, tx);
+        liquid_vectorf_addscalar(waterfall_psd, waterfall_nfft, -30.0f, waterfall_psd);
+        waterfall_data(waterfall_psd, waterfall_nfft, tx);
         waterfall_time = now;
         return true;
     }
@@ -147,11 +148,11 @@ static void update_s_meter(){
 
         radio_filter_get(&filter_from, &filter_to);
 
-        from = nfft / 2;
-        from -= filter_to * nfft / 100000;
+        from = waterfall_nfft / 2;
+        from -= filter_to * waterfall_nfft / 100000;
 
-        to = nfft / 2;
-        to -= filter_from * nfft / 100000;
+        to = waterfall_nfft / 2;
+        to -= filter_from * waterfall_nfft / 100000;
 
         int16_t peak_db = -121;
 
@@ -189,7 +190,7 @@ void dsp_samples(float complex *buf_samples, uint16_t size, bool tx) {
         update_s_meter();
         // TODO: skip on disabled auto min/max
         if (!tx) {
-            dsp_update_min_max(waterfall_psd, nfft);
+            dsp_update_min_max(waterfall_psd, waterfall_nfft);
         } else {
             min_max_delay = 2;
         }
@@ -232,7 +233,7 @@ void dsp_set_spectrum_factor(uint8_t x) {
     spgramcf_reset(spectrum_sg_rx);
     spgramcf_reset(spectrum_sg_tx);
 
-    for (uint16_t i = 0; i < nfft; i++)
+    for (uint16_t i = 0; i < spectrum_nfft; i++)
         spectrum_psd_filtered[i] = S_MIN;
 
     pthread_mutex_unlock(&spectrum_mux);
@@ -319,12 +320,12 @@ static void setup_spectrum_spgram() {
     if (spectrum_sg_tx) {
         spgramcf_destroy(spectrum_sg_tx);
     }
-    uint16_t window = nfft * 3 / 2 / spectrum_factor;
-    if (nfft < window) {
-        window = nfft;
+    uint16_t window = spectrum_nfft * 3 / 2 / spectrum_factor;
+    if (spectrum_nfft < window) {
+        window = spectrum_nfft;
     }
-    spectrum_sg_rx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, window, nfft / 4);
+    spectrum_sg_rx = spgramcf_create(spectrum_nfft, LIQUID_WINDOW_HANN, window, spectrum_nfft / 4);
     spgramcf_set_alpha(spectrum_sg_rx, 0.4f);
-    spectrum_sg_tx = spgramcf_create(nfft, LIQUID_WINDOW_HANN, window, nfft / 4);
+    spectrum_sg_tx = spgramcf_create(spectrum_nfft, LIQUID_WINDOW_HANN, window, spectrum_nfft / 4);
     spgramcf_set_alpha(spectrum_sg_tx, 0.4f);
 }
