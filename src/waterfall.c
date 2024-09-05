@@ -102,7 +102,7 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
         max = grid_max;
     }
 
-    x_offsets[last_row_id] = (radio_center_freq + params_lo_offset_get()) * width  / width_hz;
+    x_offsets[last_row_id] = ((radio_center_freq + params_lo_offset_get()) * width + width / 2)  / width_hz;
 
     for (int x = 0; x < width; x++) {
         uint16_t    index = x * size / width;
@@ -254,11 +254,16 @@ static void redraw_cb(lv_event_t * e) {
     uint32_t cur_freq_px = wf_center_freq * width / width_hz;
 
     lv_color_t black = lv_color_black();
-    lv_color_t px_color;
+    lv_color_t * px_color;
+
+    uint8_t current_zoom = 1;
+    if (params.waterfall_zoom.x) {
+        current_zoom = zoom;
+    }
 
     size_t mapping[width];
     for (size_t i = 0; i < width; i++) {
-        mapping[i] = ((int32_t)i - (width + zoom) / 2) / zoom + width / 2;
+        mapping[i] = ((int32_t)i - (width + current_zoom + 2) / 2) / current_zoom + width / 2;
     }
 
     for (src_y = 0; src_y < height; src_y++) {
@@ -267,11 +272,11 @@ static void redraw_cb(lv_event_t * e) {
         for (dst_x = 0; dst_x < width; dst_x++) {
             src_x = mapping[dst_x] - x_offset;
             if ((src_x < 0) || (src_x >= width)) {
-                px_color = black;
+                px_color = &black;
             } else {
-                px_color = *((lv_color_t*)waterfall_cache + (src_y * width + src_x));
+                px_color = (lv_color_t*)waterfall_cache + (src_y * width + src_x);
             }
-            *((lv_color_t*)temp_buf + (dst_y * width + dst_x)) = px_color;
+            *((lv_color_t*)temp_buf + (dst_y * width + dst_x)) = *px_color;
         }
     }
 }

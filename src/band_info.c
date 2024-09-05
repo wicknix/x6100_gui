@@ -44,6 +44,11 @@ static void band_info_draw_cb(lv_event_t * e) {
         return;
     }
 
+    uint8_t current_zoom = 1;
+    if (params.waterfall_zoom.x) {
+        current_zoom = zoom;
+    }
+
     lv_coord_t x1 = obj->coords.x1;
     lv_coord_t y1 = obj->coords.y1;
 
@@ -57,8 +62,8 @@ static void band_info_draw_cb(lv_event_t * e) {
 
         lv_border_side_t border_side = LV_BORDER_SIDE_NONE;
 
-        int32_t start = (int64_t)(band->start_freq - freq) * w / width_hz * zoom;
-        int32_t stop = (int64_t)(band->stop_freq - freq) * w / width_hz * zoom;
+        int32_t start = (int64_t)(band->start_freq - freq) * w / width_hz * current_zoom;
+        int32_t stop = (int64_t)(band->stop_freq - freq) * w / width_hz * current_zoom;
 
         start += w / 2;
         stop += w / 2;
