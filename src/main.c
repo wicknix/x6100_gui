@@ -49,7 +49,7 @@ void * tick_thread (void *args);
 
 int main(void) {
     lv_init();
-    lv_png_init();
+    // lv_png_init();
 
     fbdev_init();
     audio_init();
