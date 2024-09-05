@@ -221,7 +221,8 @@ static void spectrum_draw_cb(lv_event_t * e) {
     if (recorder_is_on()) {
         main_line_dsc.color = lv_color_hex(0xFF0000);
     } else if (cur_mode == x6100_mode_cw || cur_mode == x6100_mode_cwr) {
-        main_line_dsc.opa = LV_OPA_20;
+        // Hide LO line on CW
+        main_line_dsc.opa = LV_OPA_0;
     }
 
     lv_draw_line(draw_ctx, &main_line_dsc, &main_a, &main_b);
