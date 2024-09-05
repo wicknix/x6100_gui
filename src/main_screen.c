@@ -75,6 +75,10 @@ static void freq_update();
 void mem_load(uint16_t id) {
     params_memory_load(id);
 
+    // Fix mode fox FT8/FT4
+    if ((id >= MEM_FT8_ID) && (id < MEM_FT4_ID + 100) && (params_band_cur_mode_get() != x6100_mode_usb_dig)) {
+        params_band_cur_mode_set_no_save(x6100_mode_usb_dig);
+    }
     if (params_bands_find(params_band_cur_freq_get(), &params.freq_band)) {
         if (params.freq_band.type != 0) {
             params.band = params.freq_band.id;

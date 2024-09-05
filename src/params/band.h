@@ -68,3 +68,5 @@ int16_t params_band_grid_max_set(int16_t db);
 
 
 void params_band_vfo_clone();
+
+x6100_mode_t params_band_cur_mode_set_no_save(x6100_mode_t mode);

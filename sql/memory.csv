@@ -1,80 +1,80 @@
 100	vfo	0
 100	label	FT8 160m
 100	vfoa_freq	1840000
-100	vfoa_mode	2
+100	vfoa_mode	3
 101	vfo	0
 101	label	FT8 80m
 101	vfoa_freq	3573000
-101	vfoa_mode	2
+101	vfoa_mode	3
 102	vfo	0
 102	label	FT8 60m
 102	vfoa_freq	5357000
-102	vfoa_mode	2
+102	vfoa_mode	3
 103	vfo	0
 103	label	FT8 40m
 103	vfoa_freq	7074000
-103	vfoa_mode	2
+103	vfoa_mode	3
 104	vfo	0
 104	label	FT8 30m
 104	vfoa_freq	10136000
-104	vfoa_mode	2
+104	vfoa_mode	3
 105	vfo	0
 105	label	FT8 20m
 105	vfoa_freq	14074000
-105	vfoa_mode	2
+105	vfoa_mode	3
 106	vfo	0
 106	label	FT8 17m
 106	vfoa_freq	18100000
-106	vfoa_mode	2
+106	vfoa_mode	3
 107	vfo	0
 107	label	FT8 15m
 107	vfoa_freq	21074000
-107	vfoa_mode	2
+107	vfoa_mode	3
 108	vfo	0
 108	label	FT8 12m
 108	vfoa_freq	24915000
-108	vfoa_mode	2
+108	vfoa_mode	3
 109	vfo	0
 109	label	FT8 10m
 109	vfoa_freq	28074000
-109	vfoa_mode	2
+109	vfoa_mode	3
 110	vfo	0
 110	label	FT8 6m
 110	vfoa_freq	50313000
-110	vfoa_mode	2
+110	vfoa_mode	3
 200	vfo	0
 200	label	FT4 80m
 200	vfoa_freq	3575000
-200	vfoa_mode	2
+200	vfoa_mode	3
 201	vfo	0
 201	label	FT4 40m
 201	vfoa_freq	7047500
-201	vfoa_mode	2
+201	vfoa_mode	3
 202	vfo	0
 202	label	FT4 30m
 202	vfoa_freq	10140000
-202	vfoa_mode	2
+202	vfoa_mode	3
 203	vfo	0
 203	label	FT4 20m
 203	vfoa_freq	14080000
-203	vfoa_mode	2
+203	vfoa_mode	3
 204	vfo	0
 204	label	FT4 17m
 204	vfoa_freq	18104000
-204	vfoa_mode	2
+204	vfoa_mode	3
 205	vfo	0
 205	label	FT4 15m
 205	vfoa_freq	21140000
-205	vfoa_mode	2
+205	vfoa_mode	3
 206	vfo	0
 206	label	FT4 12m
 206	vfoa_freq	24919000
-206	vfoa_mode	2
+206	vfoa_mode	3
 207	vfo	0
 207	label	FT4 10m
 207	vfoa_freq	28180000
-207	vfoa_mode	2
+207	vfoa_mode	3
 208	vfo	0
 208	label	FT4 6m
 208	vfoa_freq	50318000
-208	vfoa_mode	2
+208	vfoa_mode	3
