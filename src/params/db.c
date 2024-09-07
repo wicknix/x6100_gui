@@ -18,7 +18,14 @@ pthread_mutex_t         db_write_mux = PTHREAD_MUTEX_INITIALIZER;
 static sqlite3_stmt     *write_stmt;
 
 
+static void errorLogCallback(void *pArg, int iErrCode, const char *zMsg){
+    LV_LOG_ERROR("(%d) %s\n", iErrCode, zMsg);
+}
+
+
 bool database_init() {
+    sqlite3_config(SQLITE_CONFIG_LOG, errorLogCallback, NULL);
+
     int rc = sqlite3_open("/mnt/params.db", &db);
 
     if (rc != SQLITE_OK) {
