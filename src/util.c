@@ -12,6 +12,7 @@
 #include <math.h>
 #include <sys/time.h>
 #include <time.h>
+#include <string.h>
 
 
 /**
@@ -230,4 +231,18 @@ size_t argmax(float * x, size_t n) {
         }
     }
     return pos;
+}
+
+
+char * util_canonize_callsign(char * callsign, bool strip_slashes) {
+    if (!callsign) {
+        return NULL;
+    }
+    // strip < and > from remote call
+    size_t callsign_len = strlen(callsign);
+    if ((callsign[0] == '<') && (callsign[callsign_len - 1] == '>')) {
+        callsign[callsign_len - 1] = 0;
+        callsign++;
+    }
+    return callsign;
 }
