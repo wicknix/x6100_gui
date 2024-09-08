@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <liquid/liquid.h>
 
+#define WATERFALL_NFFT  1024
+#define SPECTRUM_NFFT   800
+
 void dsp_init(uint8_t factor);
 void dsp_samples(float complex *buf_samples, uint16_t size, bool tx);
 void dsp_reset();
