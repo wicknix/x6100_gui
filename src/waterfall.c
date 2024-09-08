@@ -246,8 +246,8 @@ void waterfall_refresh_period_set(uint8_t k) {
 }
 
 static void redraw_cb(lv_event_t * e) {
-    int32_t dst_x_offset, dst_map_id;
-    uint16_t src_y, dst_y, dst_x;
+    int32_t src_x_offset;
+    uint16_t src_y, src_x, dst_y, dst_x;
 
     uint8_t * temp_buf = frame->data;
 
@@ -259,22 +259,22 @@ static void redraw_cb(lv_event_t * e) {
     lv_color_t black = lv_color_black();
     lv_color_t * px_color;
 
-    uint16_t mapping[width];
+    int16_t mapping[width];
     float rel_position;
     for (uint16_t i = 0; i < width; i++) {
         rel_position = (((float) i + 0.5) / width) - 0.5f;
-        mapping[i] = roundf(((rel_position / current_zoom) + 0.5f) * WATERFALL_NFFT);
+        mapping[i] = roundf(((rel_position / current_zoom) + 0.5f) * WATERFALL_NFFT - 1.0f);
     }
 
     for (src_y = 0; src_y < height; src_y++) {
         dst_y = ((height - src_y + last_row_id) % height);
-        dst_x_offset = (freq_offsets[src_y] - wf_center_freq) * width * current_zoom / width_hz;
+        src_x_offset = (freq_offsets[src_y] - wf_center_freq) * WATERFALL_NFFT / width_hz;
         for (dst_x = 0; dst_x < width; dst_x++) {
-            dst_map_id = dst_x - dst_x_offset;
-            if ((dst_map_id < 0) || (dst_map_id >= width)) {
+            src_x = mapping[dst_x] - src_x_offset;
+            if ((src_x < 0) || (src_x >= WATERFALL_NFFT)) {
                 px_color = &black;
             } else {
-                px_color = (lv_color_t*)waterfall_cache + (src_y * WATERFALL_NFFT + mapping[dst_x - dst_x_offset]);
+                px_color = (lv_color_t*)waterfall_cache + (src_y * WATERFALL_NFFT + src_x);
             }
             *((lv_color_t*)temp_buf + (dst_y * width + dst_x)) = *px_color;
         }
