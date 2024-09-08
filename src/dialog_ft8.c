@@ -226,20 +226,20 @@ static bool get_time_slot(struct timespec now);
 static bool str_equal(const char * a, const char * b);
 
 // button label is current state, press action and name - next state
-static button_item_t button_show_cq = { .label = "Show\nAll", .press = show_cq_cb };
-static button_item_t button_show_all = { .label = "Show\nCQ", .press = show_all_cb };
+static button_item_t button_show_cq = { .label = "Show:\nAll", .press = show_cq_cb };
+static button_item_t button_show_all = { .label = "Show:\nCQ", .press = show_all_cb };
 
-static button_item_t button_mode_ft4 = { .label = "Mode\nFT8", .press = mode_ft4_cb };
-static button_item_t button_mode_ft8 = { .label = "Mode\nFT4", .press = mode_ft8_cb };
+static button_item_t button_mode_ft4 = { .label = "Mode:\nFT8", .press = mode_ft4_cb };
+static button_item_t button_mode_ft8 = { .label = "Mode:\nFT4", .press = mode_ft8_cb };
 
-static button_item_t button_tx_cq_en = { .label = "TX CQ\nDisabled", .press = tx_cq_en_cb };
-static button_item_t button_tx_cq_dis = { .label = "TX CQ\nEnabled", .press = tx_cq_dis_cb };
+static button_item_t button_tx_cq_en = { .label = "TX CQ:\nDisabled", .press = tx_cq_en_cb };
+static button_item_t button_tx_cq_dis = { .label = "TX CQ:\nEnabled", .press = tx_cq_dis_cb };
 
-static button_item_t button_tx_call_en = { .label = "TX Call\nDisabled", .press = tx_call_en_cb, .hold = tx_cq_dis_cb };
-static button_item_t button_tx_call_dis = { .label = "TX Call\nEnabled", .press = tx_call_dis_cb, .hold = tx_cq_dis_cb };
+static button_item_t button_tx_call_en = { .label = "TX Call:\nDisabled", .press = tx_call_en_cb, .hold = tx_cq_dis_cb };
+static button_item_t button_tx_call_dis = { .label = "TX Call:\nEnabled", .press = tx_call_dis_cb, .hold = tx_cq_dis_cb };
 
-static button_item_t button_auto_en = { .label = "Auto\nDisabled", .press = mode_auto_cb };
-static button_item_t button_auto_dis = { .label = "Auto\nEnabled", .press = mode_auto_cb };
+static button_item_t button_auto_en = { .label = "Auto:\nDisabled", .press = mode_auto_cb };
+static button_item_t button_auto_dis = { .label = "Auto:\nEnabled", .press = mode_auto_cb };
 
 static button_item_t button_time_sync = { .label = "Time\nSync", .press = time_sync };
 
