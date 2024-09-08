@@ -1,3 +1,5 @@
 #!/bin/sh
 
-while true; do /usr/sbin/x6100_gui; done
+while true; do
+    /usr/sbin/x6100_gui > /tmp/x6100_log.txt 2>&1 || mv /tmp/x6100_log.txt /mnt/x6100_log_$(date +%Y-%m-%d_%H-%M-%S).txt
+done
