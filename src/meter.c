@@ -22,6 +22,7 @@ static int16_t          max_db = S9_40;
 
 static uint8_t          meter_height = 62;
 static int16_t          meter_db = S1;
+static float            noise_level = S_MIN;
 
 static int16_t          meter_peak = S1;
 static int64_t          meter_peak_time;
@@ -77,10 +78,8 @@ static void meter_draw_cb(lv_event_t * e) {
 
     int16_t db = s_items[0].db;
 
-    int16_t min = spectrum_get_min();
-
     for (uint16_t i = 0; i < count; i++) {
-        if (db <= min) {
+        if (db <= noise_level) {
             rect_dsc.bg_color = lv_color_hex(0x777777);
         } else if (db <= -73) {
             rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
@@ -159,6 +158,15 @@ lv_obj_t * meter_init(lv_obj_t * parent) {
 }
 
 void meter_update(int16_t db, float beta) {
+    noise_level = spectrum_get_min();
+    if (params_band_cur_att_get()) {
+        db += 14;
+        noise_level+= 14.0f;
+    }
+    if (params_band_cur_pre_get()){
+        db -= 14;
+        noise_level -= 14.0f;
+    }
     if (db < min_db) {
         db = min_db;
     } else if (db > max_db) {
