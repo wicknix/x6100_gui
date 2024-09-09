@@ -58,6 +58,9 @@ static void pannel_update_cb(lv_event_t * e) {
     lv_point_t line_size;
     lv_point_t text_size;
 
+    if (!last_line) {
+        return;
+    }
     char *text = lv_event_get_param(e);
 
     if (strcmp(text, "\n") == 0) {
