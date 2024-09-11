@@ -19,6 +19,7 @@
 #define N_BLOCKS 15
 #define WIDTH (N_BLOCKS * (BLOCK_W + SPACING) + SPACING)
 #define HEIGHT 40
+#define BLOCK_HZ 10
 
 static lv_draw_rect_dsc_t rect_dsc;
 static lv_draw_rect_dsc_t rect_active_dsc;
@@ -71,8 +72,7 @@ bool cw_tune_toggle(int16_t diff) {
 }
 
 void cw_tune_set_freq(float hz) {
-
-    int8_t new_id = roundf(hz / 5) + N_BLOCKS / 2;
+    int8_t new_id = N_BLOCKS / 2 - roundf(hz / BLOCK_HZ);
     if (new_id < 0) new_id = 0;
     if (new_id > N_BLOCKS - 1) new_id = N_BLOCKS - 1;
 
