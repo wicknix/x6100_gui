@@ -47,6 +47,27 @@
 #include <pthread.h>
 #include <errno.h>
 
+#define FT8_160M_ID     (100 - MEM_FT8_ID)
+#define FT8_80M_ID      (101 - MEM_FT8_ID)
+#define FT8_60M_ID      (102 - MEM_FT8_ID)
+#define FT8_40M_ID      (103 - MEM_FT8_ID)
+#define FT8_30M_ID      (104 - MEM_FT8_ID)
+#define FT8_20M_ID      (105 - MEM_FT8_ID)
+#define FT8_17M_ID      (106 - MEM_FT8_ID)
+#define FT8_15M_ID      (107 - MEM_FT8_ID)
+#define FT8_12M_ID      (108 - MEM_FT8_ID)
+#define FT8_10M_ID      (109 - MEM_FT8_ID)
+#define FT8_6M_ID       (110 - MEM_FT8_ID)
+#define FT4_80M_ID      (200 - MEM_FT4_ID)
+#define FT4_40M_ID      (201 - MEM_FT4_ID)
+#define FT4_30M_ID      (202 - MEM_FT4_ID)
+#define FT4_20M_ID      (203 - MEM_FT4_ID)
+#define FT4_17M_ID      (204 - MEM_FT4_ID)
+#define FT4_15M_ID      (205 - MEM_FT4_ID)
+#define FT4_12M_ID      (206 - MEM_FT4_ID)
+#define FT4_10M_ID      (207 - MEM_FT4_ID)
+#define FT4_6M_ID       (208 - MEM_FT4_ID)
+
 #define DECIM           4
 #define SAMPLE_RATE     (AUDIO_CAPTURE_RATE / DECIM)
 
@@ -57,9 +78,6 @@
 #define FREQ_OSR        2
 #define TIME_OSR        4
 
-#define FT8_BANDS       11
-#define FT4_BANDS       9
-
 #define WIDTH           771
 
 #define UNKNOWN_SNR     99
@@ -68,6 +86,8 @@
 
 #define FT8_WIDTH_HZ    50
 #define FT4_WIDTH_HZ    83
+
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 typedef enum {
     RX_PROCESS,
@@ -137,6 +157,41 @@ typedef struct {
     msg_t       *last_rx_msg;
     bool        rx_odd;
 } ft8_qso_item_t;
+
+
+typedef struct {
+    uint8_t cur;
+    uint8_t next;
+    uint8_t prev;
+    uint8_t another;
+} band_relations_t;
+
+band_relations_t ft8_relations[] = {
+    {FT8_160M_ID,   FT8_80M_ID,   FT8_6M_ID,    FT4_80M_ID},
+    {FT8_80M_ID,    FT8_60M_ID,   FT8_160M_ID,  FT4_80M_ID},
+    {FT8_60M_ID,    FT8_40M_ID,   FT8_80M_ID,   FT4_40M_ID},
+    {FT8_40M_ID,    FT8_30M_ID,   FT8_60M_ID,   FT4_40M_ID},
+    {FT8_30M_ID,    FT8_20M_ID,   FT8_40M_ID,   FT4_30M_ID},
+    {FT8_20M_ID,    FT8_17M_ID,   FT8_30M_ID,   FT4_20M_ID},
+    {FT8_17M_ID,    FT8_15M_ID,   FT8_20M_ID,   FT4_17M_ID},
+    {FT8_15M_ID,    FT8_12M_ID,   FT8_17M_ID,   FT4_15M_ID},
+    {FT8_12M_ID,    FT8_10M_ID,   FT8_15M_ID,   FT4_12M_ID},
+    {FT8_10M_ID,    FT8_6M_ID,    FT8_12M_ID,   FT4_10M_ID},
+    {FT8_6M_ID,     FT8_160M_ID,  FT8_10M_ID,   FT4_6M_ID},
+};
+
+
+band_relations_t ft4_relations[] = {
+    {FT4_80M_ID,   FT4_40M_ID,   FT4_6M_ID,    FT8_80M_ID},
+    {FT4_40M_ID,   FT4_30M_ID,   FT4_80M_ID,   FT8_40M_ID},
+    {FT4_30M_ID,   FT4_20M_ID,   FT4_40M_ID,   FT8_30M_ID},
+    {FT4_20M_ID,   FT4_17M_ID,   FT4_30M_ID,   FT8_20M_ID},
+    {FT4_17M_ID,   FT4_15M_ID,   FT4_20M_ID,   FT8_17M_ID},
+    {FT4_15M_ID,   FT4_12M_ID,   FT4_17M_ID,   FT8_15M_ID},
+    {FT4_12M_ID,   FT4_10M_ID,   FT4_15M_ID,   FT8_12M_ID},
+    {FT4_10M_ID,   FT4_6M_ID,    FT4_12M_ID,   FT8_10M_ID},
+    {FT4_6M_ID,    FT4_80M_ID,   FT4_10M_ID,   FT8_6M_ID},
+};
 
 
 static ft8_state_t          state = RX_PROCESS;
@@ -678,22 +733,13 @@ static void load_band() {
         case PROTO_FT8:
             mem_id = MEM_FT8_ID;
             lv_finder_set_width(finder, FT8_WIDTH_HZ);
-
-            if (params.ft8_band > FT8_BANDS - 1) {
-                params.ft8_band = FT8_BANDS - 1;
-            }
             break;
 
         case PROTO_FT4:
             mem_id = MEM_FT4_ID;
             lv_finder_set_width(finder, FT4_WIDTH_HZ);
-
-            if (params.ft8_band > FT4_BANDS - 1) {
-                params.ft8_band = FT4_BANDS - 1;
-            }
             break;
     }
-
     mem_load(mem_id + params.ft8_band);
 }
 
@@ -714,32 +760,41 @@ static void clean() {
     lv_event_send(table, LV_EVENT_KEY, c);
 }
 
+static band_relations_t * get_band_relation() {
+    int band = params.ft8_band;
+
+    band_relations_t *rel;
+    size_t arr_size;
+
+    switch (params.ft8_protocol) {
+        case PROTO_FT8:
+            rel = ft8_relations;
+            arr_size = ARRAY_SIZE(ft8_relations);
+            break;
+        case PROTO_FT4:
+            rel = ft4_relations;
+            arr_size = ARRAY_SIZE(ft4_relations);
+            break;
+    }
+    for (size_t i = 0; i < arr_size; i++){
+        if (rel[i].cur == band) {
+            rel += i;
+            break;
+        }
+    }
+    return rel;
+}
+
 static void band_cb(lv_event_t * e) {
     int band = params.ft8_band;
     int max_band = 0;
 
-    switch (params.ft8_protocol) {
-        case PROTO_FT8:
-            max_band = FT8_BANDS - 1;
-            break;
-
-        case PROTO_FT4:
-            max_band = FT4_BANDS - 1;
-            break;
-    }
+    band_relations_t *rel = get_band_relation();
 
     if (lv_event_get_code(e) == EVENT_BAND_UP) {
-        band++;
-
-        if (band > max_band) {
-            band = 0;
-        }
+        band = rel->next;
     } else {
-        band--;
-
-        if (band < 0) {
-            band = max_band;
-        }
+        band = rel->prev;
     }
 
     params_lock();
@@ -950,8 +1005,13 @@ static void show_all_cb(lv_event_t * e) {
 }
 
 static void mode_ft4_cb(lv_event_t * e) {
+
+    band_relations_t *rel = get_band_relation();
+
     params_lock();
     params.ft8_protocol = PROTO_FT4;
+    params.ft8_band = rel->another;
+    params.dirty.ft8_band = true;
     params_unlock(&params.dirty.ft8_protocol);
 
     buttons_load(1, &button_mode_ft8);
@@ -963,8 +1023,11 @@ static void mode_ft4_cb(lv_event_t * e) {
 }
 
 static void mode_ft8_cb(lv_event_t * e) {
+    band_relations_t *rel = get_band_relation();
     params_lock();
     params.ft8_protocol = PROTO_FT8;
+    params.ft8_band = rel->another;
+    params.dirty.ft8_band = true;
     params_unlock(&params.dirty.ft8_protocol);
 
     buttons_load(1, &button_mode_ft4);
