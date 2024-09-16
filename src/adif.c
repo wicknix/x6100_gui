@@ -39,9 +39,13 @@ static void write_int(FILE *fd, const char * key, int val);
 static void write_date_time(FILE *fd, time_t time);
 static void write_freq(FILE *fd, float freq_mhz);
 static void write_band(FILE *fd, qso_log_band_t band);
+static void write_mode(FILE *fd, qso_log_mode_t mode);
+
 static void copy_str(char * dst, char * src, size_t val_len, size_t dst_len);
+static char * extract_str(const char * src, size_t src_len);
 
 static qso_log_band_t str_to_band(const char * s);
+static qso_log_mode_t create_mode(const char * mode, const char * submode);
 
 
 adif_log adif_log_init(const char * path) {
@@ -74,8 +78,7 @@ void adif_add_qso(adif_log l, qso_log_record_t qso)
     write_str(l->fd, "OPERATOR", qso.local_call);
     write_str(l->fd, "CALL", qso.remote_call);
     write_date_time(l->fd, qso.time);
-    write_str(l->fd, "MODE", qso.mode);
-    write_str(l->fd, "SUBMODE", NULL);
+    write_mode(l->fd, qso.mode);
     write_str(l->fd, "NAME", NULL);
     write_str(l->fd, "QTH", NULL);
     write_int(l->fd, "RST_SENT", qso.rsts);
@@ -124,6 +127,8 @@ int adif_read(const char * path, qso_log_record_t ** records) {
         if (strcmp(line + read - 7, "<EOR>\r\n") != 0) continue;
         s = line;
         cur_record = &(*records)[cur_record_id];
+        char * mode = NULL;
+        char * submode = NULL;
         for (unsigned int i = 0; ; i++) {
             if (regexec(&regex, s, ARRAY_SIZE(pmatch), pmatch, 0))
                 break;
@@ -138,7 +143,9 @@ int adif_read(const char * path, qso_log_record_t ** records) {
                 } else if (strncmp(s + pmatch[1].rm_so, "TIME_ON", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
                     strptime(s + pmatch[0].rm_eo, "%H%M", &qso_ts);
                 } else if (strncmp(s + pmatch[1].rm_so, "MODE", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
-                    COPY_STR(cur_record->mode, s + pmatch[0].rm_eo, val_len);
+                    mode = extract_str(s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "SUBMODE", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    submode = extract_str(s + pmatch[0].rm_eo, val_len);
                 } else if (strncmp(s + pmatch[1].rm_so, "NAME", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
                     COPY_STR(cur_record->name, s + pmatch[0].rm_eo, val_len);
                 } else if (strncmp(s + pmatch[1].rm_so, "QTH", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
@@ -162,6 +169,9 @@ int adif_read(const char * path, qso_log_record_t ** records) {
         }
 
         cur_record->time = mktime(&qso_ts);
+        cur_record->mode = create_mode(mode, submode);
+        if (mode) free(mode);
+        if (submode) free(submode);
         if ((qso_log_freq_to_band(cur_record->freq_mhz * MHZ) != cur_record->band) &&
             (qso_log_freq_to_band(cur_record->freq_mhz * KHZ) == cur_record->band)) {
                 cur_record->freq_mhz /= 1000;
@@ -221,6 +231,38 @@ static void write_band(FILE *fd, qso_log_band_t band) {
     }
 }
 
+static void write_mode(FILE *fd, qso_log_mode_t mode) {
+    char * mode_str;
+    char * submode_str = NULL;
+    switch (mode) {
+        case MODE_SSB:
+            mode_str = "SSB";
+            // submode_str = "USB";
+        case MODE_AM:
+            mode_str = "AM";
+            break;
+        case MODE_FM:
+            mode_str = "FM";
+            break;
+        case MODE_CW:
+            mode_str = "CW";
+            // submode_str = "PCW";
+            break;
+        case MODE_FT8:
+            mode_str = "FT8";
+            break;
+        case MODE_FT4:
+            mode_str = "MFSK";
+            submode_str = "FT4";
+            break;
+        case MODE_RTTY:
+            mode_str = "RTTY";
+            break;
+    }
+    write_str(fd, "MODE", mode_str);
+    write_str(fd, "SUBMODE", submode_str);
+}
+
 
 static void copy_str(char * dst, char * src, size_t val_len, size_t dst_len) {
     if (val_len > (dst_len - 1)) {
@@ -230,6 +272,28 @@ static void copy_str(char * dst, char * src, size_t val_len, size_t dst_len) {
     dst[val_len] = 0;
 }
 
+static char * extract_str(const char * src, size_t src_len) {
+    char * dst;
+    dst = malloc(src_len + 1);
+    memcpy(dst, src, src_len);
+    dst[src_len] = 0;
+    return dst;
+}
+
 static qso_log_band_t str_to_band(const char * s) {
     return atoi(s);
+}
+
+
+static qso_log_mode_t create_mode(const char * mode, const char * submode) {
+    if (!mode) return MODE_OTHER;
+    if (strcmp(mode, "SSB") == 0) return MODE_SSB;
+    if (strcmp(mode, "AM") == 0) return MODE_AM;
+    if (strcmp(mode, "FM") == 0) return MODE_FM;
+    if (strcmp(mode, "CW") == 0) return MODE_CW;
+    if (strcmp(mode, "FT8") == 0) return MODE_FT8;
+    if (strcmp(mode, "RTTY") == 0) return MODE_RTTY;
+    if (!submode) return MODE_OTHER;
+    if ((strcmp(mode, "MFSK") == 0) && (strcmp(submode, "FT4") == 0)) return MODE_FT4;
+    return MODE_OTHER;
 }

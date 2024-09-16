@@ -99,11 +99,12 @@ qso_log_band_t qso_log_freq_to_band(uint64_t freq_hz)
 }
 
 qso_log_record_t qso_log_record_create(const char * local_call, const char * remote_call,
-    time_t qso_time, const char * mode, int rsts, int rstr, uint64_t freq_hz,
+    time_t qso_time, qso_log_mode_t mode, int rsts, int rstr, uint64_t freq_hz,
     const char * name, const char * qth, const char *local_grid, const char * remote_grid)
 {
     qso_log_record_t rec = {
         .time = qso_time,
+        .mode = mode,
         .rsts = rsts,
         .rstr = rstr,
         .freq_mhz = (float) freq_hz / 1000000,
@@ -114,9 +115,6 @@ qso_log_record_t qso_log_record_create(const char * local_call, const char * rem
 
     strncpy(rec.remote_call, remote_call, sizeof(rec.remote_call) - 1);
     rec.remote_call[sizeof(rec.remote_call) - 1] = 0;
-
-    strncpy(rec.mode, mode, sizeof(rec.mode) - 1);
-    rec.mode[sizeof(rec.mode) - 1] = 0;
 
     if (name) {
         strncpy(rec.name, name, sizeof(rec.name) - 1);
@@ -161,10 +159,6 @@ int qso_log_record_save(qso_log_record_t qso) {
         LV_LOG_ERROR("Remote callsign is required");
         return -1;
     }
-    if (strlen(qso.mode) == 0) {
-        LV_LOG_ERROR("Modulation is required");
-        return -1;
-    }
 
     rc = sqlite3_prepare_v2(
         db, "INSERT OR IGNORE INTO qso_log ("
@@ -188,7 +182,7 @@ int qso_log_record_save(qso_log_record_t qso) {
     if (rc != SQLITE_OK) return -1;
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":band"), qso.band);
     if (rc != SQLITE_OK) return -1;
-    rc = sqlite3_bind_text(stmt, sqlite3_bind_parameter_index(stmt, ":mode"), qso.mode, strlen(qso.mode), 0);
+    rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":mode"), qso.mode);
     if (rc != SQLITE_OK) return -1;
     rc = sqlite3_bind_text(stmt, sqlite3_bind_parameter_index(stmt, ":local_callsign"), qso.local_call, strlen(qso.local_call), 0);
     if (rc != SQLITE_OK) return -1;
@@ -217,18 +211,24 @@ int qso_log_record_save(qso_log_record_t qso) {
     }
 
     if(sqlite3_step(stmt) != SQLITE_DONE) {
-        printf("Statement: %s\n", sqlite3_expanded_sql(stmt));
+        printf("Error during execute: `%s`\n", sqlite3_expanded_sql(stmt));
         free(canonized_remote_callsign);
         return -1;
     }
+
+    int changed = sqlite3_changes(db);
+    if (changed == 0) {
+        printf("Not inserted `%s`\n", sqlite3_expanded_sql(stmt));
+    }
+
     free(canonized_remote_callsign);
 
     sqlite3_finalize(stmt);
-    return sqlite3_changes(db);
+    return changed;
 }
 
 
-qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char * mode, qso_log_band_t band)
+qso_log_search_worked_t qso_log_search_worked(const char *callsign, qso_log_mode_t mode, qso_log_band_t band)
 {
     int                         rc;
     qso_log_search_worked_t     worked = SEARCH_WORKED_NO;
@@ -257,7 +257,7 @@ qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char *
     while (sqlite3_step(search_callsign_stmt) != SQLITE_DONE) {
         worked = SEARCH_WORKED_YES;
         if ((sqlite3_column_int(search_callsign_stmt, 0) == band) &&
-            (strcmp(mode, sqlite3_column_text(search_callsign_stmt, 1)) == 0))
+            (sqlite3_column_int(search_callsign_stmt, 1) == mode))
         {
             worked = SEARCH_WORKED_SAME_MODE;
             break;
@@ -288,7 +288,7 @@ static void * import_adif_thread(void* args) {
         }
         if (c >= 10) {
             c = 0;
-            msg_set_text_fmt("Importing QSO: %zu/%zu", i, cnt);
+            msg_set_text_fmt("Importing QSO: %zu/%zu", i + 1, cnt);
             msg_set_timeout(5000);
         }
     }
@@ -313,7 +313,7 @@ static bool create_tables() {
             "ts              TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "freq            REAL CHECK ( freq > 0 ), "
             "band            INT NOT NULL, "
-            "mode            TEXT CHECK ( mode IN ('SSB', 'CW', 'FT8', 'FT4', 'AM', 'FM', 'MFSK')), "
+            "mode            INT NOT NULL, "
             "local_callsign  TEXT NOT NULL, "
             "remote_callsign TEXT NOT NULL, "
             "canonized_remote_callsign TEXT NOT NULL, "

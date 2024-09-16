@@ -258,7 +258,7 @@ static void save_qso() {
     qso_log_record_t qso = qso_log_record_create(
         params.callsign.x,
         util_canonize_callsign(qso_item.remote_callsign, false),
-        now, params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4",
+        now, params.ft8_protocol == PROTO_FT8 ? MODE_FT8 : MODE_FT4,
         qso_item.rst_s, qso_item.rst_r, params_band_cur_freq_get(), NULL, NULL,
         params.qth.x, qso_item.remote_qth
     );
@@ -1358,7 +1358,7 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
     if (msg.type == MSG_TYPE_CQ) {
         cell_data->worked_type = qso_log_search_worked(
             msg.call_from,
-            params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4",
+            params.ft8_protocol == PROTO_FT8 ? MODE_FT8 : MODE_FT4,
             qso_log_freq_to_band(params_band_cur_freq_get())
         );
     }
