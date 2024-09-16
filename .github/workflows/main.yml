@@ -35,8 +35,6 @@ jobs:
         sed -i "s,^X6100_GUI_SITE_METHOD = git,X6100_GUI_SITE_METHOD = local,g" AetherX6100Buildroot/br2_external/package/x6100-gui/x6100_gui.mk
         sed -i "s,^X6100_GUI_GIT_SUBMODULES,# X6100_GUI_GIT_SUBMODULES,g" AetherX6100Buildroot/br2_external/package/x6100-gui/x6100_gui.mk
 
-    - name: Check changes
-      run: cat AetherX6100Buildroot/br2_external/package/x6100-gui/x6100_gui.mk
     # - name: Cache ccache
     #   id: cache-ccache
     #   uses: actions/cache@v4
@@ -44,31 +42,32 @@ jobs:
     #     path: ~/.buildroot-ccache
     #     key: ${{ runner.os }}-ccache
 
-    # # Configure
-    # - name: Configure
-    #   run: bash ./br_config.sh
+    # Configure
+    - name: Configure
+      run: |
+        cd AetherX6100Buildroot && bash ./br_config.sh
 
-    # # Build
-    # - name: Build
-    #   run: |
-    #     cd build && make
+    # Build
+    - name: Build
+      run: |
+        cd AetherX6100Buildroot/build && make
 
-    # # Compress image
-    # - name: Compress image
-    #   run: |
-    #     cd build/images
-    #     zip sdcard.img.zip sdcard.img
+    # Compress image
+    - name: Compress image
+      run: |
+        cd AetherX6100Buildroot/build/images
+        zip sdcard.img.zip sdcard.img
 
-    # # Upload image
-    # - name: 'Upload image'
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: sdcard.img
-    #     path: build/images/sdcard.img
+    # Upload image
+    - name: 'Upload image'
+      uses: actions/upload-artifact@v4
+      with:
+        name: sdcard.img
+        path: AetherX6100Buildroot/build/images/sdcard.img
 
-    # # Create release
-    # - name: Release
-    #   uses: softprops/action-gh-release@v2
-    #   if: startsWith(github.ref, 'refs/tags/')
-    #   with:
-    #     files: build/images/sdcard.img.zip
+    # Create release
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: AetherX6100Buildroot/build/images/sdcard.img.zip
