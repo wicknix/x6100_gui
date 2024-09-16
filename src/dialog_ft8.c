@@ -66,6 +66,9 @@
 
 #define MAX_PWR         5.0f
 
+#define FT8_WIDTH_HZ    50
+#define FT4_WIDTH_HZ    83
+
 typedef enum {
     RX_PROCESS,
     TX_PROCESS,
@@ -674,6 +677,7 @@ static void load_band() {
     switch (params.ft8_protocol) {
         case PROTO_FT8:
             mem_id = MEM_FT8_ID;
+            lv_finder_set_width(finder, FT8_WIDTH_HZ);
 
             if (params.ft8_band > FT8_BANDS - 1) {
                 params.ft8_band = FT8_BANDS - 1;
@@ -682,6 +686,7 @@ static void load_band() {
 
         case PROTO_FT4:
             mem_id = MEM_FT4_ID;
+            lv_finder_set_width(finder, FT4_WIDTH_HZ);
 
             if (params.ft8_band > FT4_BANDS - 1) {
                 params.ft8_band = FT4_BANDS - 1;
