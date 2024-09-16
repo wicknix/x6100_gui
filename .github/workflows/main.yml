@@ -35,12 +35,12 @@ jobs:
         sed -i "s,^X6100_GUI_SITE_METHOD = git,X6100_GUI_SITE_METHOD = local,g" AetherX6100Buildroot/br2_external/package/x6100-gui/x6100_gui.mk
         sed -i "s,^X6100_GUI_GIT_SUBMODULES,# X6100_GUI_GIT_SUBMODULES,g" AetherX6100Buildroot/br2_external/package/x6100-gui/x6100_gui.mk
 
-    # - name: Cache ccache
-    #   id: cache-ccache
-    #   uses: actions/cache@v4
-    #   with:
-    #     path: ~/.buildroot-ccache
-    #     key: ${{ runner.os }}-ccache
+    - name: Cache ccache
+      id: cache-ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.buildroot-ccache
+        key: ${{ runner.os }}-ccache
 
     # Configure
     - name: Configure
