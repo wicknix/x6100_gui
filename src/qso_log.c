@@ -56,25 +56,64 @@ void qso_log_import_adif(const char * path) {
     }
 }
 
+qso_log_band_t qso_log_freq_to_band(uint64_t freq_hz)
+{
+    uint32_t freq_khz = freq_hz  / 1000;
+
+    switch (freq_khz)
+    {
+    case 1800 ... 2000:
+        return BAND_160M;
+        break;
+    case 3500 ... 4000:
+        return BAND_80M;
+        break;
+    case 7000 ... 7300:
+        return BAND_40M;
+        break;
+    case 10100 ... 10150:
+        return BAND_30M;
+        break;
+    case 14000 ... 14350:
+        return BAND_20M;
+        break;
+    case 18068 ... 18168:
+        return BAND_17M;
+        break;
+    case 21000 ... 21450:
+        return BAND_15M;
+        break;
+    case 24890 ... 24990:
+        return BAND_12M;
+        break;
+    case 28000 ... 29700:
+        return BAND_10M;
+        break;
+    case 50000 ... 54000:
+        return BAND_6M;
+        break;
+    default:
+        return BAND_OTHER;
+        break;
+    }
+}
 
 qso_log_record_t qso_log_record_create(const char * local_call, const char * remote_call,
-    time_t qso_time, const char * mode, int rsts, int rstr, float freq_mhz, const char * band,
+    time_t qso_time, const char * mode, int rsts, int rstr, uint64_t freq_hz,
     const char * name, const char * qth, const char *local_grid, const char * remote_grid)
 {
     qso_log_record_t rec = {
         .time = qso_time,
         .rsts = rsts,
         .rstr = rstr,
-        .freq_mhz = freq_mhz,
+        .freq_mhz = (float) freq_hz / 1000000,
+        .band = qso_log_freq_to_band(freq_hz)
     };
     strncpy(rec.local_call, local_call, sizeof(rec.local_call) - 1);
     rec.local_call[sizeof(rec.local_call) - 1] = 0;
 
     strncpy(rec.remote_call, remote_call, sizeof(rec.remote_call) - 1);
     rec.remote_call[sizeof(rec.remote_call) - 1] = 0;
-
-    strncpy(rec.band, band, sizeof(rec.band) - 1);
-    rec.band[sizeof(rec.band) - 1] = 0;
 
     strncpy(rec.mode, mode, sizeof(rec.mode) - 1);
     rec.mode[sizeof(rec.mode) - 1] = 0;
@@ -126,10 +165,6 @@ int qso_log_record_save(qso_log_record_t qso) {
         LV_LOG_ERROR("Modulation is required");
         return -1;
     }
-    if (strlen(qso.band) == 0) {
-        LV_LOG_ERROR("Band is required");
-        return -1;
-    }
 
     rc = sqlite3_prepare_v2(
         db, "INSERT OR IGNORE INTO qso_log ("
@@ -151,7 +186,7 @@ int qso_log_record_save(qso_log_record_t qso) {
     }
     rc = sqlite3_bind_double(stmt, sqlite3_bind_parameter_index(stmt, ":freq"), (double) qso.freq_mhz);
     if (rc != SQLITE_OK) return -1;
-    rc = sqlite3_bind_text(stmt, sqlite3_bind_parameter_index(stmt, ":band"), qso.band, strlen(qso.band), 0);
+    rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":band"), qso.band);
     if (rc != SQLITE_OK) return -1;
     rc = sqlite3_bind_text(stmt, sqlite3_bind_parameter_index(stmt, ":mode"), qso.mode, strlen(qso.mode), 0);
     if (rc != SQLITE_OK) return -1;
@@ -189,11 +224,11 @@ int qso_log_record_save(qso_log_record_t qso) {
     free(canonized_remote_callsign);
 
     sqlite3_finalize(stmt);
-    return 0;
+    return sqlite3_changes(db);
 }
 
 
-qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char * mode, const char * band)
+qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char * mode, qso_log_band_t band)
 {
     int                         rc;
     qso_log_search_worked_t     worked = SEARCH_WORKED_NO;
@@ -221,7 +256,7 @@ qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char *
 
     while (sqlite3_step(search_callsign_stmt) != SQLITE_DONE) {
         worked = SEARCH_WORKED_YES;
-        if ((strcmp(band, sqlite3_column_text(search_callsign_stmt, 0)) == 0) &&
+        if ((sqlite3_column_int(search_callsign_stmt, 0) == band) &&
             (strcmp(mode, sqlite3_column_text(search_callsign_stmt, 1)) == 0))
         {
             worked = SEARCH_WORKED_SAME_MODE;
@@ -246,13 +281,14 @@ static void * import_adif_thread(void* args) {
     size_t updated_rows = 0;
     size_t c = 0;
     for (size_t i = 0; i < cnt; i++) {
-        if (qso_log_record_save(records[i]) == 0) {
-            updated_rows++;
-            c++;
+        int changed = qso_log_record_save(records[i]);
+        c++;
+        if (changed > 0) {
+            updated_rows += changed;
         }
         if (c >= 10) {
             c = 0;
-            msg_set_text_fmt("Importing QSO: %zu/%zu", updated_rows, cnt);
+            msg_set_text_fmt("Importing QSO: %zu/%zu", i, cnt);
             msg_set_timeout(5000);
         }
     }
@@ -276,7 +312,7 @@ static bool create_tables() {
         "CREATE TABLE IF NOT EXISTS qso_log( "
             "ts              TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
             "freq            REAL CHECK ( freq > 0 ), "
-            "band            TEXT NOT NULL, "
+            "band            INT NOT NULL, "
             "mode            TEXT CHECK ( mode IN ('SSB', 'CW', 'FT8', 'FT4', 'AM', 'FM', 'MFSK')), "
             "local_callsign  TEXT NOT NULL, "
             "remote_callsign TEXT NOT NULL, "

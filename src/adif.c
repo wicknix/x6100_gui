@@ -21,6 +21,9 @@
 #include <unistd.h>
 #include <regex.h>
 
+#define MHZ 1000000
+#define KHZ 1000
+
 #define ARRAY_SIZE(arr) (sizeof((arr)) / sizeof((arr)[0]))
 #define COPY_STR(dst, src, len) (copy_str(dst, src, len, sizeof(dst)))
 
@@ -34,8 +37,11 @@ static void write_str(FILE *fd, const char * key, const char * val);
 static void write_int(FILE *fd, const char * key, int val);
 
 static void write_date_time(FILE *fd, time_t time);
-static void write_freq_band(FILE *fd, float freq_mhz);
+static void write_freq(FILE *fd, float freq_mhz);
+static void write_band(FILE *fd, qso_log_band_t band);
 static void copy_str(char * dst, char * src, size_t val_len, size_t dst_len);
+
+static qso_log_band_t str_to_band(const char * s);
 
 
 adif_log adif_log_init(const char * path) {
@@ -75,7 +81,8 @@ void adif_add_qso(adif_log l, qso_log_record_t qso)
     write_int(l->fd, "RST_SENT", qso.rsts);
     write_str(l->fd, "STX", NULL);
     write_int(l->fd, "RST_RCVD", qso.rstr);
-    write_freq_band(l->fd, qso.freq_mhz);
+    write_band(l->fd, qso.band);
+    write_freq(l->fd, qso.freq_mhz);
     write_str(l->fd, "GRIDSQUARE", qso.remote_grid);
     write_str(l->fd, "MY_GRIDSQUARE", qso.local_grid);
     fprintf(l->fd, "<EOR>\r\n");
@@ -141,7 +148,7 @@ int adif_read(const char * path, qso_log_record_t ** records) {
                 } else if (strncmp(s + pmatch[1].rm_so, "RST_RCVD", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
                     cur_record->rstr = atoi(s + pmatch[0].rm_eo);
                 } else if (strncmp(s + pmatch[1].rm_so, "BAND", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
-                    COPY_STR(cur_record->band, s + pmatch[0].rm_eo, val_len);
+                    cur_record->band = str_to_band(s + pmatch[0].rm_eo);
                 } else if (strncmp(s + pmatch[1].rm_so, "FREQ", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
                     cur_record->freq_mhz = strtof(s + pmatch[0].rm_eo, NULL);
                 } else if (strncmp(s + pmatch[1].rm_so, "MY_GRIDSQUARE", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
@@ -155,8 +162,8 @@ int adif_read(const char * path, qso_log_record_t ** records) {
         }
 
         cur_record->time = mktime(&qso_ts);
-        if ((strcmp(cur_record->band, util_freq_to_band(cur_record->freq_mhz)) != 0) &&
-            (strcmp(cur_record->band, util_freq_to_band(cur_record->freq_mhz / 1000)) == 0)) {
+        if ((qso_log_freq_to_band(cur_record->freq_mhz * MHZ) != cur_record->band) &&
+            (qso_log_freq_to_band(cur_record->freq_mhz * KHZ) == cur_record->band)) {
                 cur_record->freq_mhz /= 1000;
         }
         cur_record_id++;
@@ -198,14 +205,20 @@ static void write_date_time(FILE *fd, time_t time) {
     fprintf(fd, "<TIME_OFF:4>%02i%02i", ts->tm_hour, ts->tm_min);
 }
 
-static void write_freq_band(FILE *fd, float freq_mhz) {
-    char * band = util_freq_to_band(freq_mhz);
-
-    write_str(fd, "BAND", band);
-
+static void write_freq(FILE *fd, float freq_mhz) {
     char str_freq[8];
     sprintf(str_freq, "%0.4f", freq_mhz);
     write_str(fd, "FREQ", str_freq);
+}
+
+static void write_band(FILE *fd, qso_log_band_t band) {
+    if (band == BAND_OTHER) {
+        write_str(fd, "BAND", "");
+    } else {
+        char str_band[8];
+        sprintf(str_band, "%dM", band);
+        write_str(fd, "BAND", str_band);
+    }
 }
 
 
@@ -215,4 +228,8 @@ static void copy_str(char * dst, char * src, size_t val_len, size_t dst_len) {
     }
     strncpy(dst, src, val_len);
     dst[val_len] = 0;
+}
+
+static qso_log_band_t str_to_band(const char * s) {
+    return atoi(s);
 }

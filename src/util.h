@@ -43,5 +43,3 @@ float wrms_get_val(wrms_t wr);
 size_t argmax(float *x, size_t n);
 
 char *util_canonize_callsign(const char *callsign, bool strip_slashes);
-
-char *util_freq_to_band(float freq_mhz);

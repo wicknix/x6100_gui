@@ -12,6 +12,20 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef enum {
+    BAND_OTHER  = 0,
+    BAND_6M     = 6,
+    BAND_10M    = 10,
+    BAND_12M    = 12,
+    BAND_15M    = 15,
+    BAND_17M    = 17,
+    BAND_20M    = 20,
+    BAND_30M    = 30,
+    BAND_40M    = 40,
+    BAND_80M    = 80,
+    BAND_160M   = 160,
+} qso_log_band_t;
+
 typedef struct {
     char local_call[32];
     char remote_call[32];
@@ -20,7 +34,7 @@ typedef struct {
     int rsts;
     int rstr;
     float freq_mhz;
-    char band[8];
+    qso_log_band_t band;
     char name[64];
     char qth[64];
     char local_grid[8];
@@ -46,11 +60,14 @@ void qso_log_import_adif(const char *path);
  * Required params: `local_call`, `remote_call`, qso_time`, `mode`, `rsts`, `rstr`,  and `freq_mhz`
  */
 qso_log_record_t qso_log_record_create(const char *local_call, const char *remote_call,
-                                       time_t qso_time, const char *mode, int rsts, int rstr, float freq_mhz,
-                                       const char *band, const char *name, const char *qth,
+                                       time_t qso_time, const char *mode, int rsts, int rstr, uint64_t freq_hz,
+                                       const char *name, const char *qth,
                                        const char *local_grid, const char *remote_grid);
 
 /**
  * Search callsign in log.
  */
-qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char * mode, const char * band);
+qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char * mode, qso_log_band_t band);
+
+
+qso_log_band_t qso_log_freq_to_band(uint64_t freq_hz);
