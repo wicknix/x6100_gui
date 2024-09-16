@@ -66,8 +66,6 @@
 
 #define MAX_PWR         5.0f
 
-#define MAX_SEARCH_ITEMS    50
-
 typedef enum {
     RX_PROCESS,
     TX_PROCESS,
@@ -98,12 +96,6 @@ typedef enum {
     MSG_TYPE_OTHER,
 } msg_type_t;
 
-typedef enum {
-    CQ_TYPE_OLD_CALL,
-    CQ_TYPE_NEW_CALL,
-    CQ_TYPE_NEW_CALL_ON_BAND,
-} cq_type_t;
-
 /**
  * Incoming message parse result.
  */
@@ -126,7 +118,7 @@ typedef struct {
     msg_t           msg;
     char            text[128];
 
-    cq_type_t       cq_type;
+    qso_log_search_worked_t       worked_type;
 } cell_data_t;
 
 /**
@@ -191,8 +183,6 @@ static message_t            decoded[MAX_DECODED];
 static message_t*           decoded_hashtable[MAX_DECODED];
 
 static adif_log             ft8_log;
-
-static qso_log_search_item_t * search_items;
 
 static void construct_cb(lv_obj_t *parent);
 static void key_cb(lv_event_t * e);
@@ -264,17 +254,21 @@ static void save_qso() {
         return;
     }
     time_t now = time(NULL);
-    const char * mode = params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4";
-
-    char * remote_callsign = util_canonize_callsign(qso_item.remote_callsign, false);
 
     float freq_mhz = params_band_cur_freq_get() / 1000000.0f;
-    adif_add_qso(ft8_log, params.callsign.x, remote_callsign, now, mode,
-        qso_item.rst_s, qso_item.rst_r, freq_mhz, params.qth.x, qso_item.remote_qth);
+
+    qso_log_record_t qso = qso_log_record_create(
+        params.callsign.x,
+        util_canonize_callsign(qso_item.remote_callsign, false),
+        now, params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4",
+        qso_item.rst_s, qso_item.rst_r, freq_mhz, util_freq_to_band(freq_mhz), NULL, NULL,
+        params.qth.x, qso_item.remote_qth
+    );
+
+    adif_add_qso(ft8_log, qso);
 
     // Save QSO to sqlite log
-    qso_log_add_record(params.callsign.x, remote_callsign, now, mode,
-        qso_item.rst_s, qso_item.rst_r, freq_mhz, params.qth.x, qso_item.remote_qth, NULL);
+    qso_log_record_save(qso);
 
     msg_set_text_fmt("QSO saved");
 }
@@ -553,17 +547,17 @@ static void table_draw_part_begin_cb(lv_event_t * e) {
                     break;
 
                 case CELL_RX_CQ:
-                    switch (cell_data->cq_type) {
-                        case CQ_TYPE_NEW_CALL:
+                    switch (cell_data->worked_type) {
+                        case SEARCH_WORKED_NO:
                             // green
                             dsc->rect_dsc->bg_color = lv_color_hex(0x00DD00);
                             break;
-                        case CQ_TYPE_NEW_CALL_ON_BAND:
+                        case SEARCH_WORKED_YES:
                             // dark green
                             dsc->label_dsc->opa = LV_OPA_90;
                             dsc->rect_dsc->bg_color = lv_color_hex(0x2e5a00);
                             break;
-                        case CQ_TYPE_OLD_CALL:
+                        case SEARCH_WORKED_SAME_MODE:
                             // darker green
                             dsc->label_dsc->decor = LV_TEXT_DECOR_STRIKETHROUGH;
                             dsc->label_dsc->opa = LV_OPA_80;
@@ -672,8 +666,6 @@ static void destruct_cb() {
     main_screen_lock_band(false);
 
     radio_set_pwr(params.pwr);
-
-    free(search_items);
 }
 
 static void load_band() {
@@ -934,8 +926,6 @@ static void construct_cb(lv_obj_t *parent) {
         radio_set_pwr(MAX_PWR);
         msg_set_text_fmt("Power was limited to %0.0fW", MAX_PWR);
     }
-
-    search_items = malloc(MAX_SEARCH_ITEMS * sizeof(qso_log_search_item_t));
 }
 
 static void show_cq_cb(lv_event_t * e) {
@@ -1368,20 +1358,11 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
     }
     cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
     if (msg.type == MSG_TYPE_CQ) {
-        n_found_items = qso_log_search_remote_callsign(msg.call_from, MAX_SEARCH_ITEMS, search_items);
-        if (!n_found_items) {
-            cell_data->cq_type = CQ_TYPE_NEW_CALL;
-        } else {
-            cell_data->cq_type = CQ_TYPE_NEW_CALL_ON_BAND;
-            for (size_t i = 0; i < n_found_items; i++) {
-                if ((search_items[i].freq_mhz == params_band_cur_freq_get() / 1000000) &&
-                    (strcmp(search_items[i].mode, params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4") == 0))
-                {
-                    cell_data->cq_type = CQ_TYPE_OLD_CALL;
-                    break;
-                }
-            }
-        }
+        cell_data->worked_type = qso_log_search_worked(
+            msg.call_from,
+            params.ft8_protocol == PROTO_FT8 ? "FT8" : "FT4",
+            util_freq_to_band((float) params_band_cur_freq_get() / 1000000)
+        );
     }
 
     cell_data->cell_type = cell_type;

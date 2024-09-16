@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <string.h>
+#include <string.h>
 
 
 /**
@@ -234,15 +235,79 @@ size_t argmax(float * x, size_t n) {
 }
 
 
-char * util_canonize_callsign(char * callsign, bool strip_slashes) {
+char * util_canonize_callsign(const char * callsign, bool strip_slashes) {
     if (!callsign) {
         return NULL;
     }
-    // strip < and > from remote call
-    size_t callsign_len = strlen(callsign);
-    if ((callsign[0] == '<') && (callsign[callsign_len - 1] == '>')) {
-        callsign[callsign_len - 1] = 0;
-        callsign++;
+
+    char *result = NULL;
+
+    if (strip_slashes) {
+        char *s = strdup(callsign);
+        char *token = strtok(s, "/");
+        while(token) {
+            if ((
+                ((token[0] >= '0') && (token[0] <= '9')) ||
+                ((token[1] >= '0') && (token[1] <= '9')) ||
+                ((token[2] >= '0') && (token[2] <= '9'))
+            ) && strlen(token) >= 4) {
+                result = strdup(token);
+                break;
+            }
+            token = strtok(NULL, "/");
+        }
+        free(s);
+    } else {
+        // strip < and > from remote call
+        size_t callsign_len = strlen(callsign);
+        if ((callsign[0] == '<') && (callsign[callsign_len - 1] == '>')) {
+            result = strdup(callsign + 1);
+            result[callsign_len - 2] = 0;
+        }
+
     }
-    return callsign;
+    return result;
+}
+
+
+char * util_freq_to_band(float freq_mhz) {
+    uint32_t freq_khz = freq_mhz * 1000;
+    char * band;
+
+    switch (freq_khz)
+    {
+    case 1800 ... 2000:
+        return "160M";
+        break;
+    case 3500 ... 4000:
+        return "80M";
+        break;
+    case 7000 ... 7300:
+        return "40M";
+        break;
+    case 10100 ... 10150:
+        return "30M";
+        break;
+    case 14000 ... 14350:
+        return "20M";
+        break;
+    case 18068 ... 18168:
+        return "17M";
+        break;
+    case 21000 ... 21450:
+        return "15M";
+        break;
+    case 24890 ... 24990:
+        return "12M";
+        break;
+    case 28000 ... 29700:
+        return "10M";
+        break;
+    case 50000 ... 54000:
+        return "6M";
+        break;
+    default:
+        return "";
+        break;
+    }
 }

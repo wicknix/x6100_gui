@@ -35,6 +35,7 @@
 #include "gps.h"
 #include "mfk.h"
 #include "vol.h"
+#include "qso_log.h"
 
 #define DISP_BUF_SIZE (800 * 480 * 4)
 
@@ -109,6 +110,10 @@ int main(void) {
     cat_init();
     pannel_visible();
     gps_init();
+    if (!qso_log_init()) {
+        LV_LOG_ERROR("Can't init QSO log");
+    }
+    qso_log_import_adif("/mnt/incoming_log.adi");
 
     pthread_t thread;
     pthread_create(&thread, NULL, tick_thread, NULL);

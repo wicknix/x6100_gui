@@ -65,22 +65,3 @@ CREATE TABLE transverter(
     val         INTEGER,
     UNIQUE      (id, name) ON CONFLICT REPLACE
 );
-
-
-CREATE TABLE qso_log(
-    ts              TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    freq            REAL CHECK ( freq > 0 ),
-    mode            TEXT CHECK ( mode IN ('SSB', 'CW', 'FT8', 'FT4')),
-    local_callsign  TEXT NOT NULL,
-    remote_callsign TEXT NOT NULL,
-    rsts            INTEGER NOT NULL,
-    rstr            INTEGER NOT NULL,
-    local_qth       TEXT,
-    remote_qth      TEXT,
-    op_name         TEXT,
-    comment         TEXT
-);
-
-CREATE INDEX qso_log_idx_remote_callsign ON qso_log(remote_callsign COLLATE NOCASE);
-CREATE INDEX qso_log_idx_mode ON qso_log(mode);
-CREATE INDEX qso_log_idx_ts ON qso_log(ts);

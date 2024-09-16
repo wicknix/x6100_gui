@@ -13,19 +13,44 @@
 #include <stdbool.h>
 
 typedef struct {
-    uint16_t    freq_mhz;
-    char        mode[16];
-} qso_log_search_item_t;
+    char local_call[32];
+    char remote_call[32];
+    time_t time;
+    char mode[8];
+    int rsts;
+    int rstr;
+    float freq_mhz;
+    char band[8];
+    char name[64];
+    char qth[64];
+    char local_grid[8];
+    char remote_grid[8];
+} qso_log_record_t;
 
 
-int qso_log_add_record(const char * local_call, const char * remote_call,
-    time_t time, const char * mode, int rsts, int rstr, float freq_mhz,
-    const char * local_qth, const char * remote_qth, const char * name);
+typedef enum {
+    SEARCH_WORKED_NO,
+    SEARCH_WORKED_YES,
+    SEARCH_WORKED_SAME_MODE,
+} qso_log_search_worked_t;
+
+
+bool qso_log_init();
+
+int qso_log_record_save(qso_log_record_t qso);
+
+void qso_log_import_adif(const char *path);
+
+/**
+ * Create qso log recort struct.
+ * Required params: `local_call`, `remote_call`, qso_time`, `mode`, `rsts`, `rstr`,  and `freq_mhz`
+ */
+qso_log_record_t qso_log_record_create(const char *local_call, const char *remote_call,
+                                       time_t qso_time, const char *mode, int rsts, int rstr, float freq_mhz,
+                                       const char *band, const char *name, const char *qth,
+                                       const char *local_grid, const char *remote_grid);
 
 /**
  * Search callsign in log.
- * @return count of distinct records
- * @param[in] max_count Max expected results
- * @param[out] items array of `qso_log_search_item_t`
  */
-int qso_log_search_remote_callsign(const char *callsign, size_t max_count, qso_log_search_item_t * items);
+qso_log_search_worked_t qso_log_search_worked(const char *callsign, const char * mode, const char * band);

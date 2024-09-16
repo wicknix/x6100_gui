@@ -5,7 +5,13 @@
  *
  *  Copyright (c) 2024 Georgy Dyuldin aka R2RFE
  */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "adif.h"
+
+#include "util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +19,10 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <regex.h>
+
+#define ARRAY_SIZE(arr) (sizeof((arr)) / sizeof((arr)[0]))
+#define COPY_STR(dst, src, len) (copy_str(dst, src, len, sizeof(dst)))
 
 struct adif_log_s {
     FILE *fd;
@@ -25,6 +35,7 @@ static void write_int(FILE *fd, const char * key, int val);
 
 static void write_date_time(FILE *fd, time_t time);
 static void write_freq_band(FILE *fd, float freq_mhz);
+static void copy_str(char * dst, char * src, size_t val_len, size_t dst_len);
 
 
 adif_log adif_log_init(const char * path) {
@@ -51,26 +62,110 @@ void adif_log_close(adif_log l) {
     fclose(l->fd);
 }
 
-void adif_add_qso(adif_log l, const char *local_call, const char *remote_call,
-    time_t time, const char *mode, int rsts, int rstr, float freq_mhz,
-    const char *local_grid, const char *remote_grid)
+void adif_add_qso(adif_log l, qso_log_record_t qso)
 {
-    write_str(l->fd, "STATION_CALLSIGN", local_call);
-    write_str(l->fd, "OPERATOR", local_call);
-    write_str(l->fd, "CALL", remote_call);
-    write_date_time(l->fd, time);
-    write_str(l->fd, "MODE", mode);
+    write_str(l->fd, "STATION_CALLSIGN", qso.local_call);
+    write_str(l->fd, "OPERATOR", qso.local_call);
+    write_str(l->fd, "CALL", qso.remote_call);
+    write_date_time(l->fd, qso.time);
+    write_str(l->fd, "MODE", qso.mode);
     write_str(l->fd, "SUBMODE", NULL);
     write_str(l->fd, "NAME", NULL);
     write_str(l->fd, "QTH", NULL);
-    write_int(l->fd, "RST_SENT", rsts);
+    write_int(l->fd, "RST_SENT", qso.rsts);
     write_str(l->fd, "STX", NULL);
-    write_int(l->fd, "RST_RCVD", rstr);
-    write_freq_band(l->fd, freq_mhz);
-    write_str(l->fd, "GRIDSQUARE", remote_grid);
-    write_str(l->fd, "MY_GRIDSQUARE", local_grid);
+    write_int(l->fd, "RST_RCVD", qso.rstr);
+    write_freq_band(l->fd, qso.freq_mhz);
+    write_str(l->fd, "GRIDSQUARE", qso.remote_grid);
+    write_str(l->fd, "MY_GRIDSQUARE", qso.local_grid);
     fprintf(l->fd, "<EOR>\r\n");
     fflush(l->fd);
+}
+
+int adif_read(const char * path, qso_log_record_t ** records) {
+    char * line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    FILE *fp = fopen(path, "r");
+
+    if (fp == NULL) {
+        perror("Unable to open log file:");
+        return 0;
+    }
+
+    static regex_t  regex;
+    static const    char re[] = "<([A-Za-z_]+):([0-9]+)>";
+    regmatch_t      pmatch[3];
+    regoff_t        off, r_len;
+    char            *s;
+
+    if (regcomp(&regex, re, REG_NEWLINE | REG_EXTENDED)) {
+        printf("Can't compile regexp");
+        return -2;
+    }
+
+    size_t arr_size = 128;
+    *records = malloc(arr_size * sizeof(qso_log_record_t));
+
+    qso_log_record_t *cur_record;
+    ssize_t cur_record_id = 0;
+    struct tm qso_ts;
+    size_t val_len;
+
+    while ((read = getline(&line, &len, fp)) != -1) {
+        if (strcmp(line + read - 7, "<EOR>\r\n") != 0) continue;
+        s = line;
+        cur_record = &(*records)[cur_record_id];
+        for (unsigned int i = 0; ; i++) {
+            if (regexec(&regex, s, ARRAY_SIZE(pmatch), pmatch, 0))
+                break;
+            val_len = atoi(s + pmatch[2].rm_so);
+            if (val_len > 0) {
+                if (strncmp(s + pmatch[1].rm_so, "OPERATOR", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->local_call, s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "CALL", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->remote_call, s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "QSO_DATE", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    strptime(s + pmatch[0].rm_eo, "%Y%m%d", &qso_ts);
+                } else if (strncmp(s + pmatch[1].rm_so, "TIME_ON", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    strptime(s + pmatch[0].rm_eo, "%H%M", &qso_ts);
+                } else if (strncmp(s + pmatch[1].rm_so, "MODE", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->mode, s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "NAME", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->name, s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "QTH", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->qth, s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "RST_SENT", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    cur_record->rsts = atoi(s + pmatch[0].rm_eo);
+                } else if (strncmp(s + pmatch[1].rm_so, "RST_RCVD", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    cur_record->rstr = atoi(s + pmatch[0].rm_eo);
+                } else if (strncmp(s + pmatch[1].rm_so, "BAND", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->band, s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "FREQ", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    cur_record->freq_mhz = strtof(s + pmatch[0].rm_eo, NULL);
+                } else if (strncmp(s + pmatch[1].rm_so, "MY_GRIDSQUARE", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->local_grid, s + pmatch[0].rm_eo, val_len);
+                } else if (strncmp(s + pmatch[1].rm_so, "GRIDSQUARE", pmatch[1].rm_eo - pmatch[1].rm_so) == 0) {
+                    COPY_STR(cur_record->remote_grid, s + pmatch[0].rm_eo, val_len);
+                }
+            }
+
+            s += pmatch[0].rm_eo;
+        }
+
+        cur_record->time = mktime(&qso_ts);
+        if ((strcmp(cur_record->band, util_freq_to_band(cur_record->freq_mhz)) != 0) &&
+            (strcmp(cur_record->band, util_freq_to_band(cur_record->freq_mhz / 1000)) == 0)) {
+                cur_record->freq_mhz /= 1000;
+        }
+        cur_record_id++;
+        if (cur_record_id >= arr_size) {
+            arr_size *= 2;
+            (*records) = realloc((*records), arr_size * sizeof(qso_log_record_t));
+        }
+    }
+    return cur_record_id--;
 }
 
 static void write_header(FILE *fd) {
@@ -104,48 +199,20 @@ static void write_date_time(FILE *fd, time_t time) {
 }
 
 static void write_freq_band(FILE *fd, float freq_mhz) {
-    char * band;
-    uint16_t freq_khz = freq_mhz * 1000;
-    switch (freq_khz)
-    {
-    case 1800 ... 2000:
-        band = "160M";
-        break;
-    case 3500 ... 4000:
-        band = "80M";
-        break;
-    case 7000 ... 7300:
-        band = "40M";
-        break;
-    case 10100 ... 10150:
-        band = "30M";
-        break;
-    case 14000 ... 14350:
-        band = "20M";
-        break;
-    case 18068 ... 18168:
-        band = "17M";
-        break;
-    case 21000 ... 21450:
-        band = "15M";
-        break;
-    case 24890 ... 24990:
-        band = "12M";
-        break;
-    case 28000 ... 29700:
-        band = "10M";
-        break;
-    case 50000 ... 54000:
-        band = "6M";
-        break;
-    default:
-        band = NULL;
-        break;
-    }
+    char * band = util_freq_to_band(freq_mhz);
 
     write_str(fd, "BAND", band);
 
     char str_freq[8];
     sprintf(str_freq, "%0.4f", freq_mhz);
     write_str(fd, "FREQ", str_freq);
+}
+
+
+static void copy_str(char * dst, char * src, size_t val_len, size_t dst_len) {
+    if (val_len > (dst_len - 1)) {
+        val_len = dst_len - 1;
+    }
+    strncpy(dst, src, val_len);
+    dst[val_len] = 0;
 }
