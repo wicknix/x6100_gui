@@ -255,13 +255,15 @@ static void save_qso() {
     }
     time_t now = time(NULL);
 
+    char * canonized_call = util_canonize_callsign(qso_item.remote_callsign, false);
     qso_log_record_t qso = qso_log_record_create(
         params.callsign.x,
-        util_canonize_callsign(qso_item.remote_callsign, false),
+        canonized_call,
         now, params.ft8_protocol == PROTO_FT8 ? MODE_FT8 : MODE_FT4,
         qso_item.rst_s, qso_item.rst_r, params_band_cur_freq_get(), NULL, NULL,
         params.qth.x, qso_item.remote_qth
     );
+    free(canonized_call);
 
     adif_add_qso(ft8_log, qso);
 

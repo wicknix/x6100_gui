@@ -200,9 +200,6 @@ int qso_log_record_save(qso_log_record_t qso) {
     if (rc != SQLITE_OK) return -1;
 
     char * canonized_remote_callsign = util_canonize_callsign(qso.remote_call, true);
-    if (!canonized_remote_callsign) {
-        canonized_remote_callsign = strdup(qso.remote_call);
-    }
 
     rc = bind_optional_text(stmt, sqlite3_bind_parameter_index(stmt, ":canonized_remote_callsign"), canonized_remote_callsign);
     if (rc != SQLITE_OK) {

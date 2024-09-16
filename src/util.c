@@ -266,5 +266,8 @@ char * util_canonize_callsign(const char * callsign, bool strip_slashes) {
         }
 
     }
+    if (!result) {
+        result = strdup(callsign);
+    }
     return result;
 }
