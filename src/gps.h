@@ -10,4 +10,13 @@
 
 #include <gps.h>
 
+typedef enum {
+    GPS_STATUS_WAITING=0,
+    GPS_STATUS_WORKING,
+    GPS_STATUS_RESTARTING,
+    GPS_STATUS_EXITED,
+} gps_status_t;
+
 void gps_init();
+
+gps_status_t gps_status();
