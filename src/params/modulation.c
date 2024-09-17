@@ -258,7 +258,7 @@ int16_t params_mode_spectrum_factor_get(x6100_mode_t mode) {
 int16_t params_mode_spectrum_factor_set(x6100_mode_t mode, int16_t val) {
     params_int16_t *param = &get_params_by_mode(mode)->spectrum_factor;
     params_lock();
-    if ((val != param->x) & (val >= 1) & (val <= 4)) {
+    if ((val != param->x) & (val >= 1) & (val <= 8)) {
         param->x = val;
         param->dirty = true;
     }
