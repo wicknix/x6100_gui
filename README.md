@@ -4,7 +4,7 @@ This is part of an alternative firmware for X6100 using the LVGL library
 
 ## Installing
 
-Open [Releases](releases) page and download `sdcard.img` file (in Assets section). With balenaEtcher or Rufus
+Open [Releases](https://github.com/gdyuldin/AetherX6100Buildroot/releases/latest) page and download `sdcard.img` file (in Assets section). With balenaEtcher or Rufus
 burn img file to microSD card. Insert card to the transceiver and boot it.
 
 ## Importing ADI log
@@ -12,6 +12,8 @@ burn img file to microSD card. Insert card to the transceiver and boot it.
 Application could mark already worked callsign in the UI.
 To load information about previous QSOs - copy your ADI log to the `DATA` partition and rename it to `incoming_log.adi`.
 Application will import records to own log on the next boot and will rename `incoming_log.adi` to `incoming_log.adi.bak`.
+
+*Note*: `DATA` partition will be created after first launch transceiver with inserted SD card.
 
 
 ## Exporting ADI log
