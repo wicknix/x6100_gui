@@ -67,7 +67,6 @@ static void * gps_thread(void *arg) {
             status = GPS_STATUS_RESTARTING;
             disconnect();
         }
-        system("/etc/init.d/S50gpsd restart");
         usleep(10000000);
     }
 }
