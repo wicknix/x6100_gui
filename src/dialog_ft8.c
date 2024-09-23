@@ -1052,6 +1052,7 @@ static void tx_cq_en_cb(lv_event_t * e) {
     }
 
     buttons_load(2, &button_tx_cq_dis);
+    clear_qso();
     make_cq_msg();
     msg_set_text_fmt("Next TX: %s", tx_msg);
     cq_enabled = true;
