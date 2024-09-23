@@ -180,7 +180,7 @@ static void add_symbol(float pwr) {
         }
     }
 
-    /* LV_LOG_INFO("%5.1f %i", p_avr, rx_symbol_cur); */
+    /* LV_LOG_USER("%5.1f %i", p_avr, rx_symbol_cur); */
 
     rx_symbol[SYMBOL_LEN - 1] = rx_symbol_cur;
 

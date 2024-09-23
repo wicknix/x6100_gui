@@ -48,7 +48,7 @@ void qso_log_import_adif(const char * path) {
     pthread_t thr;
 
     if (access(path, F_OK) != 0) {
-        LV_LOG_INFO("No ADI file to import");
+        LV_LOG_USER("No ADI file to import");
         return;
     }
     if(pthread_create(&thr, NULL, import_adif_thread, (void*)path) != 0) {

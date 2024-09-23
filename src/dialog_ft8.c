@@ -308,7 +308,7 @@ static void save_qso() {
         (qso_item.rst_r == UNKNOWN_SNR) ||
         (strlen(qso_item.remote_callsign) == 0)
     ) {
-        LV_LOG_INFO("Can't save QSO - not enough information");
+        LV_LOG_USER("Can't save QSO - not enough information");
         return;
     }
     time_t now = time(NULL);

@@ -89,7 +89,7 @@ void audio_init() {
         pa_threaded_mainloop_wait(mloop);
     }
 
-    LV_LOG_INFO("Conected");
+    LV_LOG_USER("Conected");
 
     pa_buffer_attr  attr;
 
