@@ -36,14 +36,14 @@ bool grid_check(const char *grid) {
             if (grid[7] < '0' || grid[7] > '9') return false;
             if (grid[6] < '0' || grid[6] > '9') return false;
         case 6:
-            if (toupper(grid[5]) < 'A' || toupper(grid[5]) > 'S') return false;
-            if (toupper(grid[4]) < 'A' || toupper(grid[4]) > 'S') return false;
+            if (toupper(grid[5]) < 'A' || toupper(grid[5]) > 'X') return false;
+            if (toupper(grid[4]) < 'A' || toupper(grid[4]) > 'X') return false;
         case 4:
             if (grid[3] < '0' || grid[3] > '9') return false;
             if (grid[2] < '0' || grid[2] > '9') return false;
         case 2:
-            if (toupper(grid[1]) < 'A' || toupper(grid[1]) > 'S') return false;
-            if (toupper(grid[0]) < 'A' || toupper(grid[0]) > 'S') return false;
+            if (toupper(grid[1]) < 'A' || toupper(grid[1]) > 'R') return false;
+            if (toupper(grid[0]) < 'A' || toupper(grid[0]) > 'R') return false;
             break;
 
         default:
