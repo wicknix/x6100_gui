@@ -66,6 +66,7 @@ bool cw_tune_toggle(int16_t diff) {
         params_lock();
         params.cw_tune = !params.cw_tune;
         params_unlock(&params.dirty.cw_tune);
+        lv_msg_send(MSG_PARAM_CHANGED, NULL);
     }
     update_visibility();
     return params.cw_tune;

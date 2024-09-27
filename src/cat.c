@@ -221,7 +221,7 @@ static uint8_t x_mode_2_ci_mode(x6100_mode_t mode) {
 
 
 static uint8_t get_if_bandwidth() {
-    uint32_t bw = params_current_mode_filter_bw();
+    uint32_t bw = params_current_mode_filter_bw_get();
     switch (params_band_cur_mode_get())
     {
     case x6100_mode_cw:

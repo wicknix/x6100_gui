@@ -128,23 +128,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_MIC:
             x = radio_change_mic(diff);
-
-            switch (x) {
-                case x6100_mic_builtin:
-                    s = "Built-In";
-                    break;
-
-                case x6100_mic_handle:
-                    s = "Handle";
-                    break;
-
-                case x6100_mic_auto:
-                    s = "Auto";
-                    break;
-                default:
-                    s = "";
-            }
-
+            s = params_mic_str_get(x);
             msg_set_text_fmt("#%3X MIC: %s", color, s);
 
             if (diff) {

@@ -9,6 +9,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MAX_CW_BW 500
 
@@ -28,11 +29,7 @@ void params_current_mode_filter_get(int32_t *low, int32_t *high);
 
 uint16_t params_current_mode_freq_step_change(bool up);
 
-uint32_t params_current_mode_filter_bw();
-
-
 uint16_t params_current_mode_freq_step_get();
-
 
 void params_modulation_setup(get_lo_offset_t fn);
 void params_mode_save();

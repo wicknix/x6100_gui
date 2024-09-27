@@ -7,10 +7,6 @@
  */
 #include "cw.h"
 
-#include <math.h>
-#include "lvgl/lvgl.h"
-#include <pthread.h>
-
 #include "audio.h"
 #include "util.h"
 #include "params/params.h"
@@ -19,6 +15,11 @@
 #include "meter.h"
 #include "util.h"
 #include "cw_tune_ui.h"
+#include "pubsub_ids.h"
+
+#include <math.h>
+#include "lvgl/lvgl.h"
+#include <pthread.h>
 
 typedef struct {
     uint16_t    n;
@@ -241,6 +242,7 @@ bool cw_change_decoder(int16_t df) {
     params_lock();
     params.cw_decoder = !params.cw_decoder;
     params_unlock(&params.dirty.cw_decoder);
+    lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
     pannel_visible();
 
@@ -263,6 +265,7 @@ float cw_change_snr(int16_t df) {
     params_lock();
     params.cw_decoder_snr = x;
     params_unlock(&params.dirty.cw_decoder_snr);
+    lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
     return params.cw_decoder_snr;
 }
@@ -283,6 +286,7 @@ float cw_change_peak_beta(int16_t df) {
     params_lock();
     params.cw_decoder_peak_beta = x;
     params_unlock(&params.dirty.cw_decoder_peak_beta);
+    lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
     return params.cw_decoder_peak_beta;
 }
@@ -303,6 +307,7 @@ float cw_change_noise_beta(int16_t df) {
     params_lock();
     params.cw_decoder_noise_beta = x;
     params_unlock(&params.dirty.cw_decoder_noise_beta);
+    lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
     return params.cw_decoder_noise_beta;
 }

@@ -16,6 +16,7 @@
 
 #include "../meter.h"
 #include "../util.h"
+#include "../pubsub_ids.h"
 
 typedef struct {
     params_uint64_t freq;
@@ -489,6 +490,7 @@ uint16_t params_band_rfg_set(int16_t rfg)
         params_lock();
         params_band.rfg.x = rfg;
         params_band.rfg.dirty = true;
+        lv_msg_send(MSG_PARAM_CHANGED, NULL);
         params_unlock(NULL);
     }
     return params_band.rfg.x;

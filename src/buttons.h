@@ -59,10 +59,22 @@ typedef enum {
 
 } button_group_t;
 
+typedef enum {
+    LABEL_TEXT,
+    LABEL_FN,
+
+} label_type_t;
+
 typedef void (*hold_cb_t)(void *);
 
+typedef char * (*label_cb_fn)();
+
 typedef struct {
-    char            *label;
+    union {
+        char        *label;
+        label_cb_fn label_fn;
+    };
+    label_type_t    label_type;
     char            *voice;
     lv_event_cb_t   press;
     hold_cb_t       hold;

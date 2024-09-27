@@ -969,3 +969,47 @@ uint8_t params_uint8_change(params_uint8_t *var, int16_t df) {
 
     return var->x;
 }
+
+inline char * params_charger_str_get(radio_charger_t val) {
+    switch (val) {
+        case RADIO_CHARGER_OFF:
+            return "Off";
+        case RADIO_CHARGER_ON:
+            return "On";
+        case RADIO_CHARGER_SHADOW:
+            return "Shadow";
+    }
+}
+
+inline char * params_mic_str_get(x6100_mic_sel_t val) {
+    switch (val) {
+        case x6100_mic_builtin:
+            return "Built-In";
+        case x6100_mic_handle:
+            return "Handle";
+        case x6100_mic_auto:
+            return "Auto";
+        default:
+            return "";
+    }
+}
+
+inline char * params_key_mode_str_get(x6100_key_mode_t val) {
+    switch (val) {
+        case x6100_key_manual:
+            return "Manual";
+        case x6100_key_auto_left:
+            return "Auto-L";
+        case x6100_key_auto_right:
+            return "Auto-R";
+    }
+}
+
+inline char * params_iambic_mode_str_ger(x6100_iambic_mode_t val) {
+    switch (val) {
+        case x6100_iambic_a:
+            return "A";
+        case x6100_iambic_b:
+            return "B";
+    }
+}

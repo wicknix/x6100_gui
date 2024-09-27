@@ -6,20 +6,20 @@
  *  Copyright (c) 2024 Georgy Dyuldin aka R2RFE
  */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-#include <sqlite3.h>
-#include <lvgl/lvgl.h>
-#include <aether_radio/x6100_control/control.h>
+#include "modulation.h"
 
 #include "common.h"
 #include "types.h"
 #include "db.h"
 
 #include "../radio.h"
+#include "../pubsub_ids.h"
 
-#include "modulation.h"
+#include <string.h>
+#include <stdio.h>
+#include <sqlite3.h>
+#include <lvgl/lvgl.h>
+#include <aether_radio/x6100_control/control.h>
 
 #define MAX_FILTER_FREQ 10000
 
@@ -145,6 +145,7 @@ uint32_t params_mode_filter_high_set(x6100_mode_t mode, int32_t val) {
     if ((val != param->x) & (val <= MAX_FILTER_FREQ) & (val > mode_params->filter_low.x)) {
         param->x = val;
         param->dirty = true;
+        lv_msg_send(MSG_PARAM_CHANGED, NULL);
     }
     params_unlock(NULL);
     return params_mode_filter_high_get(mode);
@@ -181,6 +182,7 @@ uint32_t params_mode_filter_low_set(x6100_mode_t mode, int32_t val) {
             if ((val != param->x) & (val >= 0) & (val < mode_params->filter_high.x)) {
                 param->x = val;
                 param->dirty = true;
+                lv_msg_send(MSG_PARAM_CHANGED, NULL);
             }
             params_unlock(NULL);
             return param->x;
@@ -191,6 +193,7 @@ uint32_t params_mode_filter_bw_get(x6100_mode_t mode) {
     params_mode_t *params = get_params_by_mode(mode);
     return params->filter_high.x - params->filter_low.x;
 }
+
 uint32_t params_mode_filter_bw_set(x6100_mode_t mode, int32_t val) {
     int32_t new_low, new_high, change;
     params_mode_t *mode_params = get_params_by_mode(mode);
@@ -224,13 +227,19 @@ uint32_t params_mode_filter_bw_set(x6100_mode_t mode, int32_t val) {
     new_high = LV_MIN(new_high, MAX_FILTER_FREQ);
     new_high = LV_MAX(new_high, 50);
     params_lock();
+    bool changed = false;
     if ((new_low != l_param->x) && (new_low < new_high)) {
         l_param->x = new_low;
         l_param->dirty = true;
+        changed = true;
     }
     if ((new_high != h_param->x) && (new_low < new_high)) {
         h_param->x = new_high;
         h_param->dirty = true;
+        changed = true;
+    }
+    if (changed) {
+        lv_msg_send(MSG_PARAM_CHANGED, NULL);
     }
     params_unlock(NULL);
     cur_bw = h_param->x - l_param->x;
@@ -331,14 +340,6 @@ uint16_t params_current_mode_freq_step_change(bool up) {
     param->freq_step.dirty = true;
     params_unlock(NULL);
     return param->freq_step.x;
-}
-
-
-uint32_t params_current_mode_filter_bw() {
-    x6100_mode_t mode = radio_current_mode();
-    params_mode_t *mode_params = get_params_by_mode(mode);
-
-    return mode_params->filter_high.x - mode_params->filter_low.x;
 }
 
 /* Database operations */

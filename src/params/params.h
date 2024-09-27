@@ -368,3 +368,11 @@ void params_msg_cw_delete(uint32_t id);
 band_t * params_bands_find_all(uint64_t freq, int32_t half_width, uint16_t *count);
 bool params_bands_find(uint64_t freq, band_t *band);
 bool params_bands_find_next(uint64_t freq, bool up, band_t *band);
+
+char *params_charger_str_get(radio_charger_t val);
+
+char *params_mic_str_get(x6100_mic_sel_t val);
+
+char *params_key_mode_str_get(x6100_key_mode_t val);
+
+char *params_iambic_mode_str_ger(x6100_iambic_mode_t val);
