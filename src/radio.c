@@ -44,6 +44,8 @@ static uint64_t         prev_time;
 static uint64_t         idle_time;
 static bool             mute = false;
 
+#define WITH_RADIO_LOCK(fn) radio_lock(); fn; radio_unlock();
+
 #define CHANGE_PARAM(new_val, val, dirty, radio_fn) \
     if (new_val != val) { \
         params_lock(); \
@@ -102,9 +104,7 @@ bool radio_tick() {
                 break;
 
             case RADIO_ATU_START:
-                radio_lock();
-                x6100_control_atu_tune(true);
-                radio_unlock();
+                WITH_RADIO_LOCK(x6100_control_atu_tune(true));
                 state = RADIO_ATU_WAIT;
                 break;
 
@@ -118,15 +118,11 @@ bool radio_tick() {
             case RADIO_ATU_RUN:
                 if (pack->flag.atu_status && !pack->flag.tx) {
                     params_atu_save(pack->atu_params);
-                    radio_lock();
-                    x6100_control_atu_tune(false);
-                    radio_unlock();
+                    WITH_RADIO_LOCK(x6100_control_atu_tune(false));
                     notify_rx();
 
                     if (params.atu) {
-                        radio_lock();
-                        x6100_control_cmd(x6100_atu_network, pack->atu_params);
-                        radio_unlock();
+                        WITH_RADIO_LOCK(x6100_control_cmd(x6100_atu_network, pack->atu_params));
                         params.atu_loaded = true;
                         notify_atu_update();
                     }
@@ -173,9 +169,7 @@ static void * radio_thread(void *arg) {
         int32_t idle = now_time - idle_time;
 
         if (idle > IDLE_TIMEOUT && state == RADIO_RX) {
-            radio_lock();
-            x6100_control_idle();
-            radio_unlock();
+            WITH_RADIO_LOCK(x6100_control_idle());
 
             idle_time = now_time;
         }
@@ -351,9 +345,7 @@ void radio_set_freq(uint64_t freq) {
     params_band_cur_freq_set(freq);
     params_band_cur_shift_set(shift != 0);
 
-    radio_lock();
-    x6100_control_vfo_freq_set(params_band_vfo_get(), freq - shift);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_vfo_freq_set(params_band_vfo_get(), freq - shift));
 
     radio_load_atu();
 }
@@ -414,9 +406,7 @@ uint16_t radio_change_moni(int16_t df) {
         params_lock();
         params.moni = new_val;
         params_unlock(&params.dirty.moni);
-        radio_lock();
-        x6100_control_cmd(x6100_monilevel, params.moni);
-        radio_unlock();
+        WITH_RADIO_LOCK(x6100_control_cmd(x6100_monilevel, params.moni));
         lv_msg_send(MSG_PARAM_CHANGED, NULL);
     }
 
@@ -431,9 +421,7 @@ bool radio_change_spmode(int16_t df) {
     params_bool_set(&params.spmode, df > 0);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_spmode_set(params.spmode.x);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_spmode_set(params.spmode.x));
 
     return params.spmode.x;
 }
@@ -447,9 +435,7 @@ uint16_t radio_change_rfg(int16_t df) {
     rfg = params_band_rfg_set(rfg + df);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_rfg_set(rfg);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_rfg_set(rfg));
 
     return rfg;
 }
@@ -472,9 +458,7 @@ bool radio_change_pre() {
 
     pre = params_band_cur_pre_set(!pre);
 
-    radio_lock();
-    x6100_control_vfo_pre_set(cur_vfo, pre);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_vfo_pre_set(cur_vfo, pre));
 
     voice_say_text_fmt("Preamplifier %s", pre ? "On" : "Off");
     return pre;
@@ -486,9 +470,7 @@ bool radio_change_att() {
 
     att = params_band_cur_att_set(!att);
 
-    radio_lock();
-    x6100_control_vfo_att_set(cur_vfo, att);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_vfo_att_set(cur_vfo, att));
 
     voice_say_text_fmt("Attenuator %s", att ? "On" : "Off");
     return att;
@@ -532,9 +514,7 @@ void radio_filter_get(int32_t *from_freq, int32_t *to_freq) {
 void radio_set_mode(x6100_vfo_t vfo, x6100_mode_t mode) {
     params_band_vfo_mode_set(vfo, mode);
 
-    radio_lock();
-    x6100_control_vfo_mode_set(vfo, mode);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_vfo_mode_set(vfo, mode));
     lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 }
 
@@ -622,9 +602,7 @@ static void update_agc_time() {
             break;
     }
 
-    radio_lock();
-    x6100_control_agc_time_set(agc_time);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_agc_time_set(agc_time));
 }
 
 void radio_change_agc() {
@@ -656,9 +634,7 @@ void radio_change_agc() {
 
     agc = params_band_cur_agc_set(agc);
 
-    radio_lock();
-    x6100_control_vfo_agc_set(params_band_vfo_get(), agc);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_vfo_agc_set(params_band_vfo_get(), agc));
 }
 
 void radio_change_atu() {
@@ -666,9 +642,7 @@ void radio_change_atu() {
     params.atu = !params.atu;
     params_unlock(&params.dirty.atu);
 
-    radio_lock();
-    x6100_control_atu_set(params.atu);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_atu_set(params.atu));
 
     radio_load_atu();
     voice_say_text_fmt("Auto tuner %s", params.atu ? "On" : "Off");
@@ -708,9 +682,7 @@ void radio_load_atu() {
         if (params_band_cur_shift_get()) {
             info_atu_update();
 
-            radio_lock();
-            x6100_control_atu_set(false);
-            radio_unlock();
+            WITH_RADIO_LOCK(x6100_control_atu_set(false));
 
             return;
         }
@@ -729,9 +701,7 @@ void radio_load_atu() {
 }
 
 void radio_set_pwr(float d) {
-    radio_lock();
-    x6100_control_txpwr_set(d);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_txpwr_set(d));
 }
 
 float radio_change_pwr(int16_t d) {
@@ -783,9 +753,7 @@ x6100_key_mode_t radio_change_key_mode(int16_t d) {
     params_unlock(&params.dirty.key_mode);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_key_mode_set(params.key_mode);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_key_mode_set(params.key_mode));
 
     return params.key_mode;
 }
@@ -802,9 +770,7 @@ x6100_iambic_mode_t radio_change_iambic_mode(int16_t d) {
     params_unlock(&params.dirty.iambic_mode);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_iambic_mode_set(params.iambic_mode);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_iambic_mode_set(params.iambic_mode));
 
     return params.iambic_mode;
 }
@@ -842,9 +808,7 @@ bool radio_change_key_train(int16_t d) {
     params_unlock(&params.dirty.key_train);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_key_train_set(params.key_train);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_key_train_set(params.key_train));
 
     return params.key_train;
 }
@@ -870,9 +834,7 @@ uint8_t radio_change_key_ratio(int16_t d) {
         params_lock();
         params.key_ratio = new_val;
         params_unlock(&params.dirty.key_ratio);
-        radio_lock();
-        x6100_control_key_ratio_set(params.key_ratio * 0.1f);
-        radio_unlock();
+        WITH_RADIO_LOCK(x6100_control_key_ratio_set(params.key_ratio * 0.1f));
     }
 
     return params.key_ratio;
@@ -902,9 +864,7 @@ x6100_mic_sel_t radio_change_mic(int16_t d) {
     params_unlock(&params.dirty.mic);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_mic_set(params.mic);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_mic_set(params.mic));
 
     return params.mic;
 }
@@ -933,9 +893,7 @@ uint8_t radio_change_imic(int16_t d) {
 x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo) {
     params_band_vfo_set(vfo);
 
-    radio_lock();
-    x6100_control_vfo_set(vfo);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_vfo_set(vfo));
     lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 }
 
@@ -952,17 +910,13 @@ void radio_toggle_split() {
     bool split = params_band_split_get();
     split = params_band_split_set(!split);
 
-    radio_lock();
-    x6100_control_split_set(split);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_split_set(split));
     voice_say_text_fmt("Split %s", split ? "On" : "Off");
 }
 
 void radio_poweroff() {
     if (params.charger == RADIO_CHARGER_SHADOW) {
-        radio_lock();
-        x6100_control_charger_set(true);
-        radio_unlock();
+        WITH_RADIO_LOCK(x6100_control_charger_set(true));
     }
 
     state = RADIO_POWEROFF;
@@ -992,9 +946,7 @@ radio_charger_t radio_change_charger(int16_t d) {
     params_unlock(&params.dirty.charger);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_charger_set(params.charger == RADIO_CHARGER_ON);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_charger_set(params.charger == RADIO_CHARGER_ON));
 
     return params.charger;
 }
@@ -1009,9 +961,7 @@ bool radio_change_dnf(int16_t d) {
     params_unlock(&params.dirty.dnf);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_dnf_set(params.dnf);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_dnf_set(params.dnf));
 
     return params.dnf;
 }
@@ -1048,9 +998,7 @@ bool radio_change_nb(int16_t d) {
     params_unlock(&params.dirty.nb);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_nb_set(params.nb);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_nb_set(params.nb));
 
     return params.nb;
 }
@@ -1087,9 +1035,7 @@ bool radio_change_nr(int16_t d) {
     params_unlock(&params.dirty.nr);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_nr_set(params.nr);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_nr_set(params.nr));
 
     return params.nr;
 }
@@ -1114,9 +1060,7 @@ bool radio_change_agc_hang(int16_t d) {
     params_unlock(&params.dirty.agc_hang);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    radio_lock();
-    x6100_control_agc_hang_set(params.agc_hang);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_agc_hang_set(params.agc_hang));
 
     return params.agc_hang;
 }
@@ -1144,15 +1088,11 @@ uint8_t radio_change_agc_slope(int16_t d) {
 }
 
 void radio_set_ptt(bool tx) {
-    radio_lock();
-    x6100_control_ptt_set(tx);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_ptt_set(tx));
 }
 
 void radio_set_modem(bool tx) {
-    radio_lock();
-    x6100_control_modem_set(tx);
-    radio_unlock();
+    WITH_RADIO_LOCK(x6100_control_modem_set(tx));
 }
 
 int16_t radio_change_rit(int16_t d) {
@@ -1166,9 +1106,7 @@ int16_t radio_change_rit(int16_t d) {
         params.rit = new_val;
         params_unlock(&params.dirty.rit);
         lv_msg_send(MSG_PARAM_CHANGED, NULL);
-        radio_lock();
-        x6100_control_cmd(x6100_rit, params.rit);
-        radio_unlock();
+        WITH_RADIO_LOCK(x6100_control_cmd(x6100_rit, params.rit));
     }
 
     return params.rit;
@@ -1185,9 +1123,7 @@ int16_t radio_change_xit(int16_t d) {
         params.xit = new_val;
         params_unlock(&params.dirty.xit);
         lv_msg_send(MSG_PARAM_CHANGED, NULL);
-        radio_lock();
-        x6100_control_cmd(x6100_xit, params.xit);
-        radio_unlock();
+        WITH_RADIO_LOCK(x6100_control_cmd(x6100_xit, params.xit));
     }
 
     return params.xit;
