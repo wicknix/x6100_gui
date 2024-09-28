@@ -87,6 +87,11 @@
 #define FT8_WIDTH_HZ    50
 #define FT4_WIDTH_HZ    83
 
+#define MAX_TABLE_MSG   512
+#define CLEAN_N_ROWS    64
+
+#define WAIT_SYNC_TEXT "Wait sync"
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 typedef enum {
@@ -204,7 +209,6 @@ static char                 tx_msg[64] = "";
 static ft8_qso_item_t       qso_item = {.rst_s=UNKNOWN_SNR, .rst_r=UNKNOWN_SNR};
 
 static lv_obj_t             *table;
-static int16_t              table_rows;
 
 static lv_timer_t           *timer = NULL;
 static lv_anim_t            fade;
@@ -550,26 +554,54 @@ void static process(float complex *frame) {
     wf.num_blocks++;
 }
 
+static void truncate_table() {
+    lv_coord_t     removed_rows_height = 0;
+    uint16_t       table_rows = lv_table_get_row_cnt(table);
+    if (table_rows > MAX_TABLE_MSG) {
+        LV_LOG_USER("Start");
+
+        lv_table_t *table_obj = (lv_table_t*) table;
+
+        for (size_t i = 0; i < CLEAN_N_ROWS; i++) {
+            removed_rows_height += table_obj->row_h[i];
+        }
+
+        if (table_obj->row_act > CLEAN_N_ROWS) {
+            table_obj->row_act -= CLEAN_N_ROWS;
+        } else {
+            table_obj->row_act = 0;
+        }
+
+        for (uint16_t i = CLEAN_N_ROWS; i < table_rows; i++) {
+            cell_data_t *cell_data_copy = malloc(sizeof(cell_data_t));
+            lv_table_set_cell_value(table, i-CLEAN_N_ROWS, 0, lv_table_get_cell_value(table, i, 0));
+            *cell_data_copy = *(cell_data_t *) lv_table_get_cell_user_data(table, i, 0);
+            lv_table_set_cell_user_data(table, i-CLEAN_N_ROWS, 0, cell_data_copy);
+        }
+        table_rows -= CLEAN_N_ROWS;
+
+        lv_table_set_row_cnt(table, table_rows);
+        lv_obj_scroll_by_bounded(table, 0, removed_rows_height, LV_ANIM_OFF);
+    }
+}
+
 static void add_msg_cb(lv_event_t * e) {
+    truncate_table();
     cell_data_t *cell_data = (cell_data_t *) lv_event_get_param(e);
     uint16_t    row = 0;
     uint16_t    col = 0;
     bool        scroll;
 
     lv_table_get_selected_cell(table, &row, &col);
+    uint16_t table_rows = lv_table_get_row_cnt(table);
+    if ((table_rows == 1) && strcmp(lv_table_get_cell_value(table, 0, 0), WAIT_SYNC_TEXT) == 0) {
+        table_rows--;
+    }
     scroll = table_rows == (row + 1);
 
     // Copy data, because original event data will be deleted
     cell_data_t *cell_data_copy = malloc(sizeof(cell_data_t));
     *cell_data_copy = *cell_data;
-#ifdef MAX_TABLE_MSG
-    if (table_rows > MAX_TABLE_MSG) {
-        for (uint16_t i = 1; i < table_rows; i++)
-            lv_table_set_cell_value(table, i-1, 0, lv_table_get_cell_value(table, i, 0));
-
-        table_rows--;
-    }
-#endif
 
     lv_table_set_cell_value(table, table_rows, 0, cell_data_copy->text);
     lv_table_set_cell_user_data(table, table_rows, 0, cell_data_copy);
@@ -579,8 +611,6 @@ static void add_msg_cb(lv_event_t * e) {
 
         lv_event_send(table, LV_EVENT_KEY, &c);
     }
-
-    table_rows++;
 }
 
 static void table_draw_part_begin_cb(lv_event_t * e) {
@@ -748,11 +778,9 @@ static void clean() {
 
     lv_table_set_row_cnt(table, 0);
     lv_table_set_row_cnt(table, 1);
-    lv_table_set_cell_value(table, 0, 0, "Wait sync");
+    lv_table_set_cell_value(table, 0, 0, WAIT_SYNC_TEXT);
 
     lv_waterfall_clear_data(waterfall);
-
-    table_rows = 0;
 
     int32_t *c = malloc(sizeof(int32_t));
     *c = LV_KEY_UP;
@@ -835,7 +863,6 @@ static void rotary_cb(int32_t diff) {
     }
 
     params_uint16_set(&params.ft8_tx_freq, f);
-
 
     lv_finder_set_value(finder, f);
     lv_obj_invalidate(finder);
@@ -945,8 +972,6 @@ static void construct_cb(lv_obj_t *parent) {
 
     lv_group_add_obj(keyboard_group, table);
     lv_group_set_editing(keyboard_group, true);
-
-    table_rows = 0;
 
     if (params.ft8_show_all) {
         buttons_load(0, &button_show_cq);
