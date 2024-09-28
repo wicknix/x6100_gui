@@ -19,6 +19,7 @@
 
 #define NUM_PWR_ITEMS   6
 #define NUM_VSWR_ITEMS  5
+#define UPDATE_UI_MS    40
 
 static const float      min_pwr = 0.0f;
 static const float      max_pwr = 10.0f;
@@ -29,6 +30,8 @@ static const float      max_swr = 5.0f;
 static float            pwr = 10.0f;
 static float            vswr = 5.0f;
 static float            alc;
+
+static uint64_t         prev_ui_update = 0;
 
 static lv_obj_t         *obj;
 static lv_obj_t         *alc_label;
@@ -85,8 +88,9 @@ static void tx_info_draw_cb(lv_event_t * e) {
     area.y1 = y1 - slice / 2;
     area.y2 = y1 + 32;
 
+    rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
+
     for (uint16_t i = 0; i < count; i++) {
-        rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
 
         area.x1 = x1 + 30 + i * slice;
         area.x2 = area.x1 + slice - 3;
@@ -186,6 +190,20 @@ static void rx_cb(lv_event_t * e) {
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
 }
 
+static void update_timer(lv_timer_t * timer)
+{
+    if (lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN)) {
+        return;
+    }
+    lv_event_send(obj, LV_EVENT_REFRESH, NULL);
+    if (params.mag_alc.x) {
+        msg_tiny_set_text_fmt("ALC: %.1f", alc);
+    }
+    if (dialog_is_run() || !params.mag_alc.x) {
+        lv_event_send(alc_label, EVENT_MSG_UPDATE, NULL);
+    }
+}
+
 lv_obj_t * tx_info_init(lv_obj_t *parent) {
     obj = lv_obj_create(parent);
 
@@ -217,6 +235,7 @@ lv_obj_t * tx_info_init(lv_obj_t *parent) {
     lv_label_set_text(alc_label, "");
     lv_obj_add_event_cb(alc_label, update_alc_label_cb, EVENT_MSG_UPDATE, NULL);
 
+    lv_timer_t * timer = lv_timer_create(update_timer, UPDATE_UI_MS,  NULL);
     return obj;
 }
 
@@ -238,14 +257,5 @@ void tx_info_update(float p, float s, float a) {
             lpf(&pwr, p, beta, 0.0f);
             lpf(&alc, a, beta, 0.0f);
             lpf(&vswr, s, beta, 0.0f);
-    }
-
-    event_send(obj, LV_EVENT_REFRESH, NULL);
-
-    if (params.mag_alc.x) {
-        msg_tiny_set_text_fmt("ALC: %.1f", alc);
-    }
-    if (dialog_is_run() || !params.mag_alc.x) {
-        event_send(alc_label, EVENT_MSG_UPDATE, NULL);
     }
 }
