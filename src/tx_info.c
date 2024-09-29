@@ -69,15 +69,14 @@ static void tx_info_draw_cb(lv_event_t * e) {
     lv_area_t           area;
     lv_point_t          label_size;
     uint32_t            count;
+    uint8_t             slices_total;
+    uint8_t             slice_spacing = 2;
 
     lv_coord_t x1 = obj->coords.x1 + 7;
     lv_coord_t y1 = obj->coords.y1 + 17;
 
-    lv_coord_t w = lv_obj_get_width(obj);
+    lv_coord_t w = lv_obj_get_width(obj) - 60;
     lv_coord_t h = lv_obj_get_height(obj) - 1;
-
-    uint8_t     slice = 10;
-    lv_coord_t  len = 300;
 
     /* PWR rects */
 
@@ -85,17 +84,22 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
     rect_dsc.bg_opa = LV_OPA_80;
 
-    count = len * (pwr - min_pwr) / (max_pwr - min_pwr) / slice;
+    float slice_pwr_step = 0.25f;
+    slices_total = (max_pwr - min_pwr) / slice_pwr_step;
+    uint8_t     slice_pwr_width = w / slices_total;
 
-    area.y1 = y1 - slice / 2;
+    count = (pwr - min_pwr + slice_pwr_step) / slice_pwr_step;
+    count = LV_MIN(count, slices_total);
+
+    area.y1 = y1 - 5;
     area.y2 = y1 + 32;
 
     rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
 
     for (uint16_t i = 0; i < count; i++) {
 
-        area.x1 = x1 + 30 + i * slice;
-        area.x2 = area.x1 + slice - 3;
+        area.x1 = x1 + 30 + i * slice_pwr_width - slice_pwr_width / 2 + slice_spacing / 2;
+        area.x2 = area.x1 + slice_pwr_width - slice_spacing;
 
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
     }
@@ -106,26 +110,31 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
     rect_dsc.bg_opa = LV_OPA_80;
 
-    count = len * (vswr - min_swr) / (max_swr - min_swr) / slice;
+    float slice_swr_step = 0.1f;
+    slices_total = (max_swr - min_swr) / slice_swr_step;
+    uint8_t     slice_swr_width = w / slices_total;
 
-    area.y1 = y1 - slice / 2 + 54;
+    count = (vswr - min_swr + slice_swr_step) / slice_swr_step;
+
+    area.y1 = y1 - 5 + 54;
     area.y2 = y1 + 32 + 54;
 
-    for (uint16_t i = 0; i < count; i++) {
-        float s = i * (max_swr - min_swr) / (len / slice) + min_swr;
+    float swr_val = vswr_items[0].val;
 
-        if (s <= 2.0f) {
+    for (uint16_t i = 0; i < count; i++) {
+        if (swr_val <= 2.0f) {
             rect_dsc.bg_color = lv_color_hex(0xAAAAAA);
-        } else if (s <= 3.0f) {
+        } else if (swr_val <= 3.0f) {
             rect_dsc.bg_color = lv_color_hex(0xAAAA00);
         } else {
             rect_dsc.bg_color = lv_color_hex(0xAA0000);
         }
 
-        area.x1 = x1 + 30 + i * slice;
-        area.x2 = area.x1 + slice - 3;
+        area.x1 = x1 + 30 + i * slice_swr_width - slice_swr_width / 2 + slice_spacing / 2;
+        area.x2 = area.x1 + slice_swr_width - slice_spacing;
 
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
+        swr_val += slice_swr_step;
     }
 
     /* PWR Labels */
@@ -147,7 +156,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
         lv_txt_get_size(&label_size, label, label_dsc.font, 0, 0, LV_COORD_MAX, 0);
 
-        area.x1 = x1 + 30 + len * (val - min_pwr) / (max_pwr - min_pwr) - (label_size.x / 2);
+        area.x1 = x1 + 30 + slice_pwr_width * ((val  - min_pwr) / slice_pwr_step) - label_size.x / 2;
         area.x2 = area.x1 + label_size.x;
 
         lv_draw_label(draw_ctx, &label_dsc, &area, label, NULL);
@@ -167,7 +176,7 @@ static void tx_info_draw_cb(lv_event_t * e) {
 
         lv_txt_get_size(&label_size, label, label_dsc.font, 0, 0, LV_COORD_MAX, 0);
 
-        area.x1 = x1 + 30 + len * (val - min_swr) / (max_swr - min_swr) - (label_size.x / 2);
+        area.x1 = x1 + 30 + slice_swr_width * ((val  - min_swr) / slice_swr_step) - label_size.x / 2;
         area.x2 = area.x1 + label_size.x;
 
         lv_draw_label(draw_ctx, &label_dsc, &area, label, NULL);

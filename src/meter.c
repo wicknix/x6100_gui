@@ -69,8 +69,7 @@ static void meter_draw_cb(lv_event_t * e) {
 
     rect_dsc.bg_opa = LV_OPA_80;
 
-    // uint32_t count = slice_db * slice * (meter_db - min_db) / (max_db - min_db);
-    uint32_t count = (meter_db - min_db) / slice_db;
+    uint32_t count = (meter_db - min_db + slice_db) / slice_db;
     count = LV_MIN(count, slices_total);
 
     area.y1 = y1 - 5;
@@ -113,14 +112,11 @@ static void meter_draw_cb(lv_event_t * e) {
     label_dsc.font = &sony_22;
 
     area.x1 = x1;
-    area.y1 = y1;
     area.x2 = x1 + 20;
-    area.y2 = y1 + 32;
-
-    lv_point_t label_size;
-
     area.y1 = y1 + 5;
     area.y2 = area.y1 + 18;
+
+    lv_point_t label_size;
 
     for (uint8_t i = 0; i < NUM_ITEMS; i++) {
         char    *label = s_items[i].label;
