@@ -126,10 +126,14 @@ int main(void) {
     lv_scr_load(main_obj);
 #endif
 
+    int64_t next_loop_time, sleep_time;
     while (1) {
-        lv_timer_handler();
+        next_loop_time = get_time() + lv_timer_handler();
         event_obj_check();
-        usleep(5 * 1000);
+        sleep_time = next_loop_time - get_time();
+        if (sleep_time > 0) {
+            usleep(sleep_time * 1000);
+        }
     }
     return 0;
 }
