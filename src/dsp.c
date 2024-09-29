@@ -182,8 +182,8 @@ void dsp_samples(float complex *buf_samples, uint16_t size, bool tx) {
         wf_sg = waterfall_sg_rx;
     }
     process_samples(buf_samples, size, sp_decim, sp_sg, wf_sg);
-    pthread_mutex_unlock(&spectrum_mux);
     update_spectrum(sp_sg, now, tx);
+    pthread_mutex_unlock(&spectrum_mux);
     if (update_waterfall(wf_sg, now, tx)) {
         update_s_meter();
         // TODO: skip on disabled auto min/max
