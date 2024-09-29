@@ -22,6 +22,7 @@
 #include "msg.h"
 #include "util.h"
 #include "recorder.h"
+#include "tx_info.h"
 
 #include "widgets/lv_waterfall.h"
 #include "widgets/lv_finder.h"
@@ -1262,6 +1263,22 @@ static bool make_answer(const msg_t * msg, int8_t snr, bool rx_odd) {
     return true;
 }
 
+static float get_correction() {
+    static uint8_t msg_id = 0;
+    float correction = 0.0f;
+    float pwr, alc;
+
+    if (tx_info_refresh(&msg_id, &alc, &pwr, NULL)) {
+        float target_pwr = LV_MIN(params.pwr, MAX_PWR);
+        if (alc > 0.5f) {
+            correction = log10f(log10f(10.0f - alc)) * 10.0f;
+        } else if (target_pwr - pwr > 0.5f) {
+            // TODO: check battery level
+            correction = log10f(target_pwr / pwr) * 5.0f;
+        }
+    }
+    return correction;
+}
 
 static void tx_worker() {
     uint8_t packed[FTX_LDPC_K_BYTES];
@@ -1297,9 +1314,17 @@ static void tx_worker() {
     radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
     radio_set_modem(true);
 
-    float gain_scale = -8.2f + params.ft8_output_gain_offset + log10f(LV_MIN(params.pwr, MAX_PWR)) * 5;
+    float target_pwr = LV_MIN(params.pwr, MAX_PWR);
+    float base_gain_scale = -8.2f + log10f(target_pwr) * 5;
+    float gain_scale = base_gain_scale + params.ft8_output_gain_offset.x;
+    size_t counter = 0;
 
     while (true) {
+        if (counter > 30) {
+            gain_scale += get_correction() * 0.4f;
+            if (gain_scale > 0.0) gain_scale = 0.0f;
+            else if (gain_scale < -40.0f) gain_scale = -40.0f;
+        }
         if (n_samples <= 0 || state != TX_PROCESS) {
             state = RX_PROCESS;
             break;
@@ -1310,8 +1335,9 @@ static void tx_worker() {
 
         n_samples -= part;
         ptr += part;
+        counter++;
     }
-
+    params_float_set(&params.ft8_output_gain_offset, gain_scale - base_gain_scale);
     audio_play_wait();
     radio_set_modem(false);
     // Restore freq

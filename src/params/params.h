@@ -192,8 +192,8 @@ typedef struct {
     params_uint16_t     ft8_tx_freq;
     params_bool_t       ft8_auto;
 
-    // Temporal fix for different output power on FT8
-    float               ft8_output_gain_offset;
+    // FT8 gain offset for different radios/bands/modes
+    params_float_t      ft8_output_gain_offset;
 
     /* Long press actions */
 
@@ -352,6 +352,7 @@ void params_bool_set(params_bool_t *var, bool x);
 void params_uint8_set(params_uint8_t *var, uint8_t x);
 void params_uint16_set(params_uint16_t *var, uint16_t x);
 void params_str_set(params_str_t *var, const char *x);
+void params_float_set(params_float_t *var, float x);
 
 uint8_t params_uint8_change(params_uint8_t *var, int16_t df);
 

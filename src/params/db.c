@@ -76,6 +76,16 @@ void params_write_int64(const char *name, uint64_t data, bool *dirty) {
     *dirty = false;
 }
 
+void params_write_float(const char *name, float data, bool *dirty) {
+    sqlite3_bind_text(write_stmt, 1, name, strlen(name), 0);
+    sqlite3_bind_double(write_stmt, 2, (double) data);
+    sqlite3_step(write_stmt);
+    sqlite3_reset(write_stmt);
+    sqlite3_clear_bindings(write_stmt);
+
+    *dirty = false;
+}
+
 void params_write_text(const char *name, const char *data, bool *dirty) {
     sqlite3_bind_text(write_stmt, 1, name, strlen(name), 0);
     sqlite3_bind_text(write_stmt, 2, data, strlen(data), 0);

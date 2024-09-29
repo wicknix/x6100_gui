@@ -27,9 +27,11 @@ static const float      max_pwr = 10.0f;
 static const float      min_swr = 1.0f;
 static const float      max_swr = 5.0f;
 
-static float            pwr = 10.0f;
-static float            vswr = 5.0f;
+static float            pwr = 0.0f;
+static float            vswr = 0.0f;
 static float            alc;
+
+static uint8_t          msg_id;
 
 static uint64_t         prev_ui_update = 0;
 
@@ -178,9 +180,9 @@ static void update_alc_label_cb(lv_event_t * e) {
 }
 
 static void tx_cb(lv_event_t * e) {
-    pwr = 0;
-    vswr = 0;
-    alc = 0;
+    pwr = 0.0f;
+    vswr = 0.0f;
+    alc = 0.0f;
 
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(obj);
@@ -258,4 +260,16 @@ void tx_info_update(float p, float s, float a) {
             lpf(&alc, a, beta, 0.0f);
             lpf(&vswr, s, beta, 0.0f);
     }
+    msg_id++;
+}
+
+bool tx_info_refresh(uint8_t * prev_msg_id, float * alc_p, float * pwr_p, float * vswr_p) {
+    if (*prev_msg_id == msg_id) {
+        return false;
+    }
+    if (alc_p) *alc_p = alc;
+    if (pwr_p) *pwr_p = pwr;
+    if (vswr_p) *vswr_p = vswr;
+    *prev_msg_id = msg_id;
+    return true;
 }

@@ -119,7 +119,7 @@ params_t params = {
     .ft8_band               = 5,
     .ft8_tx_freq            = { .x = 1325,      .name = "ft8_tx_freq" },
     .ft8_auto               = { .x = true,      .name = "ft8_auto" },
-    .ft8_output_gain_offset = 0.0f,
+    .ft8_output_gain_offset = { .x = 0.0f,      .name = "ft8_output_gain_offset" },
 
     .long_gen               = ACTION_SCREENSHOT,
     .long_app               = ACTION_APP_RECORDER,
@@ -187,6 +187,15 @@ static bool params_load_uint16(params_uint16_t *var, const char *name, const int
     return false;
 }
 
+static bool params_load_float(params_float_t *var, const char *name, float x) {
+    if (strcmp(name, var->name) == 0) {
+        var->x = x;
+        return true;
+    }
+
+    return false;
+}
+
 static bool params_load_str(params_str_t *var, const char *name, const char *x) {
     if (strcmp(name, var->name) == 0) {
         strncpy(var->x, x, sizeof(var->x) - 1);
@@ -208,6 +217,7 @@ static bool params_load() {
 
     while (sqlite3_step(stmt) != SQLITE_DONE) {
         const char      *name = sqlite3_column_text(stmt, 0);
+        const float     f = sqlite3_column_double(stmt, 1);
         const int32_t   i = sqlite3_column_int(stmt, 1);
         const int64_t   l = sqlite3_column_int64(stmt, 1);
         const char      *t = sqlite3_column_text(stmt, 1);
@@ -381,6 +391,7 @@ static bool params_load() {
         if (params_load_bool(&params.waterfall_zoom, name, i)) continue;
         if (params_load_bool(&params.spmode, name, i)) continue;
         if (params_load_bool(&params.ft8_auto, name, i)) continue;
+        if (params_load_float(&params.ft8_output_gain_offset, name, f)) continue;
 
         if (params_load_uint8(&params.voice_mode, name, i)) continue;
         if (params_load_uint8(&params.voice_lang, name, i)) continue;
@@ -418,6 +429,12 @@ static void params_save_uint8(params_uint8_t *var) {
 static void params_save_uint16(params_uint16_t *var) {
     if (var->dirty) {
         params_write_int(var->name, var->x, &var->dirty);
+    }
+}
+
+static void params_save_float(params_float_t *var) {
+    if (var->dirty) {
+        params_write_float(var->name, var->x, &var->dirty);
     }
 }
 
@@ -551,6 +568,7 @@ static void params_save() {
     params_save_bool(&params.waterfall_zoom);
     params_save_bool(&params.spmode);
     params_save_bool(&params.ft8_auto);
+    params_save_float(&params.ft8_output_gain_offset);
 
     params_save_str(&params.qth);
     params_save_str(&params.callsign);
@@ -700,11 +718,6 @@ void params_init() {
     pthread_create(&thread, NULL, params_thread, NULL);
     pthread_detach(thread);
     params_modulation_setup(&params_lo_offset_get);
-
-    // Fix for different output poser on different devices
-    if (access("/mnt/.fix_ft8_power", F_OK) == 0) {
-        params.ft8_output_gain_offset = -4.0f;
-    }
 }
 
 int32_t params_lo_offset_get() {
@@ -940,6 +953,16 @@ void params_uint8_set(params_uint8_t *var, uint8_t x) {
 }
 
 void params_uint16_set(params_uint16_t *var, uint16_t x) {
+    params_lock();
+    var->x = x;
+    params_unlock(&var->dirty);
+
+    if (var->voice) {
+        voice_say_int(var->voice, var->x);
+    }
+}
+
+void params_float_set(params_float_t *var, float x) {
     params_lock();
     var->x = x;
     params_unlock(&var->dirty);
