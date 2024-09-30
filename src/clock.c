@@ -57,10 +57,6 @@ static void show_time() {
     time_t      now;
     struct tm   *t;
 
-    if (!backlight_is_on()) {
-        return;
-    }
-
     if (params.clock_view == CLOCK_TIME_ALLWAYS) {
         set_state(CLOCK_TIME);
     } else if (params.clock_view == CLOCK_POWER_ALLWAYS) {

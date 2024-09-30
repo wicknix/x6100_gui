@@ -168,9 +168,7 @@ void band_info_update(uint64_t f) {
     bands = params_bands_find_all(f, width_hz / 2, &bands_count);
     freq = f;
 
-    if (backlight_is_on()) {
-        lv_obj_invalidate(obj);
-    }
+    lv_obj_invalidate(obj);
 
     if (!fade_run) {
         fade_run = true;
