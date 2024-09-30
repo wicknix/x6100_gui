@@ -1317,6 +1317,7 @@ static void tx_worker() {
     float target_pwr = LV_MIN(params.pwr, MAX_PWR);
     float base_gain_scale = -8.2f + log10f(target_pwr) * 5;
     float gain_scale = base_gain_scale + params.ft8_output_gain_offset.x;
+    float prev_gain_scale = gain_scale;
     size_t counter = 0;
 
     while (true) {
@@ -1330,7 +1331,13 @@ static void tx_worker() {
             break;
         }
         part = LV_MIN(1024 * 2, n_samples);
-        audio_gain_db(ptr, part, gain_scale, ptr);
+        if (gain_scale == prev_gain_scale) {
+            audio_gain_db(ptr, part, gain_scale, ptr);
+        } else {
+            // Smooth change gain
+            audio_gain_db_transition(ptr, part, prev_gain_scale, gain_scale, ptr);
+            prev_gain_scale = gain_scale;
+        }
         audio_play(ptr, part);
 
         n_samples -= part;

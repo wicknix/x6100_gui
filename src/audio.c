@@ -194,6 +194,26 @@ void audio_gain_db(int16_t *buf, size_t samples, float gain, int16_t *out) {
     }
 }
 
+void audio_gain_db_transition(int16_t *buf, size_t samples, float gain1, float gain2, int16_t *out) {
+    float scale1 = exp10f(gain1 / 10.0f);
+    float scale2 = exp10f(gain2 / 10.0f);
+    float scale;
+    for (uint16_t i = 0; i < samples; i++) {
+        scale = scale1 + i * (scale2 - scale1) / samples;
+        int32_t x = buf[i] * scale;
+
+        if (x > 32767) {
+            x = 32767;
+        }
+
+        if (x < -32767) {
+            x = -32767;
+        }
+
+        out[i] = x;
+    }
+}
+
 void audio_play_en(bool on) {
     if (on) {
         x6100_control_hmic_set(0);
