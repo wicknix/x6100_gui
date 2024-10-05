@@ -18,9 +18,6 @@ jobs:
     - name: cleanup
       run: |
         sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
     - name: check free space
       run: |
         df -h
@@ -60,9 +57,9 @@ jobs:
     # Build
     - name: Build
       run: |
-        cd AetherX6100Buildroot/build && make
-        make libsndfile-dirclean && make libsndfile
-        make rhvoice-dirclean && make rhvoice
+        cd AetherX6100Buildroot/build
+        make lame mpg123
+        make libsndfile-dirclean
         make
 
     # Compress image
