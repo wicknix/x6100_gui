@@ -84,7 +84,7 @@ bool radio_tick() {
             delay = 0;
             clock_update_power(pack->vext * 0.1f, pack->vbat*0.1f, pack->batcap, pack->flag.charging);
         }
-        dsp_samples(pack->samples, RADIO_SAMPLES, pack->flag.tx);
+        dsp_samples(((void *)pack) + offsetof(x6100_flow_t, samples), RADIO_SAMPLES, pack->flag.tx);
 
         switch (state) {
             case RADIO_RX:
