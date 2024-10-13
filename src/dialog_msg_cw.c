@@ -140,17 +140,18 @@ static void key_cb(lv_event_t * e) {
     }
 }
 
-static void textarea_window_close_cb() {
+static bool textarea_window_close_cb() {
     lv_group_add_obj(keyboard_group, table);
     lv_group_set_editing(keyboard_group, true);
+    return true;
 }
 
-static void textarea_window_new_ok_cb() {
+static bool textarea_window_new_ok_cb() {
     params_msg_cw_new(textarea_window_get());
-    textarea_window_close_cb();
+    return textarea_window_close_cb();
 }
 
-static void textarea_window_edit_ok_cb() {
+static bool textarea_window_edit_ok_cb() {
     const char *val = textarea_window_get();
     int16_t     row = 0;
     int16_t     col = 0;
@@ -158,7 +159,7 @@ static void textarea_window_edit_ok_cb() {
     lv_table_get_selected_cell(table, &row, &col);
     lv_table_set_cell_value(table, row, col, val);
     params_msg_cw_edit(ids[row], val);
-    textarea_window_close_cb();
+    return textarea_window_close_cb();
 }
 
 static const char* get_msg() {

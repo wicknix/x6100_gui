@@ -262,15 +262,16 @@ static void * beacon_thread(void *arg) {
     return NULL;
 }
 
-static void textarea_window_close_cb() {
+static bool textarea_window_close_cb() {
     lv_group_add_obj(keyboard_group, table);
     lv_group_set_editing(keyboard_group, true);
 
     free(prev_filename);
     prev_filename = NULL;
+    return true;
 }
 
-static void textarea_window_edit_ok_cb() {
+static bool textarea_window_edit_ok_cb() {
     const char *new_filename = textarea_window_get();
 
     if (strcmp(prev_filename, new_filename) != 0) {
@@ -288,6 +289,7 @@ static void textarea_window_edit_ok_cb() {
         free(prev_filename);
         prev_filename = NULL;
     }
+    return true;
 }
 
 static void tx_cb(lv_event_t * e) {

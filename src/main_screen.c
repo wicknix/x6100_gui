@@ -42,6 +42,7 @@
 #include "dialog_qth.h"
 #include "dialog_recorder.h"
 #include "dialog_callsign.h"
+#include "dialog_wifi.h"
 #include "backlight.h"
 #include "buttons.h"
 #include "recorder.h"
@@ -234,6 +235,11 @@ void main_screen_app(uint8_t page_app) {
         case PAGE_RECORDER:
             dialog_construct(dialog_recorder, obj);
             voice_say_text_fmt("Audio recorder window");
+            break;
+
+        case PAGE_WIFI:
+            dialog_construct(dialog_wifi, obj);
+            voice_say_text_fmt("Wi-Fi window");
             break;
 
         default:
@@ -890,10 +896,11 @@ static void freq_shift(int16_t diff) {
 }
 
 static void main_screen_rotary_cb(lv_event_t * e) {
-    int32_t     diff = lv_event_get_param(e);
+    int32_t *diff = (int32_t *) lv_event_get_param(e);
 
-    freq_shift(diff);
-    dialog_rotary(diff);
+    freq_shift(*diff);
+    dialog_rotary(*diff);
+    free(diff);
 }
 
 static void spectrum_key_cb(lv_event_t * e) {

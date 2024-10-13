@@ -219,17 +219,23 @@ static button_item_t    buttons[] = {
 
     /* APP */
 
-    { .label_type = LABEL_TEXT, .label = "(APP 1:2)",         .press = button_next_page_cb,   .next = PAGE_APP_2, .prev = PAGE_APP_2, .voice = "Application|page 1" },
+    { .label_type = LABEL_TEXT, .label = "(APP 1:3)",         .press = button_next_page_cb,   .next = PAGE_APP_2, .prev = PAGE_APP_3, .voice = "Application|page 1" },
     { .label_type = LABEL_TEXT, .label = "RTTY",              .press = button_app_page_cb,    .data = PAGE_RTTY },
     { .label_type = LABEL_TEXT, .label = "FT8",               .press = button_app_page_cb,    .data = PAGE_FT8 },
     { .label_type = LABEL_TEXT, .label = "SWR\nScan",         .press = button_app_page_cb,    .data = PAGE_SWRSCAN },
     { .label_type = LABEL_TEXT, .label = "GPS",               .press = button_app_page_cb,    .data = PAGE_GPS },
 
-    { .label_type = LABEL_TEXT, .label = "(APP 2:2)",         .press = button_next_page_cb,   .next = PAGE_APP_1, .prev = PAGE_APP_1, .voice = "Application|page 2" },
+    { .label_type = LABEL_TEXT, .label = "(APP 2:3)",         .press = button_next_page_cb,   .next = PAGE_APP_3, .prev = PAGE_APP_1, .voice = "Application|page 2" },
     { .label_type = LABEL_TEXT, .label = "Recorder",          .press = button_app_page_cb,    .data = PAGE_RECORDER },
     { .label_type = LABEL_TEXT, .label = "QTH",               .press = button_action_cb,      .data = ACTION_APP_QTH },
     { .label_type = LABEL_TEXT, .label = "Callsign",          .press = button_action_cb,      .data = ACTION_APP_CALLSIGN },
     { .label_type = LABEL_TEXT, .label = "Settings",          .press = button_app_page_cb,    .data = PAGE_SETTINGS },
+
+    { .label_type = LABEL_TEXT, .label = "(APP 3:3)",         .press = button_next_page_cb,   .next = PAGE_APP_1, .prev = PAGE_APP_2, .voice = "Application|page 2" },
+    { .label_type = LABEL_TEXT, .label = "WiFi",              .press = button_app_page_cb,    .data = PAGE_WIFI },
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
 
     /* RTTY */
 
@@ -306,6 +312,13 @@ static button_item_t    buttons[] = {
     { .label_type = LABEL_TEXT, .label = "Rename",            .press = dialog_recorder_rename_cb },
     { .label_type = LABEL_TEXT, .label = "Delete",            .press = dialog_recorder_delete_cb },
     { .label_type = LABEL_TEXT, .label = "Play",              .press = dialog_recorder_play_cb },
+
+    /* WIFI */
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
+    { .label_type = LABEL_TEXT, .label = "",                  .press = NULL },
 };
 
 void buttons_init(lv_obj_t *parent) {
@@ -337,7 +350,7 @@ void buttons_init(lv_obj_t *parent) {
     lv_msg_subscribe(MSG_PARAM_CHANGED, param_changed_cb, NULL);
 }
 
-void buttons_load(uint8_t n, button_item_t *item) {
+lv_obj_t * buttons_load(uint8_t n, button_item_t *item) {
     lv_obj_t        *label = lv_obj_get_user_data(btn[n].obj);
 
     lv_obj_remove_event_cb(btn[n].obj, NULL);
@@ -350,6 +363,7 @@ void buttons_load(uint8_t n, button_item_t *item) {
     }
 
     btn[n].item = item;
+    return btn[n].obj;
 }
 
 void buttons_load_page(button_page_t page) {

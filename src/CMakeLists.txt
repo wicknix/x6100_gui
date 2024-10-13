@@ -14,6 +14,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     dialog_msg_voice.c dialog_recorder.c dialog_qth.c dialog_callsign.c
     textarea_window.c cw_encoder.c buttons.c vol.c recorder.c
     qth.c voice.cpp gfsk.c cw_tune_ui.c adif.c qso_log.c scheduler.c
+    dialog_wifi.c wifi.c
 )
 
 add_subdirectory(fonts)
@@ -25,22 +26,23 @@ include_directories(utf8)
 include_directories(${CMAKE_SYSROOT}/usr/include/RHVoice/)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
+pkg_check_modules(deps REQUIRED IMPORTED_TARGET libnm dbus-glib-1 sqlite3 libpng libgps sndfile libudev libpulse libpulse-simple)
+
 
 target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer -fasynchronous-unwind-tables)
 target_link_options(${PROJECT_NAME} PRIVATE -g -rdynamic)
 
-# target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-sanitize-recover)
-# target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-sanitize-recover -static-libasan -static-libubsan)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::deps)
+
+# target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined  -fno-omit-frame-pointer -fno-sanitize-recover)
+# target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-recover -static-libasan -static-libubsan)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 target_link_libraries(${PROJECT_NAME} PRIVATE lvgl lvgl::drivers)
 target_link_libraries(${PROJECT_NAME} PRIVATE aether_x6100_control)
 target_link_libraries(${PROJECT_NAME} PRIVATE liquid m)
-target_link_libraries(${PROJECT_NAME} PRIVATE sqlite3)
-target_link_libraries(${PROJECT_NAME} PRIVATE pulse pulse-simple)
-target_link_libraries(${PROJECT_NAME} PRIVATE png)
-target_link_libraries(${PROJECT_NAME} PRIVATE gps)
-target_link_libraries(${PROJECT_NAME} PRIVATE sndfile)
 target_link_libraries(${PROJECT_NAME} PRIVATE RHVoice RHVoice_core RHVoice_audio)
-target_link_libraries(${PROJECT_NAME} PRIVATE udev)

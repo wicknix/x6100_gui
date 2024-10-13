@@ -28,7 +28,7 @@ static dialog_t             dialog = {
 
 dialog_t                    *dialog_qth = &dialog;
 
-static void edit_ok() {
+static bool edit_ok() {
     const char *qth = textarea_window_get();
 
     if (grid_check(qth)) {
@@ -38,10 +38,12 @@ static void edit_ok() {
     }
 
     dialog_destruct(&dialog);
+    return true;
 }
 
-static void edit_cancel() {
+static bool edit_cancel() {
     dialog_destruct(&dialog);
+    return true;
 }
 
 static void construct_cb(lv_obj_t *parent) {

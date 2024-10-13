@@ -37,7 +37,9 @@ static void rotary_input_read(lv_indev_drv_t *drv, lv_indev_data_t *data) {
             backlight_tick();
 
             if (rotary->left[0] == 0 && rotary->right[0] == 0) {
-                lv_event_send(lv_scr_act(), EVENT_ROTARY, (void *) diff);
+                int32_t *diff_copy = (int32_t *) malloc(sizeof(int32_t));
+                *diff_copy = diff;
+                lv_event_send(lv_scr_act(), EVENT_ROTARY, (void *) diff_copy);
             } else {
                 data->continue_reading = 1;
                 remain_diff = diff;

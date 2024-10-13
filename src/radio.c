@@ -259,7 +259,6 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb, radio_st
     if (!x6100_flow_init())
         return;
 
-    x6100_gpio_set(x6100_pin_wifi, 1);          /* WiFi off */
     x6100_gpio_set(x6100_pin_morse_key, 1);     /* Morse key off */
 
     notify_tx = tx_cb;

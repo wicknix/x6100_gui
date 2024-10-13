@@ -227,6 +227,10 @@ typedef struct {
     params_str_t        qth;
     params_str_t        callsign;
 
+    /* WiFi / BT */
+
+    params_bool_t       wifi_enabled;
+
     /* durty flags */
 
     struct {

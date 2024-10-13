@@ -6,8 +6,8 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-#include "lvgl/lvgl.h"
 #include "dialog.h"
+
 #include "styles.h"
 #include "main_screen.h"
 #include "keyboard.h"

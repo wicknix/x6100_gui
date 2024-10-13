@@ -36,6 +36,7 @@ typedef enum {
 
     PAGE_APP_1,
     PAGE_APP_2,
+    PAGE_APP_3,
 
     PAGE_RTTY,
     PAGE_SETTINGS,
@@ -47,6 +48,7 @@ typedef enum {
     PAGE_MSG_VOICE_1,
     PAGE_MSG_VOICE_2,
     PAGE_RECORDER,
+    PAGE_WIFI,
 } button_page_t;
 
 typedef enum {
@@ -84,7 +86,7 @@ typedef struct {
 } button_item_t;
 
 void buttons_init(lv_obj_t *parent);
-void buttons_load(uint8_t n, button_item_t *item);
+lv_obj_t * buttons_load(uint8_t n, button_item_t *item);
 void buttons_load_page(button_page_t page);
 void buttons_unload_page();
 void buttons_press(uint8_t n, bool hold);

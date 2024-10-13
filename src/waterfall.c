@@ -161,7 +161,6 @@ void waterfall_set_height(lv_coord_t h) {
     memset(waterfall_cache, 0, WATERFALL_NFFT * height * PX_BYTES);
 
     lv_obj_add_event_cb(img, do_scroll_cb, LV_EVENT_DRAW_POST_END, NULL);
-    lv_obj_add_event_cb(img, redraw_cb, LV_EVENT_DRAW_MAIN_BEGIN, NULL);
 
     waterfall_min_max_reset();
     band_info_init(obj);
@@ -286,6 +285,7 @@ static void refresh_waterfall( void * arg) {
     refresh_counter++;
     if (refresh_counter >= refresh_period) {
         refresh_counter = 0;
+        redraw_cb(NULL);
         lv_obj_invalidate(img);
     }
 }

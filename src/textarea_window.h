@@ -13,7 +13,7 @@
 
 #include "lvgl/lvgl.h"
 
-typedef void (*textarea_window_cb_t)(void);
+typedef bool (*textarea_window_cb_t)(void);
 
 lv_obj_t * textarea_window_open(textarea_window_cb_t ok_cb, textarea_window_cb_t cancel_cb);
 void textarea_window_close();

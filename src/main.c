@@ -37,6 +37,7 @@
 #include "vol.h"
 #include "qso_log.h"
 #include "scheduler.h"
+#include "wifi.h"
 
 #define DISP_BUF_SIZE (800 * 480 * 4)
 
@@ -103,6 +104,7 @@ int main(void) {
         &main_screen_notify_rx,
         &main_screen_notify_atu_update
     );
+    wifi_power_setup();
     backlight_init();
     cat_init();
     pannel_visible();
@@ -123,11 +125,12 @@ int main(void) {
     lv_scr_load(main_obj);
 #endif
 
-    int64_t next_loop_time, sleep_time;
+    int64_t next_loop_time, sleep_time, loop_start_time;
     while (1) {
-        next_loop_time = get_time() + lv_timer_handler();
+        loop_start_time = get_time();
         event_obj_check();
         scheduler_work();
+        next_loop_time = lv_timer_handler() + loop_start_time;
         sleep_time = next_loop_time - get_time();
         if (sleep_time > 0) {
             usleep(sleep_time * 1000);
