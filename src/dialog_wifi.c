@@ -22,12 +22,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define DIALOG_WIDTH 775
+#define DIALOG_HEIGHT 320
+#define PARAMS_WIDTH 300
+
 #define SIZE_OF_ARRAY(arr) (sizeof(arr) / sizeof(*arr))
+
+enum selected_ap_type {
+    SELECTED_AP_NONE,
+    SELECTED_AP_UNKNOWN,
+    SELECTED_AP_KNOWN
+};
 
 static void construct_cb(lv_obj_t *parent);
 static void destruct_cb();
 static void key_cb(lv_event_t *e);
 static void cell_selected_cb(lv_event_t *e);
+static void ap_table_draw_event_cb(lv_event_t *e);
 
 // button callbacks
 static void wifi_bt_toggle_cb(lv_event_t *e);
@@ -35,6 +46,7 @@ static void start_scan_cb(lv_event_t *e);
 static void connect_cb(lv_event_t *e);
 static void con_update_cb(lv_event_t *e);
 static void con_delete_cb(lv_event_t *e);
+
 // button label getters
 static char *wifi_on_off_label_getter();
 static char *wifi_scan_label_getter();
@@ -45,8 +57,6 @@ static char *wifi_con_delete_label_getter();
 static void start_refresh_ap_list();
 static void stop_refresh_ap_list();
 static void update_aps_table_cb(lv_timer_t *);
-// static void ap_add_cb(wifi_ap_info_t *);
-// static void ap_del_cb(wifi_ap_info_t *);
 
 static int compare_aps(const void *a, const void *b);
 
@@ -70,6 +80,7 @@ static lv_obj_t *button_objs[SIZE_OF_ARRAY(buttons)];
 
 static lv_timer_t *timer_refresh_ap = NULL;
 static lv_timer_t *timer_status = NULL;
+static void       *subscription = NULL;
 
 static lv_obj_t *ap_table;
 static lv_obj_t *label_status;
@@ -78,7 +89,7 @@ static lv_obj_t *label_gateway;
 static lv_obj_t *label_status;
 
 static bool disable_buttons = false;
-static bool selected_known = false;
+static enum selected_ap_type sel_ap_type = SELECTED_AP_NONE;
 
 static wifi_ap_info_t cur_ap_info;
 static char          *cur_password = NULL;
@@ -104,11 +115,6 @@ static void construct_cb(lv_obj_t *parent) {
         start_refresh_ap_list();
     }
 
-#define DIALOG_WIDTH 775
-#define DIALOG_HEIGHT 320
-
-#define PARAMS_WIDTH 340
-
     // Container
     lv_obj_t *cont = lv_obj_create(dialog.obj);
     lv_obj_remove_style(cont, NULL, LV_STATE_ANY | LV_PART_MAIN);
@@ -126,10 +132,6 @@ static void construct_cb(lv_obj_t *parent) {
     // Params
     static lv_style_t style_val_label;
     lv_style_init(&style_val_label);
-    // lv_style_set_bg_color(&style_val_label, lv_color_hex(0x115588));
-    // lv_style_set_bg_opa(&style_val_label, LV_OPA_50);
-    // lv_style_set_border_width(&style_val_label, 2);
-    // lv_style_set_border_color(&style_val_label, lv_color_black());
     lv_style_set_pad_bottom(&style_val_label, 20);
     lv_style_set_pad_left(&style_val_label, 10);
 
@@ -178,19 +180,24 @@ static void construct_cb(lv_obj_t *parent) {
 
     lv_obj_add_event_cb(ap_table, key_cb, LV_EVENT_KEY, NULL);
     lv_obj_add_event_cb(ap_table, cell_selected_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(ap_table, ap_table_draw_event_cb, LV_EVENT_DRAW_PART_END, NULL);
     lv_group_add_obj(keyboard_group, ap_table);
     lv_group_set_editing(keyboard_group, true);
 
-    lv_msg_subscribe(MSG_WIFI_STATE_CHANGED, wifi_state_changed_cb, NULL);
-
-    wifi_state_changed_cb(NULL, NULL);
-
-    // Setup wifi callbacks
-    // wifi_set_change_ap_callbacks(ap_add_cb, ap_del_cb);
+    subscription = lv_msg_subscribe(MSG_WIFI_STATE_CHANGED, wifi_state_changed_cb, NULL);
+    lv_msg_send(MSG_WIFI_STATE_CHANGED, NULL);
 }
 
 static void destruct_cb() {
-    // wifi_clear_change_ap_callbacks();
+    if (subscription) {
+        lv_msg_unsubscribe(subscription);
+        subscription = NULL;
+    }
+    lv_msg_subscribe(MSG_WIFI_STATE_CHANGED, wifi_state_changed_cb, NULL);
+    if (timer_status) {
+        lv_timer_del(timer_status);
+        timer_status = NULL;
+    }
     keyboard_close_cb(NULL);
     stop_refresh_ap_list();
 }
@@ -224,12 +231,23 @@ static void cell_selected_cb(lv_event_t *e) {
     uint16_t  col;
     uint16_t  row;
     lv_table_get_selected_cell(obj, &row, &col);
+    if ((row == LV_TABLE_CELL_NONE) || (col == LV_TABLE_CELL_NONE)) {
+        sel_ap_type = SELECTED_AP_NONE;
+        lv_msg_send(MSG_WIFI_STATE_CHANGED, NULL);
+        return;
+    }
     wifi_ap_info_t *ap_info = (wifi_ap_info_t *)lv_table_get_cell_user_data(ap_table, row, col);
     if (ap_info) {
-        if (ap_info->known != selected_known) {
-            selected_known = ap_info->known;
+        if (ap_info->known && (sel_ap_type != SELECTED_AP_KNOWN)) {
+            sel_ap_type = SELECTED_AP_KNOWN;
+            lv_msg_send(MSG_WIFI_STATE_CHANGED, NULL);
+        } else if (!ap_info->known && (sel_ap_type != SELECTED_AP_UNKNOWN)) {
+            sel_ap_type = SELECTED_AP_UNKNOWN;
             lv_msg_send(MSG_WIFI_STATE_CHANGED, NULL);
         }
+    } else if (sel_ap_type != SELECTED_AP_NONE) {
+        sel_ap_type = SELECTED_AP_NONE;
+        lv_msg_send(MSG_WIFI_STATE_CHANGED, NULL);
     }
 }
 
@@ -243,6 +261,7 @@ static void wifi_bt_toggle_cb(lv_event_t *e) {
         wifi_power_off();
         // clear table
         lv_table_set_cell_value(ap_table, 0, 0, "");
+        lv_table_set_cell_user_data(ap_table, 0, 0, NULL);
         lv_table_set_row_cnt(ap_table, 1);
         lv_event_send(ap_table, LV_EVENT_VALUE_CHANGED, NULL);
     } else {
@@ -358,7 +377,11 @@ static char *wifi_scan_label_getter() {
 static char *wifi_connected_label_getter() {
     switch (wifi_get_status()) {
     case WIFI_DISCONNECTED:
-        return "Connect";
+        if (sel_ap_type != SELECTED_AP_NONE) {
+            return "Connect";
+        } else {
+            return "";
+        }
     case WIFI_CONNECTED:
         return "Disconnect";
     case WIFI_CONNECTING:
@@ -372,7 +395,11 @@ static char *wifi_con_update_label_getter() {
     switch (wifi_get_status()) {
     case WIFI_DISCONNECTED:
     case WIFI_CONNECTED:
-        return selected_known ? "Update" : "";
+        if (sel_ap_type == SELECTED_AP_KNOWN) {
+            return "Update";
+        } else {
+            return "";
+        }
     default:
         return "";
     }
@@ -382,7 +409,11 @@ static char *wifi_con_delete_label_getter() {
     switch (wifi_get_status()) {
     case WIFI_DISCONNECTED:
     case WIFI_CONNECTED:
-        return selected_known ? "Delete" : "";
+        if (sel_ap_type == SELECTED_AP_KNOWN) {
+            return "Delete";
+        } else {
+            return "";
+        }
     default:
         return "";
     }
@@ -415,8 +446,9 @@ static void update_aps_table_cb(lv_timer_t *t) {
     row = 0;
 
     for (uint16_t i = 0; i < aps_info.count; i++) {
-        lv_table_set_cell_value_fmt(ap_table, row++, 0, "%s (%zu)%s", aps_info.ap_arr[i].ssid,
-                                    aps_info.ap_arr[i].strength, aps_info.ap_arr[i].is_connected ? " (*)" : "");
+        // lv_table_set_cell_value_fmt(ap_table, row++, 0, "%s (%zu)%s", aps_info.ap_arr[i].ssid,
+        //                             aps_info.ap_arr[i].strength, aps_info.ap_arr[i].is_connected ? " (*)" : "");
+        lv_table_set_cell_value(ap_table, row++, 0, aps_info.ap_arr[i].ssid);
         wifi_ap_info_t *copy = (wifi_ap_info_t *)malloc(sizeof(wifi_ap_info_t));
         *copy = aps_info.ap_arr[i];
         lv_table_set_cell_user_data(ap_table, row - 1, 0, (void *)copy);
@@ -426,6 +458,7 @@ static void update_aps_table_cb(lv_timer_t *t) {
         lv_table_set_row_cnt(ap_table, row);
     } else {
         lv_table_set_cell_value(ap_table, 0, 0, "");
+        lv_table_set_cell_user_data(ap_table, 0, 0, NULL);
         lv_table_set_row_cnt(ap_table, 1);
     }
     lv_event_send(ap_table, LV_EVENT_VALUE_CHANGED, NULL);
@@ -478,7 +511,7 @@ static int compare_aps(const void *a, const void *b) {
 
 static void keyboard_open() {
     lv_group_remove_obj(ap_table);
-    textarea_window_open(keyboard_ok_cb, keyboard_cancel_cb);
+    textarea_window_open_w_label(keyboard_ok_cb, keyboard_cancel_cb, "Password: ");
     if (cur_password) {
         textarea_window_set(cur_password);
     }
@@ -567,5 +600,28 @@ static void wifi_state_changed_cb(void *s, lv_msg_t *m) {
     lv_label_set_text(label_status, status_text);
     if (!timer_status) {
         timer_status = lv_timer_create(update_status_cb, 100, NULL);
+    }
+}
+
+static void ap_table_draw_event_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+    lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
+
+    if(dsc->part == LV_PART_ITEMS) {
+        uint32_t row = dsc->id /  lv_table_get_col_cnt(obj);
+        uint32_t col = dsc->id - row * lv_table_get_col_cnt(obj);
+        wifi_ap_info_t * ap_info = (wifi_ap_info_t *) lv_table_get_cell_user_data(obj, row, col);
+        if (ap_info) {
+            char                buf[32];
+            lv_area_t           area;
+
+            area = *dsc->draw_area;
+
+            dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
+
+            snprintf(buf, sizeof(buf), "%s %zu", ap_info->is_connected ? "*": "", ap_info->strength);
+
+            lv_draw_label(dsc->draw_ctx, dsc->label_dsc, &area, buf, NULL);
+        }
     }
 }

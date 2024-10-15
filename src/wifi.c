@@ -61,7 +61,6 @@ static void connection_activating_cb(GObject *client, GAsyncResult *result, gpoi
 void wifi_power_setup() {
     set_status(WIFI_DISCONNECTED);
     loop = g_main_loop_new(NULL, FALSE);
-    loop_timer = lv_timer_create(loop_iterations_cb, 30, NULL);
     setup_nm_client();
     if (client != NULL) {
         device = nm_client_get_device_by_iface(client, WLAN_IFACE);
@@ -69,6 +68,7 @@ void wifi_power_setup() {
             setup_wifi_device();
         }
     }
+    loop_timer = lv_timer_create(loop_iterations_cb, 30, NULL);
 
     if (params.wifi_enabled.x)
         wifi_power_on();
@@ -209,6 +209,7 @@ void wifi_add_connection(const char *ssid, const char *password) {
         s_wsec = (NMSettingWirelessSecurity *)nm_setting_wireless_security_new();
         // clang-format off
         g_object_set(G_OBJECT(s_wsec),
+                    NM_SETTING_WIRELESS_SECURITY_AUTH_ALG, "open",
                     NM_SETTING_WIRELESS_SECURITY_KEY_MGMT, "wpa-psk",
                     NM_SETTING_WIRELESS_SECURITY_PSK, password,
                     NULL);
@@ -253,6 +254,7 @@ void wifi_update_connection(const char *id, const char *password) {
             s_wsec = (NMSettingWirelessSecurity *)nm_setting_wireless_security_new();
             // clang-format off
             g_object_set(s_wsec,
+                        NM_SETTING_WIRELESS_SECURITY_AUTH_ALG, "open",
                         NM_SETTING_WIRELESS_SECURITY_KEY_MGMT, "wpa-psk",
                         NM_SETTING_WIRELESS_SECURITY_PSK, password,
                         NULL);
@@ -300,15 +302,13 @@ void wifi_disconnect() {
 }
 
 bool wifi_get_ipaddr(char **ip_addr, char **gateway) {
-    NMActiveConnection *active_con;
-    NMIPConfig         *ip_cfg;
+    NMIPConfig *ip_cfg;
     if (device) {
-        active_con = nm_device_get_active_connection(device);
-        if (active_con) {
-            ip_cfg = nm_active_connection_get_ip4_config(active_con);
-            if (ip_cfg) {
-                strcpy(*gateway, nm_ip_config_get_gateway(ip_cfg));
-
+        ip_cfg = nm_device_get_ip4_config(device);
+        if (ip_cfg) {
+            const char * gw = nm_ip_config_get_gateway(ip_cfg);
+            if(gw) {
+                strcpy(*gateway, gw);
                 GPtrArray *addresses = nm_ip_config_get_addresses(ip_cfg);
                 if (addresses->len > 0) {
                     NMIPAddress *address = g_ptr_array_index(addresses, 0);
@@ -364,7 +364,7 @@ static void setup_wifi_device() {
     if (active_con) {
         g_signal_connect(active_con, "state-changed", G_CALLBACK(active_con_state_changed_sig_cb), NULL);
         set_status(WIFI_CONNECTED);
-        g_object_unref(active_con);
+        // g_object_unref(active_con);
     } else {
         set_status(WIFI_DISCONNECTED);
     }
