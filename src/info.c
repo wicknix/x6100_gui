@@ -7,22 +7,27 @@
  */
 
 #include "info.h"
+
 #include "styles.h"
 #include "params/params.h"
+#include "pubsub_ids.h"
+#include "wifi.h"
 
 typedef enum {
     INFO_VFO = 0,
     INFO_MODE,
     INFO_AGC,
-    INFO_PRE,
-    INFO_ATT,
-    INFO_ATU
+    INFO_PRE_ATT,
+    INFO_ATU,
+    INFO_WIFI
 } info_items_t;
 
 static lv_obj_t     *obj;
 static lv_obj_t     *items[6];
 
 static bool         mode_lock = false;
+
+static void wifi_state_change_cb(void *s, lv_msg_t *m);
 
 lv_obj_t * info_init(lv_obj_t * parent) {
     obj = lv_obj_create(parent);
@@ -38,20 +43,24 @@ lv_obj_t * info_init(lv_obj_t * parent) {
             lv_obj_t *item = lv_label_create(obj);
 
             lv_obj_add_style(item, &info_item_style, 0);
-            lv_obj_set_pos(item, x * 58 + 15, y * 24 + 5);
+            lv_obj_set_pos(item, x * 58 + 15, y * 22 + 5);
             lv_obj_set_style_text_align(item, LV_TEXT_ALIGN_CENTER, 0);
 
             lv_obj_set_style_text_color(item, lv_color_white(), 0);
-            lv_obj_set_size(item, 56, 22);
+            lv_obj_set_size(item, 56, 26);
 
             items[index] = item;
             index++;
         }
 
-    lv_label_set_text(items[INFO_PRE], "PRE");
-    lv_label_set_text(items[INFO_ATT], "ATT");
+    lv_label_set_text(items[INFO_PRE_ATT], "PRE/ATT");
+    lv_label_set_text(items[INFO_WIFI], LV_SYMBOL_WIFI);
+    lv_obj_set_style_text_color(items[INFO_WIFI], lv_color_hex(0x909090), 0);
 
     info_params_set();
+
+    lv_msg_subscribe(MSG_WIFI_STATE_CHANGED, wifi_state_change_cb, NULL);
+
     return obj;
 }
 
@@ -186,23 +195,20 @@ void info_params_set() {
     }
 
     if (info_params_att()) {
-        lv_obj_set_style_text_color(items[INFO_ATT], lv_color_black(), 0);
-        lv_obj_set_style_bg_color(items[INFO_ATT], lv_color_white(), 0);
-        lv_obj_set_style_bg_opa(items[INFO_ATT], LV_OPA_50, 0);
+        lv_obj_set_style_text_color(items[INFO_PRE_ATT], lv_color_black(), 0);
+        lv_obj_set_style_bg_color(items[INFO_PRE_ATT], lv_color_white(), 0);
+        lv_obj_set_style_bg_opa(items[INFO_PRE_ATT], LV_OPA_50, 0);
+        lv_label_set_text(items[INFO_PRE_ATT], "ATT");
+    } else if (info_params_pre()) {
+        lv_obj_set_style_text_color(items[INFO_PRE_ATT], lv_color_black(), 0);
+        lv_obj_set_style_bg_color(items[INFO_PRE_ATT], lv_color_white(), 0);
+        lv_obj_set_style_bg_opa(items[INFO_PRE_ATT], LV_OPA_50, 0);
+        lv_label_set_text(items[INFO_PRE_ATT], "PRE");
     } else {
-        lv_obj_set_style_text_color(items[INFO_ATT], lv_color_white(), 0);
-        lv_obj_set_style_bg_color(items[INFO_ATT], lv_color_black(), 0);
-        lv_obj_set_style_bg_opa(items[INFO_ATT], LV_OPA_0, 0);
-    }
-
-    if (info_params_pre()) {
-        lv_obj_set_style_text_color(items[INFO_PRE], lv_color_black(), 0);
-        lv_obj_set_style_bg_color(items[INFO_PRE], lv_color_white(), 0);
-        lv_obj_set_style_bg_opa(items[INFO_PRE], LV_OPA_50, 0);
-    } else {
-        lv_obj_set_style_text_color(items[INFO_PRE], lv_color_white(), 0);
-        lv_obj_set_style_bg_color(items[INFO_PRE], lv_color_black(), 0);
-        lv_obj_set_style_bg_opa(items[INFO_PRE], LV_OPA_0, 0);
+        lv_obj_set_style_text_color(items[INFO_PRE_ATT], lv_color_white(), 0);
+        lv_obj_set_style_bg_color(items[INFO_PRE_ATT], lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(items[INFO_PRE_ATT], LV_OPA_0, 0);
+        lv_label_set_text(items[INFO_PRE_ATT], "P/A");
     }
 
     x6100_mode_t mode = radio_current_mode();
@@ -217,4 +223,20 @@ void info_params_set() {
 void info_lock_mode(bool lock) {
     mode_lock = lock;
     info_params_set();
+}
+
+static void wifi_state_change_cb(void *s, lv_msg_t *m) {
+    lv_color_t color;
+    switch (wifi_get_status()) {
+    case WIFI_CONNECTED:
+        color = lv_color_white();
+        break;
+    case WIFI_OFF:
+        color = lv_color_black();
+        break;
+    default:
+        color = lv_color_hex(0x909090);
+        break;
+    }
+    lv_obj_set_style_text_color(items[INFO_WIFI], color, 0);
 }

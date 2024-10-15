@@ -120,6 +120,11 @@ static void params_mb_load(sqlite3_stmt *stmt) {
             params_band.vfo_x[X6100_VFO_A].att.x = sqlite3_column_int(stmt, 1);
         } else if (strcmp(name, "vfoa_pre") == 0) {
             params_band.vfo_x[X6100_VFO_A].pre.x = sqlite3_column_int(stmt, 1);
+            params_band.vfo_x[X6100_VFO_A].pre.x = sqlite3_column_int(stmt, 1);
+            if (params_band.vfo_x[X6100_VFO_A].pre.x) {
+                params_band.vfo_x[X6100_VFO_A].att.x = false;
+                params_band.vfo_x[X6100_VFO_A].att.dirty = true;
+            }
         } else if (strcmp(name, "vfoa_mode") == 0) {
             params_band.vfo_x[X6100_VFO_A].mode.x = sqlite3_column_int(stmt, 1);
         } else if (strcmp(name, "vfoa_agc") == 0) {
@@ -132,6 +137,10 @@ static void params_mb_load(sqlite3_stmt *stmt) {
             copy_att = false;
         } else if (strcmp(name, "vfob_pre") == 0) {
             params_band.vfo_x[X6100_VFO_B].pre.x = sqlite3_column_int(stmt, 1);
+            if (params_band.vfo_x[X6100_VFO_B].pre.x) {
+                params_band.vfo_x[X6100_VFO_B].att.x = false;
+                params_band.vfo_x[X6100_VFO_B].att.dirty = true;
+            }
             copy_pre = false;
         } else if (strcmp(name, "vfob_mode") == 0) {
             params_band.vfo_x[X6100_VFO_B].mode.x = sqlite3_column_int(stmt, 1);
@@ -440,6 +449,10 @@ x6100_pre_t params_band_cur_pre_set(x6100_pre_t pre)
         params_lock();
         cur_param->pre.x = pre;
         cur_param->pre.dirty = true;
+        if (cur_param->att.x && pre) {
+            cur_param->att.x = false;
+            cur_param->att.dirty = true;
+        }
         params_unlock(NULL);
     }
     return cur_param->pre.x;
@@ -457,6 +470,10 @@ x6100_att_t params_band_cur_att_set(x6100_att_t att)
         params_lock();
         cur_param->att.x = att;
         cur_param->att.dirty = true;
+        if (cur_param->pre.x && att) {
+            cur_param->pre.x = false;
+            cur_param->pre.dirty = true;
+        }
         params_unlock(NULL);
     }
     return cur_param->att.x;

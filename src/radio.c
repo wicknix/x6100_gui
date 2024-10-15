@@ -458,6 +458,8 @@ bool radio_change_pre() {
     pre = params_band_cur_pre_set(!pre);
 
     WITH_RADIO_LOCK(x6100_control_vfo_pre_set(cur_vfo, pre));
+    x6100_att_t att = params_band_cur_att_get();
+    WITH_RADIO_LOCK(x6100_control_vfo_att_set(cur_vfo, att));
 
     voice_say_text_fmt("Preamplifier %s", pre ? "On" : "Off");
     return pre;
@@ -470,7 +472,8 @@ bool radio_change_att() {
     att = params_band_cur_att_set(!att);
 
     WITH_RADIO_LOCK(x6100_control_vfo_att_set(cur_vfo, att));
-
+    x6100_pre_t pre = params_band_cur_pre_get();
+    WITH_RADIO_LOCK(x6100_control_vfo_pre_set(cur_vfo, pre));
     voice_say_text_fmt("Attenuator %s", att ? "On" : "Off");
     return att;
 }
