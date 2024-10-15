@@ -129,8 +129,8 @@ lv_obj_t * textarea_window_open(textarea_window_cb_t ok, textarea_window_cb_t ca
     lv_obj_set_size(text, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
 
     lv_obj_set_style_text_color(text, lv_color_white(), 0);
-    lv_obj_set_style_bg_color(text, lv_color_hex(0xb0b0b0), LV_PART_CURSOR);
-    lv_obj_set_style_bg_opa(text, 255, LV_PART_CURSOR);
+    lv_obj_set_style_bg_color(text, lv_color_white(), LV_PART_CURSOR);
+    lv_obj_set_style_bg_opa(text, LV_OPA_80, LV_PART_CURSOR);
 
     lv_textarea_set_one_line(text, true);
     lv_textarea_set_max_length(text, 40);

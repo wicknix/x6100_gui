@@ -88,7 +88,7 @@ static lv_obj_t *label_ip_addr;
 static lv_obj_t *label_gateway;
 static lv_obj_t *label_status;
 
-static bool disable_buttons = false;
+static bool                  disable_buttons = false;
 static enum selected_ap_type sel_ap_type = SELECTED_AP_NONE;
 
 static wifi_ap_info_t cur_ap_info;
@@ -193,7 +193,6 @@ static void destruct_cb() {
         lv_msg_unsubscribe(subscription);
         subscription = NULL;
     }
-    lv_msg_subscribe(MSG_WIFI_STATE_CHANGED, wifi_state_changed_cb, NULL);
     if (timer_status) {
         lv_timer_del(timer_status);
         timer_status = NULL;
@@ -206,9 +205,6 @@ static void key_cb(lv_event_t *e) {
     uint32_t key = *((uint32_t *)lv_event_get_param(e));
 
     switch (key) {
-        // case HKEY_FINP:
-        //      lv_group_set_editing(keyboard_group, !lv_group_get_editing((const lv_group_t*) keyboard_group));
-        //      break;
 
     case LV_KEY_ESC:
         dialog_destruct(&dialog);
@@ -446,9 +442,8 @@ static void update_aps_table_cb(lv_timer_t *t) {
     row = 0;
 
     for (uint16_t i = 0; i < aps_info.count; i++) {
-        // lv_table_set_cell_value_fmt(ap_table, row++, 0, "%s (%zu)%s", aps_info.ap_arr[i].ssid,
-        //                             aps_info.ap_arr[i].strength, aps_info.ap_arr[i].is_connected ? " (*)" : "");
-        lv_table_set_cell_value(ap_table, row++, 0, aps_info.ap_arr[i].ssid);
+        lv_table_set_cell_value_fmt(ap_table, row++, 0, "%s %s", aps_info.ap_arr[i].ssid,
+                                    aps_info.ap_arr[i].is_connected ? " (*)" : "");
         wifi_ap_info_t *copy = (wifi_ap_info_t *)malloc(sizeof(wifi_ap_info_t));
         *copy = aps_info.ap_arr[i];
         lv_table_set_cell_user_data(ap_table, row - 1, 0, (void *)copy);
@@ -465,39 +460,6 @@ static void update_aps_table_cb(lv_timer_t *t) {
     wifi_aps_info_delete(aps_info);
 }
 
-// static void ap_add_cb(wifi_ap_info_t * ap_info) {
-//     uint16_t row;
-//     row = lv_table_get_row_cnt(ap_table) - 1;
-//     lv_table_set_cell_value_fmt(ap_table, row++, 0, "%s (%zu)%s", ap_info->ssid,
-//                                 ap_info->strength, ap_info->is_connected ? " (*)" : "");
-//     wifi_ap_info_t *copy = (wifi_ap_info_t *)malloc(sizeof(wifi_ap_info_t));
-//     *copy = *ap_info;
-//     lv_table_set_cell_user_data(ap_table, row - 1, 0, (void *)copy);
-//     lv_table_set_row_cnt(ap_table, row);
-// }
-
-// static void ap_del_cb(wifi_ap_info_t * ap_info) {
-//     uint16_t rows;
-//     bool found = false;
-
-//     rows = lv_table_get_row_cnt(ap_table);
-//     for (size_t i = 0; i < rows; i++) {
-//         wifi_ap_info_t * row_data = (wifi_ap_info_t *) lv_table_get_cell_user_data(ap_table, i, 0);
-//         if (row_data){
-//             if (!found && (strcmp(row_data->bssid, ap_info->bssid) == 0)) {
-//                 found = true;
-//             } else if (found) {
-//                 const char * cell_value = lv_table_get_cell_value(ap_table, i, 0);
-//                 wifi_ap_info_t *copy = (wifi_ap_info_t *)malloc(sizeof(wifi_ap_info_t));
-//                 *copy = *ap_info;
-//                 lv_table_set_cell_user_data(ap_table, i-1, 0, copy);
-//                 lv_table_set_cell_value(ap_table, i - i, 0, cell_value);
-//             }
-//         }
-//     }
-//     lv_table_set_row_cnt(ap_table, rows-1);
-// }
-
 static int compare_aps(const void *a, const void *b) {
     int score_a = ((wifi_ap_info_t *)a)->is_connected * 2 + ((wifi_ap_info_t *)a)->known;
     int score_b = ((wifi_ap_info_t *)b)->is_connected * 2 + ((wifi_ap_info_t *)b)->known;
@@ -511,9 +473,13 @@ static int compare_aps(const void *a, const void *b) {
 
 static void keyboard_open() {
     lv_group_remove_obj(ap_table);
-    textarea_window_open_w_label(keyboard_ok_cb, keyboard_cancel_cb, "Password: ");
+    textarea_window_open(keyboard_ok_cb, keyboard_cancel_cb);
+
     if (cur_password) {
         textarea_window_set(cur_password);
+    } else {
+        lv_obj_t *text = textarea_window_text();
+        lv_textarea_set_placeholder_text(text, "Password");
     }
     disable_buttons = true;
 }
@@ -603,25 +569,46 @@ static void wifi_state_changed_cb(void *s, lv_msg_t *m) {
     }
 }
 
-static void ap_table_draw_event_cb(lv_event_t * e) {
-    lv_obj_t * obj = lv_event_get_target(e);
-    lv_obj_draw_part_dsc_t * dsc = lv_event_get_draw_part_dsc(e);
+static void ap_table_draw_event_cb(lv_event_t *e) {
+    lv_obj_t               *obj = lv_event_get_target(e);
+    lv_obj_draw_part_dsc_t *dsc = lv_event_get_draw_part_dsc(e);
 
-    if(dsc->part == LV_PART_ITEMS) {
-        uint32_t row = dsc->id /  lv_table_get_col_cnt(obj);
-        uint32_t col = dsc->id - row * lv_table_get_col_cnt(obj);
-        wifi_ap_info_t * ap_info = (wifi_ap_info_t *) lv_table_get_cell_user_data(obj, row, col);
+    if (dsc->part == LV_PART_ITEMS) {
+        uint32_t        row = dsc->id / lv_table_get_col_cnt(obj);
+        uint32_t        col = dsc->id - row * lv_table_get_col_cnt(obj);
+        wifi_ap_info_t *ap_info = (wifi_ap_info_t *)lv_table_get_cell_user_data(obj, row, col);
         if (ap_info) {
-            char                buf[32];
-            lv_area_t           area;
+            lv_coord_t x2 = dsc->draw_area->x2;
+            lv_coord_t y2 = dsc->draw_area->y2;
 
-            area = *dsc->draw_area;
+            lv_draw_rect_dsc_t draw_rect_dsc;
+            lv_draw_rect_dsc_init(&draw_rect_dsc);
+            draw_rect_dsc.bg_color = lv_color_white();
+            draw_rect_dsc.bg_opa = LV_OPA_COVER;
+            draw_rect_dsc.border_width = 1;
+            draw_rect_dsc.border_color = lv_color_white();
 
-            dsc->label_dsc->align = LV_TEXT_ALIGN_RIGHT;
+            const uint8_t bars = 5;
+            const uint8_t bar_w = 10;
+            const uint8_t bar_spacing = 5;
 
-            snprintf(buf, sizeof(buf), "%s %zu", ap_info->is_connected ? "*": "", ap_info->strength);
+            uint8_t active_cnt = ap_info->strength * bars / 100;
 
-            lv_draw_label(dsc->draw_ctx, dsc->label_dsc, &area, buf, NULL);
+            lv_coord_t x1 = x2 - bars * (bar_w + bar_spacing);
+            lv_coord_t max_h = dsc->draw_area->y2 - dsc->draw_area->y1 - 10;
+
+            for (size_t i = 0; i < bars; i++) {
+                lv_area_t coords;
+                coords.x1 = x1;
+                coords.x2 = coords.x1 + bar_w;
+                coords.y2 = y2 - 5;
+                coords.y1 = coords.y2 - (i + 1) * 5;
+                if (i > active_cnt) {
+                    draw_rect_dsc.bg_opa = LV_OPA_0;
+                }
+                lv_draw_rect(dsc->draw_ctx, &draw_rect_dsc, &coords);
+                x1 += bar_w + bar_spacing;
+            }
         }
     }
 }
