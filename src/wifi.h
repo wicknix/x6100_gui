@@ -12,6 +12,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+
+extern "C" {
+
+#endif
+
 typedef enum {
     WIFI_OFF,
     WIFI_STARTING,
@@ -76,3 +82,7 @@ void wifi_connect(const char *id);
 void wifi_disconnect();
 
 bool wifi_get_ipaddr(char **ip_addr, char **gateway);
+
+#ifdef __cplusplus
+}
+#endif

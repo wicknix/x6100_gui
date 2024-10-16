@@ -14,7 +14,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     dialog_msg_voice.c dialog_recorder.c dialog_qth.c dialog_callsign.c
     textarea_window.c cw_encoder.c buttons.c vol.c recorder.c
     qth.c voice.cpp gfsk.c cw_tune_ui.c adif.c qso_log.c scheduler.c
-    dialog_wifi.c wifi.c
+    dialog_wifi.c wifi.cpp
 )
 
 add_subdirectory(fonts)

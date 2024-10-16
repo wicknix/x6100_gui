@@ -6,7 +6,10 @@
  *  Copyright (c) 2024 Georgy Dyuldin aka R2RFE
  */
 
+
 #include "wifi.h"
+
+extern "C" {
 
 #include "msg.h"
 #include "params/params.h"
@@ -16,6 +19,12 @@
 #include <glib.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+}
+
+#include <string>
+#include <map>
+#include <vector>
 
 #define WLAN_IFACE "wlan0"
 
@@ -130,28 +139,56 @@ wifi_ap_arr_t wifi_get_available_access_points() {
     const GPtrArray *aps;
     NMAccessPoint   *active_ap = NULL;
     GBytes          *active_ssid = NULL;
-    int              i;
+    uint             i;
 
-    wifi_ap_arr_t aps_info = {.count = 0, .ap_arr = NULL, .is_connected = false};
+    wifi_ap_arr_t aps_info;
+
+    aps_info.count = 0;
+    aps_info.ap_arr = NULL;
+    aps_info.is_connected = false;
 
     if (device != NULL) {
-        aps = nm_device_wifi_get_access_points(NM_DEVICE_WIFI(device));
-        aps_info.count = aps->len;
-        aps_info.ap_arr = (wifi_ap_info_t *)malloc(sizeof(wifi_ap_info_t) * aps_info.count);
-
         /* Get active AP */
         if (nm_device_get_state(device) == NM_DEVICE_STATE_ACTIVATED) {
-            set_status(WIFI_CONNECTED);
             if ((active_ap = nm_device_wifi_get_active_access_point(NM_DEVICE_WIFI(device)))) {
                 active_ssid = nm_access_point_get_ssid(active_ap);
             }
-        } else if (status != WIFI_CONNECTING) {
-            set_status(WIFI_DISCONNECTED);
         }
 
+        aps = nm_device_wifi_get_access_points(NM_DEVICE_WIFI(device));
+
+        // map ssid -> [strength, ap_vec_id]
+        std::map<std::string, std::array<uint, 2>> ssid_strength_map{};
+        std::vector<wifi_ap_info_t>                ap_info_vec;
+
         for (i = 0; i < aps->len; i++) {
-            NMAccessPoint *ap = g_ptr_array_index(aps, i);
-            fill_access_point_info(active_ssid, ap, &(aps_info.ap_arr[i]));
+            wifi_ap_info_t ap_info;
+            NMAccessPoint *ap = NM_ACCESS_POINT(g_ptr_array_index(aps, i));
+            fill_access_point_info(active_ssid, ap, &ap_info);
+
+            std::string ssid = ap_info.ssid;
+
+            auto search = ssid_strength_map.find(ssid);
+            if (search != ssid_strength_map.end()) {
+                if (search->second[0] < ap_info.strength) {
+                    ap_info_vec[ssid_strength_map[ssid][1]] = ap_info;
+                    ssid_strength_map[ssid] = {
+                        {ap_info.strength, i}
+                    };
+                }
+
+            } else {
+                ssid_strength_map[ssid] = {
+                    {ap_info.strength, ap_info_vec.size()}
+                };
+                ap_info_vec.push_back(ap_info);
+            }
+        }
+
+        aps_info.count = ssid_strength_map.size();
+        aps_info.ap_arr = (wifi_ap_info_t *)malloc(sizeof(wifi_ap_info_t) * aps_info.count);
+        for (i = 0; i < aps_info.count; i++) {
+            aps_info.ap_arr[i] = ap_info_vec[i];
             aps_info.is_connected |= aps_info.ap_arr[i].is_connected;
         }
     }
@@ -311,7 +348,7 @@ bool wifi_get_ipaddr(char **ip_addr, char **gateway) {
                 strcpy(*gateway, gw);
                 GPtrArray *addresses = nm_ip_config_get_addresses(ip_cfg);
                 if (addresses->len > 0) {
-                    NMIPAddress *address = g_ptr_array_index(addresses, 0);
+                    NMIPAddress *address = (NMIPAddress *)g_ptr_array_index(addresses, 0);
                     strcpy(*ip_addr, nm_ip_address_get_address(address));
                 }
                 return true;
@@ -400,7 +437,7 @@ static void fill_access_point_info(GBytes *active_ssid, NMAccessPoint *ap, wifi_
 
     /* Convert to strings */
     if (ssid)
-        ssid_str = nm_utils_ssid_to_utf8(g_bytes_get_data(ssid, NULL), g_bytes_get_size(ssid));
+        ssid_str = nm_utils_ssid_to_utf8((const guint8 *)g_bytes_get_data(ssid, NULL), g_bytes_get_size(ssid));
     else
         ssid_str = g_strdup("--");
     strcpy(ap_info->bssid, hwaddr);
