@@ -43,6 +43,7 @@ static bool             charging;
 static char             str[32];
 
 static void check_time_sync_cb(lv_timer_t * t);
+static time_t get_last_sync_time();
 
 static void set_state(clock_state_t new_state) {
     state = new_state;
@@ -153,6 +154,7 @@ lv_obj_t * clock_init(lv_obj_t * parent) {
     show_time();
     lv_timer_create(show_time, 500, NULL);
 
+    last_time_sync = get_last_sync_time();
     timer_time_sync = lv_timer_create(check_time_sync_cb, 200, NULL);
 }
 
@@ -199,11 +201,17 @@ void clock_say_bat_info() {
 }
 
 static void check_time_sync_cb(lv_timer_t * t) {
+    time_t new_time = get_last_sync_time();
+    if (last_time_sync != new_time) {
+        last_time_sync = new_time;
+        msg_set_text_fmt("Time is synchronized with NTP");
+    }
+}
+
+static time_t get_last_sync_time() {
     struct stat attr;
     if (stat("/var/run/time-sync", &attr) == 0) {
-        if (last_time_sync != attr.st_atime) {
-            last_time_sync = attr.st_mtime;
-            msg_set_text_fmt("Time is synchronized with NTP");
-        }
+        return attr.st_atime;
     }
+    return 0;
 }
