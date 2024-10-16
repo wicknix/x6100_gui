@@ -27,6 +27,7 @@ extern "C" {
 #include <vector>
 
 #define WLAN_IFACE "wlan0"
+#define EMPTY_SSID_STR "--"
 
 static GMainLoop *loop;
 static NMClient  *client = NULL;
@@ -169,7 +170,7 @@ wifi_ap_arr_t wifi_get_available_access_points() {
             std::string ssid = ap_info.ssid;
 
             auto search = ssid_strength_map.find(ssid);
-            if (search != ssid_strength_map.end()) {
+            if ((search != ssid_strength_map.end()) && (ssid.compare(EMPTY_SSID_STR) !=0 )) {
                 if (search->second[0] < ap_info.strength) {
                     ap_info_vec[ssid_strength_map[ssid][1]] = ap_info;
                     ssid_strength_map[ssid] = {
@@ -439,7 +440,7 @@ static void fill_access_point_info(GBytes *active_ssid, NMAccessPoint *ap, wifi_
     if (ssid)
         ssid_str = nm_utils_ssid_to_utf8((const guint8 *)g_bytes_get_data(ssid, NULL), g_bytes_get_size(ssid));
     else
-        ssid_str = g_strdup("--");
+        ssid_str = g_strdup(EMPTY_SSID_STR);
     strcpy(ap_info->bssid, hwaddr);
     strcpy(ap_info->ssid, ssid_str);
     ap_info->strength = strength;
