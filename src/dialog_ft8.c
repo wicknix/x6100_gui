@@ -549,6 +549,7 @@ void static process(float complex *frame) {
             }
     }
     // Update offset to set min to 20;
+    // TODO: add auto level control
     lpf(&scaled_offset, scaled_offset + 20.0f - scaled_min, 0.95, 0.0f);
     wf.num_blocks++;
 }
@@ -1016,7 +1017,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     // setup gain offset
     float target_pwr = LV_MIN(params.pwr, MAX_PWR);
-    base_gain_offset = -8.2f + log10f(target_pwr) * 5;
+    base_gain_offset = -16.4f + log10f(target_pwr) * 10.0f;
 }
 
 static void show_cq_cb(lv_event_t * e) {
@@ -1276,10 +1277,10 @@ static float get_correction() {
     if (tx_info_refresh(&msg_id, &alc, &pwr, NULL)) {
         float target_pwr = LV_MIN(params.pwr, MAX_PWR);
         if (alc > 0.5f) {
-            correction = log10f(log10f(10.0f - alc)) * 10.0f;
+            correction = log10f(log10f(10.0f - alc)) * 20.0f;
         } else if (target_pwr - pwr > 0.5f) {
             // TODO: check battery level
-            correction = log10f(target_pwr / pwr) * 5.0f;
+            correction = log10f(target_pwr / pwr) * 10.0f;
         }
     }
     return correction;
@@ -1287,7 +1288,6 @@ static float get_correction() {
 
 static void tx_worker() {
     float gain_offset = base_gain_offset + params.ft8_output_gain_offset.x;
-
     float play_gain_offset = audio_set_play_vol(gain_offset + 4.0f);
     gain_offset -= play_gain_offset;
 

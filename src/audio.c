@@ -180,7 +180,7 @@ void audio_play_wait() {
 }
 
 void audio_gain_db(int16_t *buf, size_t samples, float gain, int16_t *out) {
-    float scale = exp10f(gain / 10.0f);
+    float scale = exp10f(gain / 20.0f);
 
     for (uint16_t i = 0; i < samples; i++) {
         int32_t x = buf[i] * scale;
@@ -198,8 +198,8 @@ void audio_gain_db(int16_t *buf, size_t samples, float gain, int16_t *out) {
 }
 
 void audio_gain_db_transition(int16_t *buf, size_t samples, float gain1, float gain2, int16_t *out) {
-    float scale1 = exp10f(gain1 / 10.0f);
-    float scale2 = exp10f(gain2 / 10.0f);
+    float scale1 = exp10f(gain1 / 20.0f);
+    float scale2 = exp10f(gain2 / 20.0f);
     float scale;
     for (uint16_t i = 0; i < samples; i++) {
         scale = scale1 + i * (scale2 - scale1) / samples;
