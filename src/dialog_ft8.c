@@ -27,13 +27,11 @@
 #include "widgets/lv_waterfall.h"
 #include "widgets/lv_finder.h"
 
-#include "ft8/unpack.h"
-#include "ft8/pack.h"
-#include "ft8/ldpc.h"
-#include "ft8/decode.h"
-#include "ft8/constants.h"
-#include "ft8/encode.h"
-#include "ft8/crc.h"
+#include <ft8lib/message.h>
+#include <ft8lib/decode.h>
+#include <ft8lib/encode.h>
+#include <ft8lib/hashtable.h>
+#include "ft8/tools.h"
 #include "gfsk.h"
 #include "adif.h"
 #include "qso_log.h"
@@ -240,11 +238,11 @@ static float                symbol_period;
 static uint32_t             block_size;
 static uint32_t             subblock_size;
 static uint16_t             nfft;
-static waterfall_t          wf;
+static ftx_waterfall_t      wf;
 
-static candidate_t          candidate_list[MAX_CANDIDATES];
-static message_t            decoded[MAX_DECODED];
-static message_t*           decoded_hashtable[MAX_DECODED];
+static ftx_candidate_t candidate_list[MAX_CANDIDATES];
+static ftx_message_t   decoded[MAX_DECODED];
+static ftx_message_t  *decoded_hashtable[MAX_DECODED];
 
 static adif_log             ft8_log;
 
@@ -323,7 +321,7 @@ static void save_qso() {
     qso_log_record_t qso = qso_log_record_create(
         params.callsign.x,
         canonized_call,
-        now, params.ft8_protocol == PROTO_FT8 ? MODE_FT8 : MODE_FT4,
+        now, params.ft8_protocol == FTX_PROTOCOL_FT8 ? MODE_FT8 : MODE_FT4,
         qso_item.rst_s, qso_item.rst_r, params_band_cur_freq_get(), NULL, NULL,
         params.qth.x, qso_item.remote_qth
     );
@@ -377,12 +375,12 @@ static void init() {
     float   slot_time;
 
     switch (params.ft8_protocol) {
-        case PROTO_FT4:
+        case FTX_PROTOCOL_FT4:
             slot_time = FT4_SLOT_TIME;
             symbol_period = FT4_SYMBOL_PERIOD;
             break;
 
-        case PROTO_FT8:
+        case FTX_PROTOCOL_FT8:
             slot_time = FT8_SLOT_TIME;
             symbol_period = FT8_SYMBOL_PERIOD;
             break;
@@ -473,6 +471,7 @@ static void done() {
     adif_log_close(ft8_log);
     clear_qso();
     tx_msg[0] = 0;
+    hashtable_cleanup(0);
 }
 
 static const char * find_qth(const char *str) {
@@ -745,6 +744,7 @@ static void key_cb(lv_event_t * e) {
 static void destruct_cb() {
     // TODO: check free mem
     done();
+    hashtable_delete();
 
     firdecim_crcf_destroy(decim);
     free(audio_buf);
@@ -762,12 +762,12 @@ static void load_band() {
     uint16_t mem_id = 0;
 
     switch (params.ft8_protocol) {
-        case PROTO_FT8:
+        case FTX_PROTOCOL_FT8:
             mem_id = MEM_FT8_ID;
             lv_finder_set_width(finder, FT8_WIDTH_HZ);
             break;
 
-        case PROTO_FT4:
+        case FTX_PROTOCOL_FT4:
             mem_id = MEM_FT4_ID;
             lv_finder_set_width(finder, FT4_WIDTH_HZ);
             break;
@@ -797,11 +797,11 @@ static band_relations_t * get_band_relation() {
     size_t arr_size;
 
     switch (params.ft8_protocol) {
-        case PROTO_FT8:
+        case FTX_PROTOCOL_FT8:
             rel = ft8_relations;
             arr_size = ARRAY_SIZE(ft8_relations);
             break;
-        case PROTO_FT4:
+        case FTX_PROTOCOL_FT4:
             rel = ft4_relations;
             arr_size = ARRAY_SIZE(ft4_relations);
             break;
@@ -982,11 +982,11 @@ static void construct_cb(lv_obj_t *parent) {
     }
 
     switch (params.ft8_protocol) {
-        case PROTO_FT8:
+        case FTX_PROTOCOL_FT8:
             buttons_load(1, &button_mode_ft4);
             break;
 
-        case PROTO_FT4:
+        case FTX_PROTOCOL_FT4:
             buttons_load(1, &button_mode_ft8);
             break;
     }
@@ -1006,6 +1006,8 @@ static void construct_cb(lv_obj_t *parent) {
     main_screen_lock_mode(true);
     main_screen_lock_freq(true);
     main_screen_lock_band(true);
+
+    hashtable_init(256);
 
     init();
 
@@ -1036,7 +1038,7 @@ static void mode_ft4_cb(lv_event_t * e) {
     band_relations_t *rel = get_band_relation();
 
     params_lock();
-    params.ft8_protocol = PROTO_FT4;
+    params.ft8_protocol = FTX_PROTOCOL_FT4;
     params.ft8_band = rel->another;
     params.dirty.ft8_band = true;
     params_unlock(&params.dirty.ft8_protocol);
@@ -1052,7 +1054,7 @@ static void mode_ft4_cb(lv_event_t * e) {
 static void mode_ft8_cb(lv_event_t * e) {
     band_relations_t *rel = get_band_relation();
     params_lock();
-    params.ft8_protocol = PROTO_FT8;
+    params.ft8_protocol = FTX_PROTOCOL_FT8;
     params.ft8_band = rel->another;
     params.dirty.ft8_band = true;
     params_unlock(&params.dirty.ft8_protocol);
@@ -1163,11 +1165,11 @@ static void time_sync(lv_event_t * e) {
     uint8_t sec = now % 60;
     float drift, slot_time;
     switch (params.ft8_protocol) {
-        case PROTO_FT4:
+        case FTX_PROTOCOL_FT4:
             slot_time = FT4_SLOT_TIME;
             break;
 
-        case PROTO_FT8:
+        case FTX_PROTOCOL_FT8:
             slot_time = FT8_SLOT_TIME;
             break;
     }
@@ -1191,11 +1193,11 @@ static bool get_time_slot(struct timespec now) {
     float sec = (now.tv_sec % 60) + now.tv_nsec / 1000000000.0f;
 
     switch (params.ft8_protocol) {
-    case PROTO_FT4:
+    case FTX_PROTOCOL_FT4:
         cur_odd = (int)(sec / FT4_SLOT_TIME) % 2;
         break;
 
-    case PROTO_FT8:
+    case FTX_PROTOCOL_FT8:
         cur_odd = (int)(sec / FT8_SLOT_TIME) % 2;
         break;
     }
@@ -1282,29 +1284,29 @@ static float get_correction() {
 }
 
 static void tx_worker() {
-    uint8_t packed[FTX_LDPC_K_BYTES];
-    int     rc = pack77(tx_msg, packed);
-    uint8_t tones[FT4_NN];
-    uint8_t n_tones;
+    ftx_message_t msg;
+    ftx_message_rc_t rc = ftx_message_encode(&msg, &hash_if, tx_msg);
 
-
-    if (rc < 0) {
+    if (rc != FTX_MESSAGE_RC_OK) {
         LV_LOG_ERROR("Cannot parse message %i", rc);
         state = RX_PROCESS;
         return;
     }
 
-    if (params.ft8_protocol == PROTO_FT8) {
+    uint8_t tones[FT4_NN];
+    uint8_t n_tones;
+
+    if (params.ft8_protocol == FTX_PROTOCOL_FT8) {
         n_tones = FT8_NN;
-        ft8_encode(packed, tones);
-    } else if (params.ft8_protocol == PROTO_FT4) {
+        ft8_encode(msg.payload, tones);
+    } else if (params.ft8_protocol == FTX_PROTOCOL_FT4) {
         n_tones = FT4_NN;
-        ft4_encode(packed, tones);
+        ft4_encode(msg.payload, tones);
     }
 
     const uint16_t signal_freq = 1325;
     uint32_t    n_samples = 0;
-    float       symbol_bt = (params.ft8_protocol == PROTO_FT4) ? FT4_SYMBOL_BT : FT8_SYMBOL_BT;
+    float       symbol_bt = (params.ft8_protocol == FTX_PROTOCOL_FT4) ? FT4_SYMBOL_BT : FT8_SYMBOL_BT;
     int16_t     *samples = gfsk_synth(tones, n_tones, signal_freq, symbol_bt, symbol_period, &n_samples);
     int16_t     *ptr = samples;
     size_t      part;
@@ -1489,7 +1491,7 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
     if (msg.type == MSG_TYPE_CQ) {
         cell_data->worked_type = qso_log_search_worked(
             msg.call_from,
-            params.ft8_protocol == PROTO_FT8 ? MODE_FT8 : MODE_FT4,
+            params.ft8_protocol == FTX_PROTOCOL_FT8 ? MODE_FT8 : MODE_FT4,
             qso_log_freq_to_band(params_band_cur_freq_get())
         );
     }
@@ -1510,13 +1512,13 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
 }
 
 static void decode(bool odd) {
-    uint16_t    num_candidates = ft8_find_sync(&wf, MAX_CANDIDATES, candidate_list, MIN_SCORE);
+    uint16_t    num_candidates = ftx_find_candidates(&wf, MAX_CANDIDATES, candidate_list, MIN_SCORE);
 
     memset(decoded_hashtable, 0, sizeof(decoded_hashtable));
     memset(decoded, 0, sizeof(decoded));
 
     for (uint16_t idx = 0; idx < num_candidates; idx++) {
-        const candidate_t *cand = &candidate_list[idx];
+        const ftx_candidate_t *cand = &candidate_list[idx];
 
         if (cand->score < MIN_SCORE)
             continue;
@@ -1524,10 +1526,10 @@ static void decode(bool odd) {
         float freq_hz = (cand->freq_offset + (float) cand->freq_sub / wf.freq_osr) / symbol_period;
         float time_sec = (cand->time_offset + (float) cand->time_sub / wf.time_osr) * symbol_period;
 
-        message_t       message;
-        decode_status_t status;
+        ftx_message_t       message;
+        ftx_decode_status_t status;
 
-        if (!ft8_decode(&wf, cand, &message, LDPC_ITER, &status)) {
+        if (!ftx_decode_candidate(&wf, cand, LDPC_ITER, &message, &status)) {
             continue;
         }
 
@@ -1538,7 +1540,7 @@ static void decode(bool odd) {
         do {
             if (decoded_hashtable[idx_hash] == NULL) {
                 found_empty_slot = true;
-            } else if (decoded_hashtable[idx_hash]->hash == message.hash && strcmp(decoded_hashtable[idx_hash]->text, message.text) == 0) {
+            } else if (decoded_hashtable[idx_hash]->hash == message.hash && (0 == memcmp(decoded_hashtable[idx_hash]->payload, message.payload, sizeof(message.payload)))) {
                 found_duplicate = true;
             } else {
                 idx_hash = (idx_hash + 1) % MAX_DECODED;
@@ -1549,7 +1551,14 @@ static void decode(bool odd) {
             memcpy(&decoded[idx_hash], &message, sizeof(message));
             decoded_hashtable[idx_hash] = &decoded[idx_hash];
 
-            add_rx_text(cand->snr, message.text, odd);
+            // TODO: switch to tokens
+            char text[FTX_MAX_MESSAGE_LENGTH];
+            ftx_message_rc_t unpack_status = ftx_message_decode(&message, &hash_if, text);
+            if (unpack_status != FTX_MESSAGE_RC_OK) {
+                continue;
+            }
+            float snr = ftx_get_snr(&wf, cand);
+            add_rx_text(snr, text, odd);
         }
     }
 }

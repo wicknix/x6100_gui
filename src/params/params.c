@@ -115,7 +115,7 @@ params_t params = {
     .swrscan_span           = 200000,
 
     .ft8_show_all           = true,
-    .ft8_protocol           = PROTO_FT8,
+    .ft8_protocol           = FTX_PROTOCOL_FT8,
     .ft8_band               = 5,
     .ft8_tx_freq            = { .x = 1325,      .name = "ft8_tx_freq" },
     .ft8_auto               = { .x = true,      .name = "ft8_auto" },

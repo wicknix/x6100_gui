@@ -12,7 +12,7 @@
 #include <stdbool.h>
 
 #include <aether_radio/x6100_control/control.h>
-#include "../ft8/constants.h"
+#include <ft8lib/constants.h>
 #include "../bands.h"
 #include "../radio.h"
 #include "../clock.h"

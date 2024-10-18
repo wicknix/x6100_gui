@@ -24,6 +24,7 @@ add_subdirectory(params)
 
 include_directories(utf8)
 include_directories(${CMAKE_SYSROOT}/usr/include/RHVoice/)
+include_directories(${CMAKE_SYSROOT}/usr/include/ft8lib/)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 
@@ -46,3 +47,4 @@ target_link_libraries(${PROJECT_NAME} PRIVATE lvgl lvgl::drivers)
 target_link_libraries(${PROJECT_NAME} PRIVATE aether_x6100_control)
 target_link_libraries(${PROJECT_NAME} PRIVATE liquid m)
 target_link_libraries(${PROJECT_NAME} PRIVATE RHVoice RHVoice_core RHVoice_audio)
+target_link_libraries(${PROJECT_NAME} PRIVATE ft8)
