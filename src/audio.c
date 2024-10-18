@@ -287,7 +287,7 @@ static void monitor_cb(pa_stream *stream, size_t length, void *udata) {
             max_val = cur_val;
         }
     }
-    float max_db = 20.0f * log10f((float) max_val / (1UL << 15));
+    float max_db = 20.0f * log10f((float) max_val / ((1UL << 15) - 1));
     dialog_recorder_set_peak(max_db);
     pa_stream_drop(stream);
 }
