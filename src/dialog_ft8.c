@@ -234,17 +234,20 @@ static complex float        *freq_buf;
 static windowcf             frame_window;
 static fftplan              fft;
 
-static float                symbol_period;
-static uint32_t             block_size;
-static uint32_t             subblock_size;
-static uint16_t             nfft;
-static ftx_waterfall_t      wf;
+static float           symbol_period;
+static uint32_t        block_size;
+static uint32_t        subblock_size;
+static uint16_t        nfft;
+static ftx_waterfall_t wf;
+static float           scaled_offset = 240.0f;
 
 static ftx_candidate_t candidate_list[MAX_CANDIDATES];
 static ftx_message_t   decoded[MAX_DECODED];
 static ftx_message_t  *decoded_hashtable[MAX_DECODED];
 
 static adif_log             ft8_log;
+
+static float base_gain_offset;
 
 static void construct_cb(lv_obj_t *parent);
 static void key_cb(lv_event_t * e);
@@ -412,19 +415,11 @@ static void init() {
     frame_window = windowcf_create(nfft);
 
     rx_window = malloc(nfft * sizeof(complex float));
+    float window_norm = 2.0f / nfft;
 
-    for (uint16_t i = 0; i < nfft; i++)
-        rx_window[i] = liquid_hann(i, nfft);
-
-    float gain = 0.0f;
-
-    for (uint16_t i = 0; i < nfft; i++)
-        gain += rx_window[i] * rx_window[i];
-
-    gain = 1.0f / sqrtf(gain);
-
-    for (uint16_t i = 0; i < nfft; i++)
-        rx_window[i] *= gain;
+    for (uint16_t i = 0; i < nfft; i++) {
+        rx_window[i] = liquid_hann(i, nfft) * window_norm;
+    }
 
     reset();
 
@@ -520,7 +515,8 @@ void static process(float complex *frame) {
     complex float   *frame_ptr;
     int             offset = wf.num_blocks * wf.block_stride;
     int             frame_pos = 0;
-    float           scaled_offset = 300.0f + 40.0f * log10f(2.0f / nfft);
+
+    int16_t scaled_min = 1024;
 
     for (int time_sub = 0; time_sub < wf.time_osr; time_sub++) {
         windowcf_write(frame_window, &frame[frame_pos], subblock_size);
@@ -536,10 +532,11 @@ void static process(float complex *frame) {
             for (int bin = 0; bin < wf.num_bins; bin++) {
                 int             src_bin = (bin * wf.freq_osr) + freq_sub;
                 complex float   freq = freq_buf[src_bin];
-                float           v = crealf(freq * conjf(freq));
-                float           db = 10.0f * log10f(v);
-                // TODO: add moving average
+                float           mag2 = crealf(freq * conjf(freq));
+                float           db = 10.0f * log10f(mag2);
                 int             scaled = (int16_t) (db * 2.0f + scaled_offset);
+
+                if (scaled < scaled_min) scaled_min = scaled;
 
                 if (scaled < 0) {
                     scaled = 0;
@@ -551,7 +548,8 @@ void static process(float complex *frame) {
                 offset++;
             }
     }
-
+    // Update offset to set min to 20;
+    lpf(&scaled_offset, scaled_offset + 20.0f - scaled_min, 0.95, 0.0f);
     wf.num_blocks++;
 }
 
@@ -1015,6 +1013,10 @@ static void construct_cb(lv_obj_t *parent) {
         radio_set_pwr(MAX_PWR);
         msg_set_text_fmt("Power was limited to %0.0fW", MAX_PWR);
     }
+
+    // setup gain offset
+    float target_pwr = LV_MIN(params.pwr, MAX_PWR);
+    base_gain_offset = -8.2f + log10f(target_pwr) * 5;
 }
 
 static void show_cq_cb(lv_event_t * e) {
@@ -1284,6 +1286,11 @@ static float get_correction() {
 }
 
 static void tx_worker() {
+    float gain_offset = base_gain_offset + params.ft8_output_gain_offset.x;
+
+    float play_gain_offset = audio_set_play_vol(gain_offset + 4.0f);
+    gain_offset -= play_gain_offset;
+
     ftx_message_t msg;
     ftx_message_rc_t rc = ftx_message_encode(&msg, &hash_if, tx_msg);
 
@@ -1317,29 +1324,29 @@ static void tx_worker() {
     radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
     radio_set_modem(true);
 
-    float target_pwr = LV_MIN(params.pwr, MAX_PWR);
-    float base_gain_scale = -8.2f + log10f(target_pwr) * 5;
-    float gain_scale = base_gain_scale + params.ft8_output_gain_offset.x;
-    float prev_gain_scale = gain_scale;
+    float prev_gain_offset = gain_offset;
     size_t counter = 0;
 
     while (true) {
         if (counter > 30) {
-            gain_scale += get_correction() * 0.4f;
-            if (gain_scale > 0.0) gain_scale = 0.0f;
-            else if (gain_scale < -40.0f) gain_scale = -40.0f;
+            gain_offset += get_correction() * 0.4f;
+
+            if (gain_offset > 0.0) gain_offset = 0.0f;
+            else if (gain_offset < -40.0f) gain_offset = -40.0f;
         }
         if (n_samples <= 0 || state != TX_PROCESS) {
             state = RX_PROCESS;
             break;
         }
         part = LV_MIN(1024 * 2, n_samples);
-        if (gain_scale == prev_gain_scale) {
-            audio_gain_db(ptr, part, gain_scale, ptr);
+        if (gain_offset == prev_gain_offset) {
+            if (gain_offset != 0.0f) {
+                audio_gain_db(ptr, part, gain_offset, ptr);
+            }
         } else {
             // Smooth change gain
-            audio_gain_db_transition(ptr, part, prev_gain_scale, gain_scale, ptr);
-            prev_gain_scale = gain_scale;
+            audio_gain_db_transition(ptr, part, prev_gain_offset, gain_offset, ptr);
+            prev_gain_offset = gain_offset;
         }
         audio_play(ptr, part);
 
@@ -1347,12 +1354,14 @@ static void tx_worker() {
         ptr += part;
         counter++;
     }
-    params_float_set(&params.ft8_output_gain_offset, gain_scale - base_gain_scale);
+
+    params_float_set(&params.ft8_output_gain_offset, gain_offset - base_gain_offset + play_gain_offset);
     audio_play_wait();
     radio_set_modem(false);
     // Restore freq
     radio_set_freq(radio_freq);
     free(samples);
+    audio_set_play_vol(params.play_gain_db_f.x);
 }
 
 /**
