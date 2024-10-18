@@ -21,3 +21,6 @@ void audio_play_en(bool on);
 
 void audio_gain_db(int16_t *buf, size_t samples, float gain, int16_t *out);
 void audio_gain_db_transition(int16_t *buf, size_t samples, float gain1, float gain2, int16_t *out);
+
+float audio_set_play_vol(float db);
+float audio_set_rec_vol(float db);

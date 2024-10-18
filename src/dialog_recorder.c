@@ -151,10 +151,6 @@ static void play_item() {
         int res = sf_read_short(file, samples_buf, BUF_SIZE);
 
         if (res > 0) {
-            if (params.play_gain_db != 0) {
-                audio_gain_db(samples_buf, res, params.play_gain_db, samples_buf);
-            }
-
             audio_play(samples_buf, res);
         } else {
             play_state = false;

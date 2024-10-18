@@ -30,7 +30,9 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
-pkg_check_modules(deps REQUIRED IMPORTED_TARGET libnm dbus-glib-1 sqlite3 libpng libgps sndfile libudev libpulse libpulse-simple)
+pkg_check_modules(deps REQUIRED IMPORTED_TARGET
+    libnm dbus-glib-1 sqlite3 libpng libgps sndfile libudev libpulse libpulse-simple alsa
+)
 
 
 target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer -fasynchronous-unwind-tables)

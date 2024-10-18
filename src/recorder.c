@@ -76,16 +76,5 @@ bool recorder_is_on() {
 }
 
 void recorder_put_audio_samples(size_t nsamples, int16_t *samples) {
-    int16_t *out_samples;
-    if (params.rec_gain_db != 0) {
-        *out_samples = malloc(nsamples * sizeof(*out_samples));
-        audio_gain_db(samples, nsamples, params.rec_gain_db, out_samples);
-    } else {
-        out_samples = samples;
-    }
-
-    sf_write_short(file, out_samples, nsamples);
-    if (params.rec_gain_db != 0) {
-        free(out_samples);
-    }
+    sf_write_short(file, samples, nsamples);
 }

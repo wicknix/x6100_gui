@@ -213,8 +213,8 @@ typedef struct {
 
     /* Audio play/rec */
 
-    int8_t              play_gain_db;
-    int8_t              rec_gain_db;
+    params_float_t      play_gain_db_f;
+    params_float_t      rec_gain_db_f;
 
     /* Voice */
 
@@ -328,8 +328,6 @@ typedef struct {
         bool    long_f1;
         bool    long_f2;
 
-        bool    play_gain_db;
-        bool    rec_gain_db;
     } dirty;
 } params_t;
 

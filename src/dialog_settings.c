@@ -6,18 +6,10 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-#include <sys/time.h>
-#include <time.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/rtc.h>
-#include <errno.h>
+#include "dialog_settings.h"
 
 #include "lvgl/lvgl.h"
 #include "dialog.h"
-#include "dialog_settings.h"
 #include "styles.h"
 #include "params/params.h"
 #include "backlight.h"
@@ -26,6 +18,16 @@
 #include "keyboard.h"
 #include "clock.h"
 #include "voice.h"
+#include "audio.h"
+
+#include <sys/time.h>
+#include <time.h>
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/rtc.h>
+#include <errno.h>
 
 static lv_obj_t     *grid;
 
@@ -894,17 +896,13 @@ static uint8_t make_hmic_action(uint8_t row) {
 static void play_gain_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
 
-    params_lock();
-    params.play_gain_db = lv_slider_get_value(obj);
-    params_unlock(&params.dirty.play_gain_db);
+    params_float_set(&params.play_gain_db_f, audio_set_play_vol(lv_slider_get_value(obj)));
 }
 
 static void rec_gain_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
 
-    params_lock();
-    params.rec_gain_db = lv_slider_get_value(obj);
-    params_unlock(&params.dirty.rec_gain_db);
+    params_float_set(&params.rec_gain_db_f, audio_set_rec_vol(lv_slider_get_value(obj)));
 }
 
 static uint8_t make_audio_gain(uint8_t row) {
@@ -930,7 +928,7 @@ static uint8_t make_audio_gain(uint8_t row) {
     dialog_item(&dialog, obj);
 
     lv_slider_set_mode(obj, LV_SLIDER_MODE_NORMAL);
-    lv_slider_set_value(obj, params.play_gain_db, LV_ANIM_OFF);
+    lv_slider_set_value(obj, params.play_gain_db_f.x, LV_ANIM_OFF);
     lv_slider_set_range(obj, -10, 10);
     lv_obj_set_width(obj, SMALL_3 - 30);
     lv_obj_center(obj);
@@ -950,7 +948,7 @@ static uint8_t make_audio_gain(uint8_t row) {
     dialog_item(&dialog, obj);
 
     lv_slider_set_mode(obj, LV_SLIDER_MODE_NORMAL);
-    lv_slider_set_value(obj, params.rec_gain_db, LV_ANIM_OFF);
+    lv_slider_set_value(obj, params.rec_gain_db_f.x, LV_ANIM_OFF);
     lv_slider_set_range(obj, -10, 10);
     lv_obj_set_width(obj, SMALL_3 - 30);
     lv_obj_center(obj);

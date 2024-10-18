@@ -15,6 +15,8 @@
 #include <math.h>
 
 #include <pulse/pulseaudio.h>
+#include <alsa/asoundlib.h>
+#include <alsa/mixer.h>
 
 #include "lvgl/lvgl.h"
 #include "audio.h"
@@ -57,7 +59,6 @@ static void mixer_setup() {
     res = system("amixer sset 'Headphone',0 58,58");
     // Play level from app to radio (for FT8)
     res = system("amixer sset 'AIF1 DA0',0 160,160");
-    res = system("amixer sset 'DAC',0 147,147");
 
     // capture audio from radio
     res = system("amixer sset 'Mic1',0 0,0 cap");
@@ -65,11 +66,13 @@ static void mixer_setup() {
     res = system("amixer sset 'Mic1 Boost',0 1");
     // disable capturing from mixer
     res = system("amixer sset 'Mixer',0 nocap");
-    res = system("amixer sset 'ADC',0 160,160");
     res = system("amixer sset 'ADC Gain',0 3");
     res = system("amixer sset 'AIF1 AD0',0 160,160");
     res = system("amixer sset 'AIF1 AD0 Stereo',0 'Mix Mono'");
     res = system("amixer sset 'AIF1 Data Digital ADC',0 cap");
+
+    audio_set_rec_vol(0.0f);
+    audio_set_play_vol(0.0f);
 }
 
 void audio_init() {
@@ -224,6 +227,52 @@ void audio_play_en(bool on) {
         x6100_control_hmic_set(params.hmic);
         x6100_control_imic_set(params.imic);
     }
+}
+
+float audio_set_play_vol(float db) {
+    snd_mixer_t *handle;
+    snd_mixer_selem_id_t *sid;
+    const char *card = "default";
+    const char *selem_name = "AIF1 DA0";
+
+    snd_mixer_open(&handle, 0);
+    snd_mixer_attach(handle, card);
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
+
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_index(sid, 0);
+    snd_mixer_selem_id_set_name(sid, selem_name);
+    snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+
+    snd_mixer_selem_set_playback_dB_all(elem, (long)(db * 100.0f), 0);
+    long db_long;
+    snd_mixer_selem_get_playback_dB(elem, SND_MIXER_SCHN_MONO, &db_long);
+    snd_mixer_close(handle);
+    return (float)db_long / 100.0f;
+}
+
+float audio_set_rec_vol(float db) {
+    snd_mixer_t *handle;
+    snd_mixer_selem_id_t *sid;
+    const char *card = "default";
+    const char *selem_name = "ADC";
+
+    snd_mixer_open(&handle, 0);
+    snd_mixer_attach(handle, card);
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
+
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_index(sid, 0);
+    snd_mixer_selem_id_set_name(sid, selem_name);
+    snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+
+    snd_mixer_selem_set_capture_dB_all(elem, (long)(db * 100.0f), 0);
+    long db_long;
+    snd_mixer_selem_get_capture_dB(elem, SND_MIXER_SCHN_MONO, &db_long);
+    snd_mixer_close(handle);
+    return (float) db_long / 100.0f;
 }
 
 static void monitor_cb(pa_stream *stream, size_t length, void *udata) {

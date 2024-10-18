@@ -133,8 +133,8 @@ params_t params = {
     .long_f1                = ACTION_STEP_DOWN,
     .long_f2                = ACTION_NONE,
 
-    .play_gain_db           = 0,
-    .rec_gain_db            = 0,
+    .play_gain_db_f         = { .x = 0.0f, .name = "play_gain_db_f"},
+    .rec_gain_db_f          = { .x = 0.0f, .name = "rec_gain_db_f"},
 
     .voice_mode             = { .x = VOICE_LCD,                                 .name = "voice_mode" },
     .voice_lang             = { .x = 0,   .min = 0,  .max = (VOICES_NUM - 1),   .name = "voice_lang" },
@@ -375,11 +375,10 @@ static bool params_load() {
             params.long_f1 = i;
         } else if (strcmp(name, "long_f2") == 0) {
             params.long_f2 = i;
-        } else if (strcmp(name, "play_gain_db") == 0) {
-            params.play_gain_db = i;
-        } else if (strcmp(name, "rec_gain_db") == 0) {
-            params.rec_gain_db = i;
         }
+
+        if (params_load_float(&params.play_gain_db_f, name, f)) continue;
+        if (params_load_float(&params.rec_gain_db_f, name, f)) continue;
 
         if (params_load_bool(&params.mag_freq, name, i)) continue;
         if (params_load_bool(&params.mag_info, name, i)) continue;
@@ -547,8 +546,8 @@ static void params_save() {
     if (params.dirty.long_f1)               params_write_int("long_f1", params.long_f1, &params.dirty.long_f1);
     if (params.dirty.long_f2)               params_write_int("long_f2", params.long_f2, &params.dirty.long_f2);
 
-    if (params.dirty.play_gain_db)          params_write_int("play_gain_db", params.play_gain_db, &params.dirty.play_gain_db);
-    if (params.dirty.rec_gain_db)           params_write_int("rec_gain_db", params.rec_gain_db, &params.dirty.rec_gain_db);
+    params_save_float(&params.play_gain_db_f);
+    params_save_float(&params.rec_gain_db_f);
 
     params_save_uint8(&params.voice_mode);
     params_save_uint8(&params.voice_lang);
