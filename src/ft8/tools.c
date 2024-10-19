@@ -1,3 +1,11 @@
+/*
+ *  SPDX-License-Identifier: LGPL-2.1-or-later
+ *
+ *  Xiegu X6100 LVGL GUI
+ *
+ *  Copyright (c) 2024 Georgy Dyuldin aka R2RFE
+ */
+
 #include "tools.h"
 
 static void swap(int* xp, int* yp) {

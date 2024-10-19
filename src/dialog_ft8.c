@@ -46,6 +46,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <errno.h>
+#include <ctype.h>
 
 #define FT8_160M_ID     (100 - MEM_FT8_ID)
 #define FT8_80M_ID      (101 - MEM_FT8_ID)
@@ -116,9 +117,9 @@ typedef enum {
     MSG_TYPE_REPORT,
     // "CALL1 CALL2 R+1"
     MSG_TYPE_R_REPORT,
-    // "CALL1 CALL2 73"
-    MSG_TYPE_RR73,
     // "CALL1 CALL2 RR73"
+    MSG_TYPE_RR73,
+    // "CALL1 CALL2 73"
     MSG_TYPE_73,
 
     MSG_TYPE_OTHER,
@@ -279,6 +280,7 @@ static void make_cq_msg();
 static bool make_answer(const msg_t *msg, int8_t snr, bool rx_odd);
 static bool get_time_slot(struct timespec now);
 static bool str_equal(const char * a, const char * b);
+static bool is_cq_modifier(const char * text);
 
 // button label is current state, press action and name - next state
 static button_item_t button_show_cq = { .label = "Show:\nAll", .press = show_cq_cb };
@@ -1222,6 +1224,44 @@ static bool str_equal(const char * a, const char * b) {
 }
 
 /**
+ * Check that text is CQ modifier (3 digits or 1 to 4 letters)
+ */
+static bool is_cq_modifier(const char *text) {
+    size_t len = strlen(text);
+    char   c;
+
+    // Check for 3 digits
+    bool correct = true;
+    if (len == 3) {
+        // Check for 3 digits
+        for (size_t i = 0; i < len; i++) {
+            if ((text[i] < '0') || (text[i] > '9')) {
+                correct = false;
+                break;
+            }
+        }
+        if (correct) {
+            return true;
+        }
+    }
+    // Check for 1 to 4 letters
+    correct = true;
+    if ((len >= 1) && (len <= 4)) {
+        for (size_t i = 0; i < len; i++) {
+            c = toupper(text[i]);
+            if ((c < 'A') || (c > 'Z')) {
+                correct = false;
+                break;
+            }
+        }
+        if (correct) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Create CQ TX message
  */
 static void make_cq_msg() {
@@ -1400,8 +1440,7 @@ static msg_t parse_rx_msg(const char * str) {
     /* Analysis */
 
     if (strcmp(call_to, "CQ") == 0) {
-        // TODO: add POTA support
-        if (strlen(call_de) == 2) {
+        if (is_cq_modifier(call_de)) {
             call_de = extra;
             extra = strtok(NULL, " ");
         }
@@ -1560,13 +1599,12 @@ static void decode(bool odd) {
             memcpy(&decoded[idx_hash], &message, sizeof(message));
             decoded_hashtable[idx_hash] = &decoded[idx_hash];
 
-            // TODO: switch to tokens
             char text[FTX_MAX_MESSAGE_LENGTH];
             ftx_message_rc_t unpack_status = ftx_message_decode(&message, &hash_if, text);
             if (unpack_status != FTX_MESSAGE_RC_OK) {
                 continue;
             }
-            float snr = ftx_get_snr(&wf, cand);
+            int16_t snr = ftx_get_snr(&wf, cand);
             add_rx_text(snr, text, odd);
         }
     }
