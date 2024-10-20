@@ -8,6 +8,7 @@
 
 #include "dialog_ft8.h"
 
+#include "ft8/worker.h"
 #include "lvgl/lvgl.h"
 #include "dialog.h"
 #include "styles.h"
@@ -109,32 +110,16 @@ typedef enum {
     CELL_TX_MSG
 } ft8_cell_type_t;
 
-typedef enum {
-    // "CQ CALL ..." or "CQ DX CALL ..." or "CQ EU CALL ..."
-    MSG_TYPE_CQ,
-    // "CALL1 CALL2 GRID"
-    MSG_TYPE_GRID,
-    // "CALL1 CALL2 +1"
-    MSG_TYPE_REPORT,
-    // "CALL1 CALL2 R+1"
-    MSG_TYPE_R_REPORT,
-    // "CALL1 CALL2 RR73"
-    MSG_TYPE_RR73,
-    // "CALL1 CALL2 73"
-    MSG_TYPE_73,
-
-    MSG_TYPE_OTHER,
-} msg_type_t;
 
 /**
  * Incoming message parse result.
  */
 typedef struct {
-    msg_type_t  type;
-    char        call_from[32];
-    char        call_to[32];
-    char        extra[32];
-    int8_t      snr;
+    ftx_msg_type_t type;
+    char           call_from[32];
+    char           call_to[32];
+    char           extra[32];
+    int8_t         snr;
 } msg_t;
 
 /**
@@ -403,6 +388,7 @@ static void init() {
     nfft = block_size * FREQ_OSR;
 
     const uint32_t max_blocks = slot_time / symbol_period;
+    // TODO: skip bins outside filter
     const uint32_t num_bins = SAMPLE_RATE * symbol_period / 2;
 
     size_t mag_size = max_blocks * TIME_OSR * FREQ_OSR * num_bins * sizeof(uint8_t);
@@ -1354,6 +1340,9 @@ static bool make_answer(const msg_t * msg, int8_t snr, bool rx_odd) {
     return true;
 }
 
+/**
+ * Get output level correction, based on output power and ALC
+ */
 static float get_correction() {
     static uint8_t msg_id = 0;
     float correction = 0.0f;
@@ -1372,52 +1361,36 @@ static float get_correction() {
 }
 
 static void tx_worker() {
+    const uint16_t signal_freq = 1325;
+    int16_t       *samples;
+    uint32_t       n_samples;
+
+    if (!ftx_worker_generate_samples(tx_msg, signal_freq, params.ft8_protocol, samples, &n_samples)) {
+        state = RX_PROCESS;
+        return;
+    }
     float gain_offset = base_gain_offset + params.ft8_output_gain_offset.x;
     float play_gain_offset = audio_set_play_vol(gain_offset + 4.0f);
     gain_offset -= play_gain_offset;
 
-    ftx_message_t msg;
-    ftx_message_rc_t rc = ftx_message_encode(&msg, &hash_if, tx_msg);
-
-    if (rc != FTX_MESSAGE_RC_OK) {
-        LV_LOG_ERROR("Cannot parse message %i", rc);
-        state = RX_PROCESS;
-        return;
-    }
-
-    uint8_t tones[FT4_NN];
-    uint8_t n_tones;
-
-    if (params.ft8_protocol == FTX_PROTOCOL_FT8) {
-        n_tones = FT8_NN;
-        ft8_encode(msg.payload, tones);
-    } else if (params.ft8_protocol == FTX_PROTOCOL_FT4) {
-        n_tones = FT4_NN;
-        ft4_encode(msg.payload, tones);
-    }
-
-    const uint16_t signal_freq = 1325;
-    uint32_t    n_samples = 0;
-    float       symbol_bt = (params.ft8_protocol == FTX_PROTOCOL_FT4) ? FT4_SYMBOL_BT : FT8_SYMBOL_BT;
-    int16_t     *samples = gfsk_synth(tones, n_tones, signal_freq, symbol_bt, symbol_period, &n_samples);
-    int16_t     *ptr = samples;
-    size_t      part;
-
     // Change freq before tx
-    uint64_t    radio_freq = params_band_cur_freq_get();
-
+    uint64_t radio_freq = params_band_cur_freq_get();
     radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
     radio_set_modem(true);
 
-    float prev_gain_offset = gain_offset;
-    size_t counter = 0;
+    float    prev_gain_offset = gain_offset;
+    size_t   counter = 0;
+    int16_t *ptr = samples;
+    size_t   part;
 
     while (true) {
         if (counter > 30) {
             gain_offset += get_correction() * 0.4f;
 
-            if (gain_offset > 0.0) gain_offset = 0.0f;
-            else if (gain_offset < -40.0f) gain_offset = -40.0f;
+            if (gain_offset > 0.0)
+                gain_offset = 0.0f;
+            else if (gain_offset < -40.0f)
+                gain_offset = -40.0f;
         }
         if (n_samples <= 0 || state != TX_PROCESS) {
             state = RX_PROCESS;
