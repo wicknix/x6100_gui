@@ -69,7 +69,7 @@
 #define FT4_10M_ID      (207 - MEM_FT4_ID)
 #define FT4_6M_ID       (208 - MEM_FT4_ID)
 
-#define DECIM           4
+#define DECIM           6
 #define SAMPLE_RATE     (AUDIO_CAPTURE_RATE / DECIM)
 
 #define MIN_SCORE       10
