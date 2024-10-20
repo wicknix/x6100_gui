@@ -120,6 +120,7 @@ params_t params = {
     .ft8_tx_freq            = { .x = 1325,      .name = "ft8_tx_freq" },
     .ft8_auto               = { .x = true,      .name = "ft8_auto" },
     .ft8_output_gain_offset = { .x = 0.0f,      .name = "ft8_output_gain_offset" },
+    .ft8_cq_modifier        = { .x = "",        .name = "ft8_cq_modifier"},
 
     .long_gen               = ACTION_SCREENSHOT,
     .long_app               = ACTION_APP_RECORDER,
@@ -393,6 +394,7 @@ static bool params_load() {
         if (params_load_bool(&params.spmode, name, i)) continue;
         if (params_load_bool(&params.ft8_auto, name, i)) continue;
         if (params_load_float(&params.ft8_output_gain_offset, name, f)) continue;
+        if (params_load_str(&params.ft8_cq_modifier, name, t)) continue;
 
         if (params_load_uint8(&params.voice_mode, name, i)) continue;
         if (params_load_uint8(&params.voice_lang, name, i)) continue;
@@ -571,6 +573,7 @@ static void params_save() {
     params_save_bool(&params.spmode);
     params_save_bool(&params.ft8_auto);
     params_save_float(&params.ft8_output_gain_offset);
+    params_save_str(&params.ft8_cq_modifier);
 
     params_save_str(&params.qth);
     params_save_str(&params.callsign);

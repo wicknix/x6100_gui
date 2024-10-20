@@ -191,6 +191,7 @@ typedef struct {
     uint8_t             ft8_band;
     params_uint16_t     ft8_tx_freq;
     params_bool_t       ft8_auto;
+    params_str_t        ft8_cq_modifier;
 
     // FT8 gain offset for different radios/bands/modes
     params_float_t      ft8_output_gain_offset;
