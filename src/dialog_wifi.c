@@ -63,7 +63,7 @@ static int compare_aps(const void *a, const void *b);
 static void keyboard_open();
 static bool keyboard_cancel_cb();
 static bool keyboard_ok_cb();
-static void keyboard_close_cb();
+static void keyboard_close();
 
 static void update_status_cb(lv_timer_t *);
 static void wifi_state_changed_cb(void *s, lv_msg_t *m);
@@ -197,7 +197,7 @@ static void destruct_cb() {
         lv_timer_del(timer_status);
         timer_status = NULL;
     }
-    keyboard_close_cb(NULL);
+    keyboard_close();
     stop_refresh_ap_list();
 }
 
@@ -484,7 +484,7 @@ static void keyboard_open() {
     disable_buttons = true;
 }
 
-static void keyboard_close_cb() {
+static void keyboard_close() {
     textarea_window_close();
     lv_group_add_obj(keyboard_group, ap_table);
     lv_group_set_editing(keyboard_group, true);
@@ -493,7 +493,7 @@ static void keyboard_close_cb() {
 
 static bool keyboard_cancel_cb() {
     msg_set_text_fmt("Password is required");
-    keyboard_close_cb();
+    keyboard_close();
     return true;
 }
 
@@ -512,7 +512,7 @@ static bool keyboard_ok_cb() {
         wifi_add_connection(cur_ap_info.ssid, cur_password);
     }
     cur_password = NULL;
-    keyboard_close_cb();
+    keyboard_close();
     return true;
 }
 
