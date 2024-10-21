@@ -9,7 +9,7 @@
 #include "worker.h"
 
 #include "../gfsk.h"
-#include "tools.h"
+#include "../util.h"
 
 #include "lvgl/lvgl.h"
 #include <ft8lib/constants.h>
@@ -22,14 +22,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_CANDIDATES 140
+#define MAX_CANDIDATES 200
 #define MAX_DECODED_MESSAGES 50
 #define LDPC_ITERATIONS 25
-#define TIME_OSR 4                   // Time oversampling rate (symbol subdivision)
-#define FREQ_OSR 2                   // Frequency oversampling rate (bin subdivision)
-#define MIN_SCORE 10                 // Minimum score for candidate
-#define DECODE_BLOCK_STRIDE 2        // Try to decode each N block
-#define EARLY_LDPC_ITERATIONS 25     // LDPC iterations on early decoding
+#define TIME_OSR 4               // Time oversampling rate (symbol subdivision)
+#define FREQ_OSR 2               // Frequency oversampling rate (bin subdivision)
+#define MIN_SCORE 10             // Minimum score for candidate
+#define DECODE_BLOCK_STRIDE 2    // Try to decode each N block
+#define EARLY_LDPC_ITERATIONS 25 // LDPC iterations on early decoding
 
 static float complex *time_buf;
 static float complex *freq_buf;
@@ -42,8 +42,8 @@ static int   block_size;
 static int   subblock_size;
 static int   nfft;
 
-static uint8_t n_tones; // Number of tones for generate message and check minimal length for rx
-static uint8_t sync_num;  //
+static uint8_t n_tones;  // Number of tones for generate message and check minimal length for rx
+static uint8_t sync_num; // Length of sync
 
 static int             num_candidates;
 static ftx_candidate_t candidate_list[MAX_CANDIDATES];
@@ -55,6 +55,8 @@ static int             find_candidates_at;
 static void decode_messages(const ftx_waterfall_t *wf, int *num_candidates, ftx_candidate_t *candidate_list,
                             ftx_message_t *decoded, ftx_message_t **decoded_hashtable, int ldpc_iterations,
                             decoded_msg_cb msg_cb, void *user_data);
+
+static int get_message_snr(const ftx_waterfall_t *wf, const ftx_candidate_t *candidate, ftx_message_t *msg);
 
 /**
  * Init worker
@@ -192,8 +194,6 @@ void ftx_worker_put_rx_samples(float complex *samples, uint32_t n_samples) {
     int            offset = wf.num_blocks * wf.block_stride;
     int            frame_pos = 0;
 
-    // int16_t scaled_min = 1024;
-
     for (int time_sub = 0; time_sub < wf.time_osr; time_sub++) {
         windowcf_write(frame_window, &samples[frame_pos], subblock_size);
         frame_pos += subblock_size;
@@ -210,12 +210,7 @@ void ftx_worker_put_rx_samples(float complex *samples, uint32_t n_samples) {
                 complex float freq = freq_buf[src_bin];
                 float         mag2 = crealf(freq * conjf(freq));
                 float         db = 10.0f * log10f(mag2);
-                int           scaled = (int16_t)(db * 2.0f + 240);
-                // switch to scaled offset
-                // int             scaled = (int16_t) (db * 2.0f + 240);
-
-                // if (scaled < scaled_min)
-                //     scaled_min = scaled;
+                int           scaled = (int16_t)(db * 2.0f + 240.0f);
 
                 if (scaled < 0) {
                     scaled = 0;
@@ -227,9 +222,6 @@ void ftx_worker_put_rx_samples(float complex *samples, uint32_t n_samples) {
                 offset++;
             }
     }
-    // // Update offset to set min to 20;
-    // // TODO: add auto level control
-    // lpf(&scaled_offset, scaled_offset + 20.0f - scaled_min, 0.95, 0.0f);
     wf.num_blocks++;
 }
 
@@ -317,12 +309,23 @@ static void decode_messages(const ftx_waterfall_t *wf, int *num_candidates, ftx_
             if (unpack_status != FTX_MESSAGE_RC_OK) {
                 LV_LOG_INFO("Error [%d] while unpacking!", (int)unpack_status);
             } else {
-                float snr;
-                snr = ftx_get_snr(wf, cand);
+                int snr = get_message_snr(wf, cand, &message);
                 msg_cb(text, snr, freq_hz, time_sec, user_data);
             }
         }
     }
     // Remove decoded candidate;
     ftx_delete_candidates(to_delete_idx, to_delete_size, candidate_list, num_candidates);
+}
+
+static int get_message_snr(const ftx_waterfall_t *wf, const ftx_candidate_t *candidate, ftx_message_t *msg) {
+    uint8_t n_tones = (wf->protocol == FTX_PROTOCOL_FT4) ? FT4_NN : FT8_NN;
+    uint8_t tones[n_tones];
+
+    if (wf->protocol == FTX_PROTOCOL_FT4) {
+        ft4_encode(msg->payload, tones);
+    } else {
+        ft8_encode(msg->payload, tones);
+    }
+    return ftx_get_snr(wf, candidate, tones, n_tones);
 }

@@ -30,7 +30,6 @@
 #include "widgets/lv_finder.h"
 
 #include <ft8lib/message.h>
-#include "ft8/tools.h"
 #include "ft8/worker.h"
 #include "gfsk.h"
 #include "adif.h"
