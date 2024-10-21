@@ -154,7 +154,6 @@ typedef struct {
     int16_t     rst_s;
 
     int16_t     last_snr;
-    msg_t       *last_rx_msg;
     bool        rx_odd;
 } ft8_qso_item_t;
 
@@ -261,6 +260,7 @@ static void keyboard_close();
 static void add_info(const char * fmt, ...);
 static void add_tx_text(const char * text);
 static void make_cq_msg(const char *callsign, const char *qth, const char *cq_mod, char *text);
+static void generate_tx_msg(const msg_t * rx_msg);
 static bool make_answer(const msg_t *msg, int8_t snr, bool rx_odd);
 static bool get_time_slot(struct timespec now);
 static bool str_equal(const char * a, const char * b);
@@ -329,10 +329,6 @@ static void clear_qso() {
     qso_item.remote_qth[0] = 0;
     qso_item.rst_r = UNKNOWN_SNR;
     qso_item.rst_s = UNKNOWN_SNR;
-    if (qso_item.last_rx_msg != NULL) {
-        free(qso_item.last_rx_msg);
-        qso_item.last_rx_msg = NULL;
-    }
 }
 
 static void start_qso(msg_t * msg) {
@@ -1410,8 +1406,6 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
     ft8_cell_type_t cell_type;
 
     msg_t msg = parse_rx_msg(text);
-    msg_t * msg_p = malloc(sizeof(msg_t));
-    *msg_p = msg;
 
     if (str_equal(msg.call_to, params.callsign.x)) {
         cell_type = CELL_RX_TO_ME;
@@ -1420,10 +1414,6 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
             strncpy(qso_item.remote_callsign, msg.call_from, sizeof(qso_item.remote_callsign) - 1);
         }
         if (active_qso() && (msg.type != MSG_TYPE_73) && str_equal(msg.call_from, qso_item.remote_callsign)) {
-            if (qso_item.last_rx_msg != NULL) {
-                free(qso_item.last_rx_msg);
-            }
-            qso_item.last_rx_msg = msg_p;
             qso_item.last_snr = snr;
             qso_item.rx_odd = odd;
             if (msg.type == MSG_TYPE_GRID) {
@@ -1431,6 +1421,9 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
             }
             if ((msg.type == MSG_TYPE_REPORT) || (msg.type == MSG_TYPE_R_REPORT)) {
                 qso_item.rst_r = msg.snr;
+            }
+            if (params.ft8_auto.x) {
+                generate_tx_msg(&msg);
             }
         }
     } else if (msg.type == MSG_TYPE_CQ) {
@@ -1511,25 +1504,21 @@ static void update_call_btn(void * arg) {
 }
 
 
-static void generate_tx_msg() {
-    if (qso_item.last_rx_msg != NULL) {
-        if (!make_answer(qso_item.last_rx_msg, qso_item.last_snr, qso_item.rx_odd)) {
-            tx_msg[0] = 0;
-        } else {
-            cq_enabled = false;
-            scheduler_put(update_call_btn, NULL, 0);
-        }
-        switch (qso_item.last_rx_msg->type) {
-            case MSG_TYPE_RR73:
-            case MSG_TYPE_R_REPORT:
-                save_qso();
-                clear_qso();
-                break;
-            default:
-                break;
-        }
-        free(qso_item.last_rx_msg);
-        qso_item.last_rx_msg = NULL;
+static void generate_tx_msg(const msg_t * rx_msg) {
+    if (!make_answer(rx_msg, qso_item.last_snr, qso_item.rx_odd)) {
+        tx_msg[0] = 0;
+    } else {
+        cq_enabled = false;
+        scheduler_put(update_call_btn, NULL, 0);
+    }
+    switch (rx_msg->type) {
+        case MSG_TYPE_RR73:
+        case MSG_TYPE_R_REPORT:
+            save_qso();
+            clear_qso();
+            break;
+        default:
+            break;
     }
 }
 
@@ -1550,9 +1539,6 @@ static void * decode_thread(void *arg) {
         rx_worker(new_slot, odd);
 
         if (new_slot) {
-            if (params.ft8_auto.x) {
-                generate_tx_msg();
-            }
             have_tx_msg = strlen(tx_msg) != 0;
 
             if (have_tx_msg && (tx_time_slot == new_odd) && tx_enabled) {
