@@ -30,10 +30,8 @@
 #include "widgets/lv_finder.h"
 
 #include <ft8lib/message.h>
-#include <ft8lib/decode.h>
-#include <ft8lib/encode.h>
-#include <ft8lib/hashtable.h>
 #include "ft8/tools.h"
+#include "ft8/worker.h"
 #include "gfsk.h"
 #include "adif.h"
 #include "qso_log.h"
@@ -74,13 +72,6 @@
 #define DECIM           6
 #define SAMPLE_RATE     (AUDIO_CAPTURE_RATE / DECIM)
 
-#define MIN_SCORE       10
-#define MAX_CANDIDATES  120
-#define LDPC_ITER       20
-#define MAX_DECODED     50
-#define FREQ_OSR        2
-#define TIME_OSR        4
-
 #define WIDTH           771
 
 #define UNKNOWN_SNR     99
@@ -96,6 +87,23 @@
 #define WAIT_SYNC_TEXT "Wait sync"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
+typedef enum {
+    // "CQ CALL ..." or "CQ DX CALL ..." or "CQ EU CALL ..."
+    MSG_TYPE_CQ,
+    // "CALL1 CALL2 GRID"
+    MSG_TYPE_GRID,
+    // "CALL1 CALL2 +1"
+    MSG_TYPE_REPORT,
+    // "CALL1 CALL2 R+1"
+    MSG_TYPE_R_REPORT,
+    // "CALL1 CALL2 RR73"
+    MSG_TYPE_RR73,
+    // "CALL1 CALL2 73"
+    MSG_TYPE_73,
+
+    MSG_TYPE_OTHER,
+} ftx_msg_type_t;
 
 typedef enum {
     RX_PROCESS,
@@ -216,22 +224,6 @@ static pthread_t            thread;
 
 static firdecim_crcf        decim;
 static float complex        *decim_buf;
-static complex float        *rx_window = NULL;
-static complex float        *time_buf;
-static complex float        *freq_buf;
-static windowcf             frame_window;
-static fftplan              fft;
-
-static float           symbol_period;
-static uint32_t        block_size;
-static uint32_t        subblock_size;
-static uint16_t        nfft;
-static ftx_waterfall_t wf;
-static float           scaled_offset = 240.0f;
-
-static ftx_candidate_t candidate_list[MAX_CANDIDATES];
-static ftx_message_t   decoded[MAX_DECODED];
-static ftx_message_t  *decoded_hashtable[MAX_DECODED];
 
 static adif_log             ft8_log;
 
@@ -362,68 +354,20 @@ static bool active_qso() {
     return qso_item.remote_callsign[0] != 0;
 }
 
-static void reset() {
-    wf.num_blocks = 0;
-}
+static void worker_init() {
 
-static void init() {
-    /* FT8 decoder */
+    /* ftx worker */
 
-    float   slot_time;
-
-    switch (params.ft8_protocol) {
-        case FTX_PROTOCOL_FT4:
-            slot_time = FT4_SLOT_TIME;
-            symbol_period = FT4_SYMBOL_PERIOD;
-            break;
-
-        case FTX_PROTOCOL_FT8:
-            slot_time = FT8_SLOT_TIME;
-            symbol_period = FT8_SYMBOL_PERIOD;
-            break;
-    }
-
-    block_size = SAMPLE_RATE * symbol_period;
-    subblock_size = block_size / TIME_OSR;
-    nfft = block_size * FREQ_OSR;
-
-    const uint32_t max_blocks = slot_time / symbol_period;
-    // TODO: skip bins outside filter
-    const uint32_t num_bins = SAMPLE_RATE * symbol_period / 2;
-
-    size_t mag_size = max_blocks * TIME_OSR * FREQ_OSR * num_bins * sizeof(uint8_t);
-
-    wf.max_blocks = max_blocks;
-    wf.num_bins = num_bins;
-    wf.time_osr = TIME_OSR;
-    wf.freq_osr = FREQ_OSR;
-    wf.block_stride = TIME_OSR * FREQ_OSR * num_bins;
-    wf.mag = (uint8_t *) malloc(mag_size);
-    wf.protocol = params.ft8_protocol;
-
-    /* FT8 DSP */
-
-    decim_buf = (float complex *) malloc(block_size * sizeof(float complex));
-    time_buf = (float complex*) malloc(nfft * sizeof(float complex));
-    freq_buf = (float complex*) malloc(nfft * sizeof(float complex));
-    fft = fft_create_plan(nfft, time_buf, freq_buf, LIQUID_FFT_FORWARD, 0);
-    frame_window = windowcf_create(nfft);
-
-    rx_window = malloc(nfft * sizeof(complex float));
-    float window_norm = 2.0f / nfft;
-
-    for (uint16_t i = 0; i < nfft; i++) {
-        rx_window[i] = liquid_hann(i, nfft) * window_norm;
-    }
-
-    reset();
+    ftx_worker_init(SAMPLE_RATE, params.ft8_protocol);
+    int block_size = ftx_worker_get_block_size();
 
     struct timespec now;
     clock_gettime(CLOCK_REALTIME, &now);
     odd = get_time_slot(now);
+    decim_buf = (float complex *) malloc(block_size * sizeof(float complex));
 
     /* Waterfall */
-
+    // TODO: check nfft for waterfall
     waterfall_nfft = block_size * 2;
 
     waterfall_sg = spgramcf_create(waterfall_nfft, LIQUID_WINDOW_HANN, waterfall_nfft, waterfall_nfft / 4);
@@ -431,37 +375,24 @@ static void init() {
     waterfall_time = get_time();
 
     /* Worker */
-
     pthread_create(&thread, NULL, decode_thread, NULL);
-
-    /* Logger */
-    ft8_log = adif_log_init("/mnt/ft_log.adi");
 }
 
-static void done() {
+static void worker_done() {
     state = RX_PROCESS;
 
     pthread_cancel(thread);
     pthread_join(thread, NULL);
     radio_set_modem(false);
     pthread_mutex_unlock(&audio_mutex);
-
-    free(wf.mag);
-    windowcf_destroy(frame_window);
-
+    ftx_worker_free();
     free(decim_buf);
-    free(time_buf);
-    free(freq_buf);
-    fft_destroy_plan(fft);
 
     spgramcf_destroy(waterfall_sg);
     free(waterfall_psd);
 
-    free(rx_window);
-    adif_log_close(ft8_log);
     clear_qso();
     tx_msg[0] = 0;
-    hashtable_cleanup(0);
 }
 
 static const char * find_qth(const char *str) {
@@ -500,53 +431,6 @@ void static waterfall_process(float complex *frame, const size_t size) {
         waterfall_time = now;
         spgramcf_reset(waterfall_sg);
     }
-}
-
-void static process(float complex *frame) {
-    if (wf.num_blocks >= wf.max_blocks) {
-        LV_LOG_ERROR("FT8 wf is full");
-        return;
-    }
-    complex float   *frame_ptr;
-    int             offset = wf.num_blocks * wf.block_stride;
-    int             frame_pos = 0;
-
-    int16_t scaled_min = 1024;
-
-    for (int time_sub = 0; time_sub < wf.time_osr; time_sub++) {
-        windowcf_write(frame_window, &frame[frame_pos], subblock_size);
-        frame_pos += subblock_size;
-
-        windowcf_read(frame_window, &frame_ptr);
-
-        liquid_vectorcf_mul(rx_window, frame_ptr, nfft, time_buf);
-
-        fft_execute(fft);
-
-        for (int freq_sub = 0; freq_sub < wf.freq_osr; freq_sub++)
-            for (int bin = 0; bin < wf.num_bins; bin++) {
-                int             src_bin = (bin * wf.freq_osr) + freq_sub;
-                complex float   freq = freq_buf[src_bin];
-                float           mag2 = crealf(freq * conjf(freq));
-                float           db = 10.0f * log10f(mag2);
-                int             scaled = (int16_t) (db * 2.0f + scaled_offset);
-
-                if (scaled < scaled_min) scaled_min = scaled;
-
-                if (scaled < 0) {
-                    scaled = 0;
-                } else if (scaled > 255) {
-                    scaled = 255;
-                }
-
-                wf.mag[offset] = scaled;
-                offset++;
-            }
-    }
-    // Update offset to set min to 20;
-    // TODO: add auto level control
-    lpf(&scaled_offset, scaled_offset + 20.0f - scaled_min, 0.95, 0.0f);
-    wf.num_blocks++;
 }
 
 static void truncate_table() {
@@ -738,8 +622,7 @@ static void key_cb(lv_event_t * e) {
 static void destruct_cb() {
     // TODO: check free mem
     keyboard_close();
-    done();
-    hashtable_delete();
+    worker_done();
 
     firdecim_crcf_destroy(decim);
     free(audio_buf);
@@ -751,6 +634,7 @@ static void destruct_cb() {
     main_screen_lock_band(false);
 
     radio_set_pwr(params.pwr);
+    adif_log_close(ft8_log);
 }
 
 static void load_band() {
@@ -770,9 +654,8 @@ static void load_band() {
     mem_load(mem_id + params.ft8_band);
 }
 
-static void clean() {
-    reset();
-
+/// @brief Clean waterfall and table
+static void clean_screen() {
     lv_table_set_row_cnt(table, 0);
     lv_table_set_row_cnt(table, 1);
     lv_table_set_cell_value(table, 0, 0, WAIT_SYNC_TEXT);
@@ -827,9 +710,9 @@ static void band_cb(lv_event_t * e) {
     params_unlock(&params.dirty.ft8_band);
     load_band();
 
-    done();
-    init();
-    clean();
+    worker_done();
+    worker_init();
+    clean_screen();
 }
 
 static void msg_timer(lv_timer_t *t) {
@@ -1002,9 +885,10 @@ static void construct_cb(lv_obj_t *parent) {
     main_screen_lock_freq(true);
     main_screen_lock_band(true);
 
-    hashtable_init(256);
+    worker_init();
 
-    init();
+    /* Logger */
+    ft8_log = adif_log_init("/mnt/ft_log.adi");
 
     if (params.pwr > MAX_PWR) {
         radio_set_pwr(MAX_PWR);
@@ -1047,9 +931,9 @@ static void mode_ft4_cb(lv_event_t * e) {
 
     buttons_load(1, &button_mode_ft8);
 
-    done();
-    init();
-    clean();
+    worker_done();
+    worker_init();
+    clean_screen();
     load_band();
 }
 
@@ -1064,9 +948,9 @@ static void mode_ft8_cb(lv_event_t * e) {
 
     buttons_load(1, &button_mode_ft4);
 
-    done();
-    init();
-    clean();
+    worker_done();
+    worker_init();
+    clean_screen();
     load_band();
 }
 
@@ -1365,7 +1249,7 @@ static void tx_worker() {
     int16_t       *samples;
     uint32_t       n_samples;
 
-    if (!ftx_worker_generate_samples(tx_msg, signal_freq, params.ft8_protocol, samples, &n_samples)) {
+    if (!ftx_worker_generate_tx_samples(tx_msg, signal_freq, &samples, &n_samples)) {
         state = RX_PROCESS;
         return;
     }
@@ -1580,61 +1464,16 @@ static void add_rx_text(int16_t snr, const char * text, bool odd) {
     event_send(table, EVENT_FT8_MSG, cell_data);
 }
 
-static void decode(bool odd) {
-    uint16_t    num_candidates = ftx_find_candidates(&wf, MAX_CANDIDATES, candidate_list, MIN_SCORE);
-
-    memset(decoded_hashtable, 0, sizeof(decoded_hashtable));
-    memset(decoded, 0, sizeof(decoded));
-
-    for (uint16_t idx = 0; idx < num_candidates; idx++) {
-        const ftx_candidate_t *cand = &candidate_list[idx];
-
-        if (cand->score < MIN_SCORE)
-            continue;
-
-        float freq_hz = (cand->freq_offset + (float) cand->freq_sub / wf.freq_osr) / symbol_period;
-        float time_sec = (cand->time_offset + (float) cand->time_sub / wf.time_osr) * symbol_period;
-
-        ftx_message_t       message;
-        ftx_decode_status_t status;
-
-        if (!ftx_decode_candidate(&wf, cand, LDPC_ITER, &message, &status)) {
-            continue;
-        }
-
-        uint16_t    idx_hash = message.hash % MAX_DECODED;
-        bool        found_empty_slot = false;
-        bool        found_duplicate = false;
-
-        do {
-            if (decoded_hashtable[idx_hash] == NULL) {
-                found_empty_slot = true;
-            } else if (decoded_hashtable[idx_hash]->hash == message.hash && (0 == memcmp(decoded_hashtable[idx_hash]->payload, message.payload, sizeof(message.payload)))) {
-                found_duplicate = true;
-            } else {
-                idx_hash = (idx_hash + 1) % MAX_DECODED;
-            }
-        } while (!found_empty_slot && !found_duplicate);
-
-        if (found_empty_slot) {
-            memcpy(&decoded[idx_hash], &message, sizeof(message));
-            decoded_hashtable[idx_hash] = &decoded[idx_hash];
-
-            char text[FTX_MAX_MESSAGE_LENGTH];
-            ftx_message_rc_t unpack_status = ftx_message_decode(&message, &hash_if, text);
-            if (unpack_status != FTX_MESSAGE_RC_OK) {
-                continue;
-            }
-            int16_t snr = ftx_get_snr(&wf, cand);
-            add_rx_text(snr, text, odd);
-        }
-    }
+static void received_message_cb(const char *text, int snr, float freq_hz, float time_sec, void *user_data) {
+    bool *odd = (bool *)user_data;
+    add_rx_text(snr, text, *odd);
 }
 
 static void rx_worker(bool new_slot, bool odd) {
-    unsigned int    n;
-    float complex   *buf;
-    const size_t    size = block_size * DECIM;
+    unsigned int   n;
+    float complex *buf;
+    const int block_size = ftx_worker_get_block_size();
+    const size_t   size = block_size * DECIM;
 
     pthread_mutex_lock(&audio_mutex);
 
@@ -1646,20 +1485,20 @@ static void rx_worker(bool new_slot, bool odd) {
 
         waterfall_process(decim_buf, block_size);
 
-        process(decim_buf);
+        ftx_worker_put_rx_samples(decim_buf, block_size);
 
-        if (wf.num_blocks >= wf.max_blocks) {
-            decode(odd);
-            reset();
+        if (ftx_worker_is_full()) {
+            ftx_worker_decode(received_message_cb, true, (void *)&odd);
+            ftx_worker_reset();
+        } else {
+            ftx_worker_decode(received_message_cb, false, (void *)&odd);
         }
     }
     pthread_mutex_unlock(&audio_mutex);
 
     if (new_slot) {
-        if (wf.num_blocks > (wf.max_blocks * 0.75f)) {
-            decode(odd);
-        }
-        reset();
+        ftx_worker_decode(received_message_cb, true, (void *)&odd);
+        ftx_worker_reset();
     }
 }
 

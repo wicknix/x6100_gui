@@ -10,73 +10,47 @@
 
 #include <ft8lib/constants.h>
 
+#include <complex.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <complex.h>
 
-typedef enum {
-    // "CQ CALL ..." or "CQ DX CALL ..." or "CQ EU CALL ..."
-    MSG_TYPE_CQ,
-    // "CALL1 CALL2 GRID"
-    MSG_TYPE_GRID,
-    // "CALL1 CALL2 +1"
-    MSG_TYPE_REPORT,
-    // "CALL1 CALL2 R+1"
-    MSG_TYPE_R_REPORT,
-    // "CALL1 CALL2 RR73"
-    MSG_TYPE_RR73,
-    // "CALL1 CALL2 73"
-    MSG_TYPE_73,
+/// @brief Callback for decoded message
+typedef void (*decoded_msg_cb)(const char *text, int snr, float freq_hz, float time_sec, void *user_data);
 
-    MSG_TYPE_OTHER,
-} ftx_msg_type_t;
+/// @brief Init worker structures
+/// @param[in] sample_rate Input audio sample rate
+/// @param[in] protocol protocol (FT8/FT4)
+void ftx_worker_init(int sample_rate, ftx_protocol_t protocol);
 
-
-/**
- * Init worker
- */
-void ftx_worker_init();
-
-/**
- * Cleanup worker
- */
+/// @brief Free internal structures
 void ftx_worker_free();
 
-
-/**
- * Reset worker
- */
+/// @brief Reset state before receiving new time slot
 void ftx_worker_reset();
 
+/// @brief Generate audio samples for TX
+/// @param[in] text message to send
+/// @param[in] signal_freq base signal frequency
+/// @param[out] samples pointer to generated audio samples
+/// @param[out] n_samples count of samples
+/// @return success flag
+bool ftx_worker_generate_tx_samples(const char *text, const uint16_t signal_freq, int16_t **samples,
+                                    uint32_t *n_samples);
 
+/// @brief Process RX audio samples
+/// @param[in] samples audio samples
+/// @param[in] n_samples count of samples
+void ftx_worker_put_rx_samples(float complex *samples, uint32_t n_samples);
 
+/// @brief Decode messages
+/// @param[in] msg_cb callback for decoded messages
+/// @param[in] last flag to perform more heavy search of messages
+/// @param[in] user_data pointer to any information to pass to `msg_cb`
+void ftx_worker_decode(decoded_msg_cb msg_cb, bool last, void *user_data);
 
-/**
- * Create CQ message
- */
-void ftx_worker_make_cq_msg(char *msg, char *from_call, char *grid, char *cq_modifier);
+/// @brief Return block size
+int ftx_worker_get_block_size();
 
-/**
- * Create answer
- */
-bool ftx_worker_make_answer_msg(char *call_from, char *call_to, ftx_msg_type_t incoming_type, char *text);
-
-
-
-
-/**
- * Generate samples
- */
-bool ftx_worker_generate_samples(const char *text, const uint16_t signal_freq, ftx_protocol_t proto, int16_t *samples,
-                                 uint32_t *n_samples);
-
-/**
- * Process samples
- */
-bool ftx_worker_process_samples(float complex *samples, uint32_t n_samples);
-
-/**
- * Decode samples
- */
-void ftx_worker_decode();
+/// @brief Check that wf is full
+bool ftx_worker_is_full();
 
