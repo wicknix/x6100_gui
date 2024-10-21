@@ -1182,7 +1182,7 @@ static bool is_cq_modifier(const char *text) {
  * Create CQ TX message
  */
 static void make_cq_msg(const char *callsign, const char *qth, const char *cq_mod, char *text) {
-    if (cq_mod) {
+    if (strlen(cq_mod)) {
         snprintf(text, FTX_MAX_MESSAGE_LENGTH, "CQ_%s %s %s", cq_mod, callsign, qth);
     } else {
         snprintf(text, FTX_MAX_MESSAGE_LENGTH, "CQ %s %s", callsign, qth);
