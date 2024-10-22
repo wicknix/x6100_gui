@@ -31,7 +31,7 @@
 enum selected_ap_type {
     SELECTED_AP_NONE,
     SELECTED_AP_UNKNOWN,
-    SELECTED_AP_KNOWN
+    SELECTED_AP_KNOWN,
 };
 
 static void construct_cb(lv_obj_t *parent);
@@ -44,14 +44,14 @@ static void ap_table_draw_event_cb(lv_event_t *e);
 static void wifi_bt_toggle_cb(lv_event_t *e);
 static void start_scan_cb(lv_event_t *e);
 static void connect_cb(lv_event_t *e);
-static void con_update_cb(lv_event_t *e);
+static void con_change_passwd_cb(lv_event_t *e);
 static void con_delete_cb(lv_event_t *e);
 
 // button label getters
 static char *wifi_on_off_label_getter();
 static char *wifi_scan_label_getter();
 static char *wifi_connected_label_getter();
-static char *wifi_con_update_label_getter();
+static char *wifi_con_change_passwd_label_getter();
 static char *wifi_con_delete_label_getter();
 
 static void start_refresh_ap_list();
@@ -69,11 +69,11 @@ static void update_status_cb(lv_timer_t *);
 static void wifi_state_changed_cb(void *s, lv_msg_t *m);
 
 static button_item_t buttons[] = {
-    {.label_type = LABEL_FN, .label_fn = wifi_on_off_label_getter,     .press = wifi_bt_toggle_cb},
-    {.label_type = LABEL_FN, .label_fn = wifi_scan_label_getter,       .press = start_scan_cb    },
-    {.label_type = LABEL_FN, .label_fn = wifi_connected_label_getter,  .press = connect_cb       },
-    {.label_type = LABEL_FN, .label_fn = wifi_con_update_label_getter, .press = con_update_cb    },
-    {.label_type = LABEL_FN, .label_fn = wifi_con_delete_label_getter, .press = con_delete_cb    },
+    {.label_type = LABEL_FN, .label_fn = wifi_on_off_label_getter,            .press = wifi_bt_toggle_cb   },
+    {.label_type = LABEL_FN, .label_fn = wifi_scan_label_getter,              .press = start_scan_cb       },
+    {.label_type = LABEL_FN, .label_fn = wifi_connected_label_getter,         .press = connect_cb          },
+    {.label_type = LABEL_FN, .label_fn = wifi_con_change_passwd_label_getter, .press = con_change_passwd_cb},
+    {.label_type = LABEL_FN, .label_fn = wifi_con_delete_label_getter,        .press = con_delete_cb       },
 };
 
 static lv_obj_t *button_objs[SIZE_OF_ARRAY(buttons)];
@@ -313,7 +313,7 @@ static void connect_cb(lv_event_t *e) {
     }
 }
 
-static void con_update_cb(lv_event_t *e) {
+static void con_change_passwd_cb(lv_event_t *e) {
     uint16_t    row, col;
     const char *con_id;
 
@@ -326,6 +326,9 @@ static void con_update_cb(lv_event_t *e) {
     if (ap_info) {
         if (!ap_info->known) {
             msg_set_text_fmt("Can't update new connection");
+            return;
+        } else if (!ap_info->password_validator) {
+            msg_set_text_fmt("Password is not used");
             return;
         }
         cur_ap_info = *ap_info;
@@ -387,12 +390,12 @@ static char *wifi_connected_label_getter() {
     }
 }
 
-static char *wifi_con_update_label_getter() {
+static char *wifi_con_change_passwd_label_getter() {
     switch (wifi_get_status()) {
     case WIFI_DISCONNECTED:
     case WIFI_CONNECTED:
         if (sel_ap_type == SELECTED_AP_KNOWN) {
-            return "Update";
+            return "Change\npassword";
         } else {
             return "";
         }
@@ -479,7 +482,7 @@ static void keyboard_open() {
         textarea_window_set(cur_password);
     } else {
         lv_obj_t *text = textarea_window_text();
-        lv_textarea_set_placeholder_text(text, "Password");
+        lv_textarea_set_placeholder_text(text, " Password");
     }
     disable_buttons = true;
 }

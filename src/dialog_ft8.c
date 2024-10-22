@@ -281,7 +281,7 @@ static button_item_t button_tx_call_dis = { .label = "TX Call:\nEnabled", .press
 static button_item_t button_auto_en = { .label = "Auto:\nDisabled", .press = mode_auto_cb };
 static button_item_t button_auto_dis = { .label = "Auto:\nEnabled", .press = mode_auto_cb };
 
-static button_item_t button_time_sync = { .label = "CQ\nmodifier", .press = cq_modifier_cb };
+static button_item_t button_cq_mod = { .label = "CQ\nModifier", .press = cq_modifier_cb };
 
 static dialog_t             dialog = {
     .run = false,
@@ -866,7 +866,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     buttons_load(2, &button_tx_cq_en);
     buttons_load(3, params.ft8_auto.x ? &button_auto_dis : &button_auto_en);
-    buttons_load(4, &button_time_sync);
+    buttons_load(4, &button_cq_mod);
 
     mem_save(MEM_BACKUP_ID);
     load_band();
