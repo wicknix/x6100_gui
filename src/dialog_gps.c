@@ -5,21 +5,23 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
+#include "dialog_gps.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <math.h>
-
-#include "lvgl/lvgl.h"
 #include "gps.h"
 #include "dialog.h"
-#include "dialog_gps.h"
 #include "styles.h"
 #include "events.h"
 #include "radio.h"
 #include "keyboard.h"
 #include "qth.h"
+#include "params/params.h"
+#include "msg.h"
+#include "lvgl/lvgl.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <math.h>
 
 #define HEIGHT 42
 #define LABEL_WIDTH 300
@@ -183,7 +185,14 @@ static void gps_cb(lv_event_t * e) {
         deg_to_str2(deg_type, msg->fix.longitude, str, sizeof(str), "E", "W");
         lv_label_set_text(lon, str);
 
-        lv_label_set_text(qth, pos_grid(msg->fix.latitude, msg->fix.longitude));
+        const char * qth_val = pos_grid(msg->fix.latitude, msg->fix.longitude);
+        lv_label_set_text(qth, qth_val);
+
+        int saved_qth_len = strlen(params.qth.x);
+        if ((saved_qth_len == 0) || (strncmp(qth_val, params.qth.x, saved_qth_len) != 0)) {
+            params_str_set(&params.qth, qth_val);
+            msg_set_text_fmt("QTH updated: %s", params.qth.x);
+        }
     } else {
         lv_label_set_text(lat, "N/A");
         lv_label_set_text(lon, "N/A");

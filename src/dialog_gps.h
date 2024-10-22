@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "lvgl/lvgl.h"
 #include "dialog.h"
 
 extern dialog_t *dialog_gps;
