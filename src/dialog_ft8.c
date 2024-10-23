@@ -1230,10 +1230,10 @@ static float get_correction() {
     if (tx_info_refresh(&msg_id, &alc, &pwr, NULL)) {
         float target_pwr = LV_MIN(params.pwr, MAX_PWR);
         if (alc > 0.5f) {
-            correction = log10f(log10f(10.0f - alc)) * 20.0f;
+            correction = log10f(log10f(11.1f - alc)) * 20.0f - 0.38f;
         } else if (target_pwr - pwr > 0.5f) {
             // TODO: check battery level
-            correction = log10f(target_pwr / pwr) * 10.0f;
+            correction = log10f(target_pwr / (pwr + 0.01f)) * 10.0f;
         }
     }
     return correction;
@@ -1249,7 +1249,7 @@ static void tx_worker() {
         return;
     }
     float gain_offset = base_gain_offset + params.ft8_output_gain_offset.x;
-    float play_gain_offset = audio_set_play_vol(gain_offset + 4.0f);
+    float play_gain_offset = audio_set_play_vol(gain_offset + 6.0f);
     gain_offset -= play_gain_offset;
 
     // Change freq before tx
@@ -1268,8 +1268,8 @@ static void tx_worker() {
 
             if (gain_offset > 0.0)
                 gain_offset = 0.0f;
-            else if (gain_offset < -40.0f)
-                gain_offset = -40.0f;
+            else if (gain_offset < -30.0f)
+                gain_offset = -30.0f;
         }
         if (n_samples <= 0 || state != TX_PROCESS) {
             state = RX_PROCESS;
@@ -1291,7 +1291,6 @@ static void tx_worker() {
         ptr += part;
         counter++;
     }
-
     params_float_set(&params.ft8_output_gain_offset, gain_offset - base_gain_offset + play_gain_offset);
     audio_play_wait();
     radio_set_modem(false);
