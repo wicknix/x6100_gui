@@ -84,6 +84,7 @@ typedef enum {
     HKEY_MODE,
     HKEY_FIL,
     HKEY_GENE,
+    HKEY_FINP,
 
     HKEY_UNKNOWN,
 } hkey_t;
@@ -103,7 +104,7 @@ typedef struct {
 typedef enum {
 //  LV_KEY_HOME             = 2,
 //  LV_KEY_END              = 3,
-    KEY_VOL_LEFT_EDIT       = HKEY_UNKNOWN + 1,
+    KEY_VOL_LEFT_EDIT       = 0x290, // KEY_MACRO1
     KEY_VOL_RIGHT_EDIT,
     KEY_VOL_LEFT_SELECT,
     KEY_VOL_RIGHT_SELECT,
@@ -111,7 +112,6 @@ typedef enum {
 //  LV_KEY_NEXT             = 9,
 //  LV_KEY_ENTER            = 10,
 //  LV_KEY_PREV             = 11,
-    HKEY_FINP,
 //  LV_KEY_UP               = 17,
 //  LV_KEY_DOWN             = 18,
 //  LV_KEY_RIGHT            = 19,
