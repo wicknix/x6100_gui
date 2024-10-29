@@ -6,29 +6,14 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
+#include "qth.h"
+
 #include <math.h>
 #include <string.h>
 #include <ctype.h>
 
-#include "qth.h"
-#include "params/params.h"
 
-static double qth_lon = 0.0;
-static double qth_lat = 0.0;
-
-void qth_set(const char *qth) {
-    params_str_set(&params.qth, qth);
-    qth_update(qth);
-}
-
-void qth_update(const char *qth) {
-    grid_pos(qth, &qth_lat, &qth_lon);
-
-    qth_lat = qth_lat * M_PI / 180.0;
-    qth_lon = qth_lon * M_PI / 180.0;
-}
-
-bool grid_check(const char *grid) {
+bool qth_grid_check(const char *grid) {
     uint8_t len = strlen(grid);
 
     switch (len) {
@@ -53,14 +38,30 @@ bool grid_check(const char *grid) {
     return true;
 }
 
-const char *pos_grid(double lat, double lon) {
-    static char buf[9];
+double qth_pos_dist(const double lat1_deg, const double lon1_deg, const double lat2_deg, const double lon2_deg) {
+    double lat1 = 0, lat2 = 0;
+    double lon1 = 0, lon2 = 0;
+
+    lat1 = lat1_deg * M_PI / 180.0;
+    lat2 = lat2_deg * M_PI / 180.0;
+    lon1 = lon1_deg * M_PI / 180.0;
+    lon2 = lon2_deg * M_PI / 180.0;
+
+    double dlat = lat1 - lat2;
+    double dlon = lon1 - lon2;
+    double a = sin(dlat / 2.0) * sin(dlat / 2.0) + cos(lat1) * cos(lat2) * sin(dlon / 2.0) * sin(dlon / 2.0);
+    double c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a));
+
+    return c * 6371;
+}
+
+void qth_pos_to_str(double lat, double lon, char* buf) {
 
     int t1;
 
     if (180.001 < fabs(lon) ||
         90.001 < fabs(lat)) {
-        return "    n/a ";
+            strcpy(buf, "    n/a ");
     }
 
     if (179.99999 < lon) {
@@ -124,69 +125,50 @@ const char *pos_grid(double lat, double lon) {
 
     buf[7] = (char) ((char)t1 + '0');
     buf[8] = '\0';
-
-    return buf;
 }
 
-void grid_pos(const char *grid, double *lat, double *lon) {
+void qth_str_to_pos(const char * grid, double *lat_deg, double *lon_deg) {
     uint8_t n = strlen(grid);
 
-    *lon = -180.0;
-    *lat = -90.0;
+    *lon_deg = -180.0;
+    *lat_deg = -90.0;
 
-    *lon += (toupper(grid[0]) - 'A') * 20.0;
-    *lat += (toupper(grid[1]) - 'A') * 10.0;
+    *lon_deg += (toupper(grid[0]) - 'A') * 20.0;
+    *lat_deg += (toupper(grid[1]) - 'A') * 10.0;
 
     if (n >= 4) {
-        *lon += (grid[2] - '0') * 2.0;
-        *lat += (grid[3] - '0') * 1.0;
+        *lon_deg += (grid[2] - '0') * 2.0;
+        *lat_deg += (grid[3] - '0') * 1.0;
     }
 
     if (n >= 6) {
-        *lon += (toupper(grid[4]) - 'A') * 5.0 / 60.0;
-        *lat += (toupper(grid[5]) - 'A') * 2.5 / 60.0;
+        *lon_deg += (toupper(grid[4]) - 'A') * 5.0 / 60.0;
+        *lat_deg += (toupper(grid[5]) - 'A') * 2.5 / 60.0;
     }
 
     if (n >= 8) {
-        *lon += (grid[6] - '0') * 5.0 / 600.0;
-        *lat += (grid[7] - '0') * 2.5 / 600.0;
+        *lon_deg += (grid[6] - '0') * 5.0 / 600.0;
+        *lat_deg += (grid[7] - '0') * 2.5 / 600.0;
     }
 
     switch (n) {
         case 2:
-            *lon += 20.0 / 2;
-            *lat += 10.0 / 2;
+            *lon_deg += 20.0 / 2;
+            *lat_deg += 10.0 / 2;
             break;
 
         case 4:
-            *lon += 2.0 / 2;
-            *lat += 1.0 / 2;
+            *lon_deg += 2.0 / 2;
+            *lat_deg += 1.0 / 2;
             break;
 
         case 6:
-            *lon += 5.0 / 60.0 / 2;
-            *lat += 2.5 / 60.0 / 2;
+            *lon_deg += 5.0 / 60.0 / 2;
+            *lat_deg += 2.5 / 60.0 / 2;
             break;
 
         case 8:
-            *lon += 5.0 / 600.0 / 2;
-            *lat += 2.5 / 600.0 / 2;
+            *lon_deg += 5.0 / 600.0 / 2;
+            *lat_deg += 2.5 / 600.0 / 2;
     }
-}
-
-int32_t grid_dist(const char *grid) {
-    double lat = 0;
-    double lon = 0;
-
-    grid_pos(grid, &lat, &lon);
-
-    lat = lat * M_PI / 180.0;
-    lon = lon * M_PI / 180.0;
-
-    double dlat = lat - qth_lat;
-    double dlon = lon - qth_lon;
-    double a = sin(dlat / 2.0) * sin(dlat / 2.0) + cos(lat) * cos(qth_lat) * sin(dlon / 2.0) * sin(dlon / 2.0);
-    double c = 2.0 * atan2(sqrt(a), sqrt(1.0 - a));
-
-    return c * 6371;
 }

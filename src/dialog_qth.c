@@ -9,7 +9,7 @@
 #include "textarea_window.h"
 #include "params/params.h"
 #include "main_screen.h"
-#include "qth.h"
+#include "qth/qth.h"
 #include "msg.h"
 #include "dialog.h"
 #include "events.h"
@@ -31,8 +31,8 @@ dialog_t                    *dialog_qth = &dialog;
 static bool edit_ok() {
     const char *qth = textarea_window_get();
 
-    if (grid_check(qth)) {
-        qth_set(qth);
+    if (qth_grid_check(qth)) {
+        params_str_set(&params.qth, qth);
     } else {
         msg_set_text_fmt("Incorrect QTH Grid");
     }

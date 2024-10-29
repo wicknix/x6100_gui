@@ -13,7 +13,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     dialog_ft8.c dialog_freq.c dialog_gps.c dialog_msg_cw.c
     dialog_msg_voice.c dialog_recorder.c dialog_qth.c dialog_callsign.c
     textarea_window.c cw_encoder.c buttons.c vol.c recorder.c
-    qth.c voice.cpp gfsk.c cw_tune_ui.c adif.c qso_log.c scheduler.c
+    voice.cpp gfsk.c cw_tune_ui.c adif.c qso_log.c scheduler.c
     dialog_wifi.c wifi.cpp
 )
 
@@ -21,6 +21,7 @@ add_subdirectory(fonts)
 add_subdirectory(ft8)
 add_subdirectory(widgets)
 add_subdirectory(params)
+add_subdirectory(qth)
 
 include_directories(utf8)
 include_directories(${CMAKE_SYSROOT}/usr/include/RHVoice/)
@@ -39,14 +40,23 @@ target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer -fasyn
 target_link_options(${PROJECT_NAME} PRIVATE -g -rdynamic)
 
 
-target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::deps)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    PkgConfig::deps
+    FT8 QTH
+    Threads::Threads
+    lvgl lvgl::drivers
+    aether_x6100_control
+    liquid
+    RHVoice RHVoice_core RHVoice_audio
+    ft8
+)
 
 # target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined  -fno-omit-frame-pointer -fno-sanitize-recover)
 # target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-recover -static-libasan -static-libubsan)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
-target_link_libraries(${PROJECT_NAME} PRIVATE lvgl lvgl::drivers)
-target_link_libraries(${PROJECT_NAME} PRIVATE aether_x6100_control)
-target_link_libraries(${PROJECT_NAME} PRIVATE liquid m)
-target_link_libraries(${PROJECT_NAME} PRIVATE RHVoice RHVoice_core RHVoice_audio)
-target_link_libraries(${PROJECT_NAME} PRIVATE ft8)
+# target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+# target_link_libraries(${PROJECT_NAME} PRIVATE lvgl lvgl::drivers)
+# target_link_libraries(${PROJECT_NAME} PRIVATE aether_x6100_control)
+# target_link_libraries(${PROJECT_NAME} PRIVATE liquid m)
+# target_link_libraries(${PROJECT_NAME} PRIVATE RHVoice RHVoice_core RHVoice_audio)
+# target_link_libraries(${PROJECT_NAME} PRIVATE ft8)

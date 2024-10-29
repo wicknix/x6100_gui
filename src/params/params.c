@@ -19,7 +19,7 @@
 #include "../mfk.h"
 #include "../vol.h"
 #include "../dialog_msg_cw.h"
-#include "../qth.h"
+#include "../qth/qth.h"
 
 params_t params = {
     .vol_modes              = (1 << VOL_VOL) | (1 << VOL_RFG) | (1 << VOL_FILTER_LOW) | (1 << VOL_FILTER_HIGH) | (1 << VOL_PWR) | (1 << VOL_HMIC),
@@ -405,10 +405,7 @@ static bool params_load() {
 
         if (params_load_uint16(&params.ft8_tx_freq, name, i)) continue;
 
-        if (params_load_str(&params.qth, name, t)) {
-            qth_update(t);
-            continue;
-        }
+        if (params_load_str(&params.qth, name, t)) continue;
 
         if (params_load_str(&params.callsign, name, t)) continue;
         if (params_load_bool(&params.wifi_enabled, name, i)) continue;
