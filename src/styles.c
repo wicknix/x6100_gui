@@ -217,15 +217,16 @@ void styles_waterfall_palette(lv_color_t *palette, uint16_t size) {
     grad.stops_count = 5;
 
     grad.stops[0].color = lv_color_hex(0x000000);
-    grad.stops[1].color = lv_color_hex(0x0000FF);
-    grad.stops[2].color = lv_color_hex(0xFF0000);
-    grad.stops[3].color = lv_color_hex(0xFFFF00);
+    grad.stops[1].color = lv_color_hex(0x00007F);
+    grad.stops[2].color = lv_color_hex(0xd00000);
+    grad.stops[3].color = lv_color_hex(0xF4F400);
     grad.stops[4].color = lv_color_hex(0xFFFFFF);
 
+    // linspace ** 1.2 to increase values of small signals
     grad.stops[0].frac  = (size - 1) * 0.00;
-    grad.stops[1].frac  = (size - 1) * 0.25;
-    grad.stops[2].frac  = (size - 1) * 0.50;
-    grad.stops[3].frac  = (size - 1) * 0.75;
+    grad.stops[1].frac  = (size - 1) * 0.19;
+    grad.stops[2].frac  = (size - 1) * 0.43;
+    grad.stops[3].frac  = (size - 1) * 0.71;
     grad.stops[4].frac  = (size - 1) * 1.00;
 
     for (int i = 0; i < size; i++)
