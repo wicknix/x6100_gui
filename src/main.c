@@ -94,7 +94,7 @@ int main(void) {
     audio_set_rec_vol(params.rec_gain_db_f.x);
     mfk_change_mode(0);
     vol_change_mode(0);
-    styles_init();
+    styles_init(params.theme.x);
 
     dsp_init(params_current_mode_spectrum_factor_get());
     lv_obj_t *main_obj = main_screen();

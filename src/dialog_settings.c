@@ -91,6 +91,14 @@ static void uint8_dropdown_update_cb(lv_event_t * e) {
     params_uint8_set(var, lv_dropdown_get_selected(obj));
 }
 
+static void theme_update_cb(lv_event_t * e) {
+    lv_obj_t        *obj = lv_event_get_target(e);
+    params_uint8_t  *var = lv_event_get_user_data(e);
+
+    params_uint8_set(var, lv_dropdown_get_selected(obj));
+    styles_set_theme(var->x);
+}
+
 /* Shared create */
 
 static lv_obj_t * switch_bool(lv_obj_t *parent, params_bool_t *var) {
@@ -120,12 +128,12 @@ static lv_obj_t * spinbox_uint8(lv_obj_t *parent, params_uint8_t *var) {
     return obj;
 }
 
-static lv_obj_t * dropdown_uint8(lv_obj_t *parent, params_uint8_t *var, const char *options) {
+static lv_obj_t * dropdown_uint8_custom_cb(lv_obj_t *parent, params_uint8_t *var, const char *options, lv_event_cb_t cb) {
     lv_obj_t *obj = lv_dropdown_create(parent);
 
     dialog_item(&dialog, obj);
 
-    lv_obj_add_event_cb(obj, uint8_dropdown_update_cb, LV_EVENT_VALUE_CHANGED, var);
+    lv_obj_add_event_cb(obj, cb, LV_EVENT_VALUE_CHANGED, var);
 
     lv_obj_t *list = lv_dropdown_get_list(obj);
     lv_obj_add_style(list, &dialog_dropdown_list_style, 0);
@@ -136,6 +144,10 @@ static lv_obj_t * dropdown_uint8(lv_obj_t *parent, params_uint8_t *var, const ch
     lv_dropdown_set_selected(obj, var->x);
 
     return obj;
+}
+
+static lv_obj_t * dropdown_uint8(lv_obj_t *parent, params_uint8_t *var, const char *options) {
+    return dropdown_uint8_custom_cb(parent, var, options, uint8_dropdown_update_cb);
 }
 
 /* Datetime */
@@ -1276,6 +1288,26 @@ static uint8_t make_freq_accel(uint8_t row) {
     return row + 1;
 }
 
+static uint8_t make_theme(uint8_t row) {
+    lv_obj_t    *obj;
+    uint8_t     col = 0;
+
+    row_dsc[row] = 54;
+
+    obj = lv_label_create(grid);
+
+    lv_label_set_text(obj, "Theme");
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, col++, 1, LV_GRID_ALIGN_CENTER, row, 1);
+
+    obj = dropdown_uint8_custom_cb(grid, &params.theme, " Dimmed \n Legacy", theme_update_cb);
+
+    lv_obj_set_size(obj, SMALL_6, 56);
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 6, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_center(obj);
+
+    return row + 1;
+}
+
 static uint8_t make_delimiter(uint8_t row) {
     row_dsc[row] = 10;
 
@@ -1344,9 +1376,11 @@ static void construct_cb(lv_obj_t *parent) {
     row = make_waterfall_zoom(row);
     row = make_delimiter(row);
 
-
     row = make_delimiter(row);
     row = make_freq_accel(row);
+
+    row = make_delimiter(row);
+    row = make_theme(row);
 
     row = make_delimiter(row);
 

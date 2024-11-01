@@ -686,12 +686,9 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_add_style(waterfall, &waterfall_style, 0);
     lv_obj_clear_flag(waterfall, LV_OBJ_FLAG_SCROLLABLE);
 
-    lv_color_t palette[256];
-
-    styles_waterfall_palette(palette, 256);
-    lv_waterfall_set_palette(waterfall, palette, 256);
+    lv_waterfall_set_palette(waterfall, (lv_color_t*)wf_palette, 256);
     lv_waterfall_set_size(waterfall, WIDTH, 325);
-    lv_waterfall_set_min(waterfall, -70);
+    lv_waterfall_set_min(waterfall, -60);
 
     lv_obj_set_pos(waterfall, 13, 13);
 

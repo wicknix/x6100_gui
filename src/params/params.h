@@ -56,6 +56,12 @@ typedef enum {
     FREQ_ACCEL_STRONG,
 } freq_accel_t;
 
+/* Themes */
+typedef enum {
+    THEME_DIMMED,
+    THEME_LEGACY,
+} themes_t;
+
 
 /* Params */
 
@@ -231,6 +237,10 @@ typedef struct {
     /* WiFi / BT */
 
     params_bool_t       wifi_enabled;
+
+    /* Theme */
+
+    params_uint8_t       theme;
 
     /* durty flags */
 

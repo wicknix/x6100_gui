@@ -43,7 +43,6 @@ static float            grid_min = DEFAULT_MIN;
 static float            grid_max = DEFAULT_MAX;
 
 static lv_img_dsc_t     *frame;
-static lv_color_t       palette[256];
 static uint8_t          delay = 0;
 
 static int64_t          *freq_offsets;
@@ -116,8 +115,8 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
             v = 1.0f;
         }
 
-        uint8_t id = v * 254 + 1;
-        memcpy(&waterfall_cache[(last_row_id * size + size - 1 - x) * PX_BYTES], &palette[id], PX_BYTES);
+        uint8_t id = v * 255;
+        waterfall_cache[last_row_id * size + size - 1 - x] = id;
     }
     scheduler_put(refresh_waterfall, NULL, 0);
 }
@@ -146,8 +145,6 @@ void waterfall_set_height(lv_coord_t h) {
 
     frame = lv_img_buf_alloc(width, height, LV_IMG_CF_TRUE_COLOR);
 
-    styles_waterfall_palette(palette, 256);
-
     img = lv_img_create(obj);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
     lv_img_set_src(img, frame);
@@ -157,8 +154,8 @@ void waterfall_set_height(lv_coord_t h) {
         freq_offsets[i] = radio_center_freq;
     }
     last_row_id = 0;
-    waterfall_cache = malloc(WATERFALL_NFFT * height * PX_BYTES);
-    memset(waterfall_cache, 0, WATERFALL_NFFT * height * PX_BYTES);
+    waterfall_cache = malloc(WATERFALL_NFFT * height);
+    memset(waterfall_cache, 0, WATERFALL_NFFT * height);
 
     lv_obj_add_event_cb(img, do_scroll_cb, LV_EVENT_DRAW_POST_END, NULL);
 
@@ -249,7 +246,7 @@ static void redraw_cb(lv_event_t * e) {
     int32_t src_x_offset;
     uint16_t src_y, src_x, dst_y, dst_x;
 
-    uint8_t * temp_buf = frame->data;
+    uint8_t * temp_buf = (uint8_t *)frame->data;
 
     uint8_t current_zoom = 1;
     if (params.waterfall_zoom.x) {
@@ -257,7 +254,7 @@ static void redraw_cb(lv_event_t * e) {
     }
 
     lv_color_t black = lv_color_black();
-    lv_color_t * px_color;
+    lv_color_t px_color;
 
     int16_t mapping[width];
     float rel_position;
@@ -272,11 +269,11 @@ static void redraw_cb(lv_event_t * e) {
         for (dst_x = 0; dst_x < width; dst_x++) {
             src_x = mapping[dst_x] - src_x_offset;
             if ((src_x < 0) || (src_x >= WATERFALL_NFFT)) {
-                px_color = &black;
+                px_color = black;
             } else {
-                px_color = (lv_color_t*)waterfall_cache + (src_y * WATERFALL_NFFT + src_x);
+                px_color = (lv_color_t)wf_palette[*(waterfall_cache + (src_y * WATERFALL_NFFT + src_x))];
             }
-            *((lv_color_t*)temp_buf + (dst_y * width + dst_x)) = *px_color;
+            *((lv_color_t*)temp_buf + (dst_y * width + dst_x)) = px_color;
         }
     }
 }

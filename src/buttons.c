@@ -324,7 +324,7 @@ static button_item_t    buttons[] = {
 void buttons_init(lv_obj_t *parent) {
     uint16_t y = 480 - btn_height;
     uint16_t x = 0;
-    uint16_t width = 152;
+    uint16_t width = 800 / 5;
 
     for (uint8_t i = 0; i < 5; i++) {
         lv_obj_t *f = lv_btn_create(parent);
@@ -335,7 +335,7 @@ void buttons_init(lv_obj_t *parent) {
         lv_obj_set_pos(f, x, y);
         lv_obj_set_size(f, width, btn_height);
 
-        x += width + 10;
+        x += width;
 
         lv_obj_t *label = lv_label_create(f);
 

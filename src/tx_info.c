@@ -216,6 +216,7 @@ lv_obj_t * tx_info_init(lv_obj_t *parent) {
     obj = lv_obj_create(parent);
 
     lv_obj_add_style(obj, &tx_info_style, 0);
+    lv_obj_set_scrollbar_mode(obj, LV_SCROLLBAR_MODE_OFF);
 
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(obj, tx_cb, EVENT_RADIO_TX, NULL);

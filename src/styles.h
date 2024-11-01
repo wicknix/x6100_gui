@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "params/params.h"
+
 #include <unistd.h>
 #include "lvgl/lvgl.h"
 
@@ -21,6 +23,10 @@
 
 #define SYMBOL_PLUG "\xEF\x87\xA6"  // F1E6
 #define SYMBOL_PLUG_CHARGE "\xEE\x95\x9B"  // E55B
+
+// Pallete
+
+extern const uint32_t *wf_palette;
 
 extern lv_color_t   bg_color;
 
@@ -69,5 +75,6 @@ extern lv_font_t    sony_42;
 extern lv_font_t    sony_44;
 extern lv_font_t    sony_60;
 
-void styles_init();
-void styles_waterfall_palette(lv_color_t *palette, uint16_t size);
+void styles_init(themes_t theme);
+
+void styles_set_theme(themes_t theme);

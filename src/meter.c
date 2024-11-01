@@ -20,7 +20,6 @@
 static int16_t          min_db = S1;
 static int16_t          max_db = S9_40;
 
-static uint8_t          meter_height = 62;
 static int16_t          meter_db = S1;
 static float            noise_level = S_MIN;
 
@@ -143,8 +142,6 @@ lv_obj_t * meter_init(lv_obj_t * parent) {
     obj = lv_obj_create(parent);
 
     lv_obj_add_style(obj, &meter_style, 0);
-
-    lv_obj_set_height(obj, meter_height);
 
     lv_obj_add_event_cb(obj, tx_cb, EVENT_RADIO_TX, NULL);
     lv_obj_add_event_cb(obj, rx_cb, EVENT_RADIO_RX, NULL);

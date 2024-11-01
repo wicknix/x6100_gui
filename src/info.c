@@ -34,7 +34,6 @@ lv_obj_t * info_init(lv_obj_t * parent) {
 
     lv_obj_add_style(obj, &info_style, 0);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_pad_left(obj, 0, 0);
 
     uint8_t index = 0;
 

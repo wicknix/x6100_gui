@@ -147,6 +147,8 @@ params_t params = {
     .callsign               = { .x = "",  .max_len = 12, .name = "callsign" },
 
     .wifi_enabled           = { .x = false, .name="wifi_enabled" },
+
+    .theme                  = { .x = THEME_DIMMED, .name="theme"},
 };
 
 transverter_t params_transverter[TRANSVERTER_NUM] = {
@@ -409,6 +411,7 @@ static bool params_load() {
 
         if (params_load_str(&params.callsign, name, t)) continue;
         if (params_load_bool(&params.wifi_enabled, name, i)) continue;
+        if (params_load_uint8(&params.theme, name, i)) continue;
     }
 
     sqlite3_finalize(stmt);
@@ -575,6 +578,7 @@ static void params_save() {
     params_save_str(&params.qth);
     params_save_str(&params.callsign);
     params_save_bool(&params.wifi_enabled);
+    params_save_uint8(&params.theme);
 
     sql_query_exec("COMMIT");
 }
