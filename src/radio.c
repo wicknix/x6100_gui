@@ -533,21 +533,30 @@ uint32_t radio_change_filter_low(int32_t freq) {
     if (freq == params_current_mode_filter_low_get()){
         return freq;
     }
-    int32_t new_freq = params_current_mode_filter_low_set(freq);
-    radio_filter_set(&new_freq, NULL);
+    int32_t old_high = params_current_mode_filter_high_get();
+    int32_t new_low = params_current_mode_filter_low_set(freq);
+    int32_t new_high = params_current_mode_filter_high_get();
+    if (old_high != new_high)
+        radio_filter_set(&new_low, &new_high);
+    else
+        radio_filter_set(&new_low, NULL);
 
-    return new_freq;
+    return new_low;
 }
 
 uint32_t radio_change_filter_high(int32_t freq) {
     if (freq == params_current_mode_filter_high_get()){
         return freq;
     }
-    int32_t new_freq = params_current_mode_filter_high_set(freq);
+    int32_t old_low = params_current_mode_filter_low_get();
+    int32_t new_high = params_current_mode_filter_high_set(freq);
+    int32_t new_low = params_current_mode_filter_low_get();
+    if (old_low != new_low)
+        radio_filter_set(&new_low, &new_high);
+    else
+        radio_filter_set(NULL, &new_high);
 
-    radio_filter_set(NULL, &new_freq);
-
-    return new_freq;
+    return new_high;
 }
 
 uint32_t radio_change_filter_bw(int32_t bw) {
