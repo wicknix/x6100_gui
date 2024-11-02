@@ -9,12 +9,10 @@
 #pragma once
 
 #include <stdbool.h>
-#include <stdint.h>
 #include <pthread.h>
 #include <sqlite3.h>
 
 extern sqlite3          *db;
-extern pthread_mutex_t  db_write_mux;
 
 bool database_init();
 

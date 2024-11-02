@@ -409,9 +409,7 @@ static void params_mode_write_int(x6100_mode_t mode, const char *name, int data,
 }
 
 void params_mode_save() {
-    pthread_mutex_lock(&db_write_mux);
     if (!sql_query_exec("BEGIN")) {
-        pthread_mutex_unlock(&db_write_mux);
         return;
     }
     for (size_t i = 0; i < db_modes_n; i++)
@@ -425,5 +423,4 @@ void params_mode_save() {
     }
 
     sql_query_exec("COMMIT");
-    pthread_mutex_unlock(&db_write_mux);
 }
