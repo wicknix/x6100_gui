@@ -11,7 +11,7 @@
 #include "rotary.h"
 #include "encoder.h"
 
-#define VERSION "v0.26.1"
+#define VERSION "v0.27.0"
 
 typedef enum {
     VOL_EDIT = 0,
