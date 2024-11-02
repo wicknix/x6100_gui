@@ -112,7 +112,7 @@ lv_style_t  cw_tune_style;
 lv_color_t  bg_color;
 
 static void setup_theme_legacy();
-static void setup_theme_dimmed();
+static void setup_theme_simple();
 
 void styles_init(themes_t theme) {
     /* * */
@@ -278,9 +278,9 @@ void styles_set_theme(themes_t theme) {
         case THEME_LEGACY:
             setup_theme_legacy();
             break;
-        case THEME_DIMMED:
+        case THEME_SIMPLE:
         default:
-            setup_theme_dimmed();
+            setup_theme_simple();
             break;
     }
 }
@@ -317,7 +317,7 @@ static void setup_theme_legacy() {
     lv_obj_invalidate(lv_scr_act());
 }
 
-static void setup_theme_dimmed() {
+static void setup_theme_simple() {
     wf_palette = wf_palette_gauss;
 
     bg_color = lv_color_hex(0x27313a);

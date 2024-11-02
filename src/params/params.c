@@ -148,7 +148,7 @@ params_t params = {
 
     .wifi_enabled           = { .x = false, .name="wifi_enabled" },
 
-    .theme                  = { .x = THEME_DIMMED, .name="theme"},
+    .theme                  = { .x = THEME_SIMPLE, .name="theme"},
 };
 
 transverter_t params_transverter[TRANSVERTER_NUM] = {
