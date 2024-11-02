@@ -52,3 +52,4 @@ dkms.conf
 
 # Misc
 .vscode
+images/*.png
