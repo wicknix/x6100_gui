@@ -31,11 +31,12 @@ void ftx_worker_reset();
 /// @brief Generate audio samples for TX
 /// @param[in] text message to send
 /// @param[in] signal_freq base signal frequency
+/// @param[in] sample_rate output sample rate
 /// @param[out] samples pointer to generated audio samples
 /// @param[out] n_samples count of samples
 /// @return success flag
-bool ftx_worker_generate_tx_samples(const char *text, const uint16_t signal_freq, int16_t **samples,
-                                    uint32_t *n_samples);
+bool ftx_worker_generate_tx_samples(const char *text, const uint16_t signal_freq, const uint32_t sample_rate,
+                                    int16_t **samples, uint32_t *n_samples);
 
 /// @brief Process RX audio samples
 /// @param[in] samples audio samples

@@ -8,8 +8,8 @@
 
 #include "worker.h"
 
-#include "../gfsk.h"
 #include "../util.h"
+#include "gfsk.h"
 
 #include "lvgl/lvgl.h"
 #include <ft8lib/constants.h>
@@ -104,8 +104,8 @@ void ftx_worker_init(int sample_rate, ftx_protocol_t protocol) {
     wf.protocol = protocol;
 
     find_candidates_at = n_tones - sync_num;
-    /* FT8 DSP */
 
+    /* FT8 DSP */
     nfft = block_size * FREQ_OSR;
     float fft_norm = 2.0f / nfft;
     time_buf = (float complex *)malloc(nfft * sizeof(float complex));
@@ -151,8 +151,8 @@ void ftx_worker_reset() {
     }
 }
 
-bool ftx_worker_generate_tx_samples(const char *text, const uint16_t signal_freq, int16_t **samples,
-                                    uint32_t *n_samples) {
+bool ftx_worker_generate_tx_samples(const char *text, const uint16_t signal_freq, const uint32_t sample_rate,
+                                    int16_t **samples, uint32_t *n_samples) {
     ftx_message_t    msg;
     ftx_message_rc_t rc = ftx_message_encode(&msg, &hash_if, text);
 
@@ -175,7 +175,7 @@ bool ftx_worker_generate_tx_samples(const char *text, const uint16_t signal_freq
         break;
     }
 
-    *samples = gfsk_synth(tones, n_tones, signal_freq, symbol_bt, symbol_period, n_samples);
+    *samples = gfsk_synth(tones, n_tones, signal_freq, symbol_bt, symbol_period, sample_rate, n_samples);
     return true;
 }
 

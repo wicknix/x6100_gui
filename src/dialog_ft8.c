@@ -33,7 +33,6 @@
 
 #include <ft8lib/message.h>
 #include "ft8/worker.h"
-#include "gfsk.h"
 #include "adif.h"
 #include "qso_log.h"
 #include "scheduler.h"
@@ -1076,7 +1075,7 @@ static void tx_worker() {
     int16_t       *samples;
     uint32_t       n_samples;
 
-    if (!ftx_worker_generate_tx_samples(tx_msg.msg, signal_freq, &samples, &n_samples)) {
+    if (!ftx_worker_generate_tx_samples(tx_msg.msg, signal_freq, AUDIO_PLAY_RATE, &samples, &n_samples)) {
         state = RX_PROCESS;
         return;
     }

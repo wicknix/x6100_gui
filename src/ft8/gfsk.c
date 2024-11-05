@@ -8,12 +8,11 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
+#include "gfsk.h"
 #include <math.h>
 #include <stdlib.h>
-#include "gfsk.h"
-#include "audio.h"
 
-#define GFSK_CONST_K    5.336446f
+#define GFSK_CONST_K 5.336446f
 
 static void gfsk_pulse(uint16_t n_spsym, float symbol_bt, float *pulse) {
     for (uint32_t i = 0; i < 3 * n_spsym; i++) {
@@ -25,20 +24,21 @@ static void gfsk_pulse(uint16_t n_spsym, float symbol_bt, float *pulse) {
     }
 }
 
-int16_t * gfsk_synth(const uint8_t *symbols, uint16_t n_sym, float f0, float symbol_bt, float symbol_period, uint32_t *n_samples) {
-    uint32_t    n_spsym = (uint32_t)(0.5f + AUDIO_PLAY_RATE * symbol_period);  /* Samples per symbol */
-    uint32_t    n_wave = n_sym * n_spsym;                                      /* Number of output samples */
-    float       hmod = 1.0f;
-    float       dphi_peak = 2 * M_PI * hmod / n_spsym;
-    float       dphi[n_wave + 2 * n_spsym];
-    int16_t     *samples = malloc(sizeof(int16_t) * n_wave);
+int16_t *gfsk_synth(const uint8_t *symbols, uint16_t n_sym, float f0, float symbol_bt, float symbol_period,
+                    uint32_t sample_rate, uint32_t *n_samples) {
+    uint32_t n_spsym = (uint32_t)(0.5f + sample_rate * symbol_period); /* Samples per symbol */
+    uint32_t n_wave = n_sym * n_spsym;                                 /* Number of output samples */
+    float    hmod = 1.0f;
+    float    dphi_peak = 2 * M_PI * hmod / n_spsym;
+    float    dphi[n_wave + 2 * n_spsym];
+    int16_t *samples = malloc(sizeof(int16_t) * n_wave);
 
     *n_samples = n_wave;
 
     /* Shift frequency up by f0 */
 
     for (uint32_t i = 0; i < n_wave + 2 * n_spsym; i++) {
-        dphi[i] = 2 * M_PI * f0 / AUDIO_PLAY_RATE;
+        dphi[i] = 2 * M_PI * f0 / sample_rate;
     }
 
     float pulse[3 * n_spsym];
