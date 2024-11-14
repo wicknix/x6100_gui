@@ -14,5 +14,14 @@
 #include "lvgl/lvgl.h"
 
 lv_obj_t * msg_init(lv_obj_t *parent);
-void msg_set_text_fmt(const char * fmt, ...);
-void msg_set_timeout(uint16_t x);
+
+/// @brief Show or update message text
+/// @param fmt
+/// @param
+void msg_update_text_fmt(const char * fmt, ...);
+
+
+/// @brief Schedule message with text
+/// @param fmt
+/// @param
+void msg_schedule_text_fmt(const char * fmt, ...);

@@ -104,7 +104,7 @@ static void * endecode_thread(void *arg) {
                 break;
             } else {
                 state = CW_ENCODER_BEACON_IDLE;
-                msg_set_text_fmt("Beacon pause: %i s", params.cw_encoder_period);
+                msg_update_text_fmt("Beacon pause: %i s", params.cw_encoder_period);
                 sleep(params.cw_encoder_period);
 
                 state = CW_ENCODER_BEACON;

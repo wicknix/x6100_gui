@@ -155,19 +155,19 @@ void voice_change_mode() {
     switch (params.voice_mode.x) {
         case VOICE_OFF:
             params_uint8_set(&params.voice_mode, VOICE_LCD);
-            msg_set_text_fmt("Voice mode: LCD");
+            msg_update_text_fmt("Voice mode: LCD");
             voice_say_text("Voice mode|", "is LCD");
             break;
 
         case VOICE_LCD:
             params_uint8_set(&params.voice_mode, VOICE_ALWAYS);
-            msg_set_text_fmt("Voice mode: Always");
+            msg_update_text_fmt("Voice mode: Always");
             voice_say_text("Voice mode|", "is always");
             break;
 
         case VOICE_ALWAYS:
             params_uint8_set(&params.voice_mode, VOICE_OFF);
-            msg_set_text_fmt("Voice mode: Off");
+            msg_update_text_fmt("Voice mode: Off");
             voice_say_text("Voice mode|", "is off");
             break;
     }

@@ -34,7 +34,7 @@ static bool edit_ok() {
     if (qth_grid_check(qth)) {
         params_str_set(&params.qth, qth);
     } else {
-        msg_set_text_fmt("Incorrect QTH Grid");
+        msg_update_text_fmt("Incorrect QTH Grid");
     }
 
     dialog_destruct(&dialog);

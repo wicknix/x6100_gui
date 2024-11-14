@@ -192,7 +192,7 @@ static void gps_cb(lv_event_t * e) {
         int saved_qth_len = strlen(params.qth.x);
         if ((saved_qth_len == 0) || (strncmp(qth_val, params.qth.x, saved_qth_len) != 0)) {
             params_str_set(&params.qth, qth_val);
-            msg_set_text_fmt("QTH updated: %s", params.qth.x);
+            msg_schedule_text_fmt("QTH updated: %s", params.qth.x);
         }
     } else {
         lv_label_set_text(lat, "N/A");

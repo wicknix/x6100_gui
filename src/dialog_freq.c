@@ -88,7 +88,7 @@ static void enter_freq() {
         main_screen_set_freq(f);
         voice_say_text_fmt("Frequency has been set %s", str);
     } else {
-        msg_set_text_fmt("Incorrect freq");
+        msg_update_text_fmt("Incorrect freq");
         voice_say_text_fmt("Incorrect frequency");
     }
 }

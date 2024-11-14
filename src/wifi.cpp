@@ -568,7 +568,7 @@ static void device_state_changed_sig_cb(NMDevice *device, guint new_state, guint
     case NM_DEVICE_STATE_FAILED:
         if (reason == NM_DEVICE_STATE_REASON_NO_SECRETS) {
             LV_LOG_WARN("Wrong password");
-            msg_set_text_fmt("Wrong WiFi password");
+            msg_update_text_fmt("Wrong WiFi password");
         }
         break;
     case NM_DEVICE_STATE_ACTIVATED:

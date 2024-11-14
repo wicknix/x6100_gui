@@ -275,7 +275,7 @@ static void save_qso(const char *remote_callsign, const char *remote_grid, const
     // Save QSO to sqlite log
     qso_log_record_save(qso);
 
-    msg_set_text_fmt("QSO saved");
+    msg_schedule_text_fmt("QSO saved");
 }
 
 static void worker_init() {
@@ -799,7 +799,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     if (params.pwr > MAX_PWR) {
         radio_set_pwr(MAX_PWR);
-        msg_set_text_fmt("Power was limited to %0.0fW", MAX_PWR);
+        msg_schedule_text_fmt("Power was limited to %0.0fW", MAX_PWR);
     }
 
     // setup gain offset
@@ -872,7 +872,7 @@ static void mode_auto_cb(lv_event_t * e) {
 static void tx_cq_en_cb(lv_event_t * e) {
     if (disable_buttons) return;
     if (strlen(params.callsign.x) == 0) {
-        msg_set_text_fmt("Call sign required");
+        msg_schedule_text_fmt("Call sign required");
         return;
     }
 
@@ -889,9 +889,9 @@ static void tx_cq_en_cb(lv_event_t * e) {
     tx_time_slot = !get_time_slot(now);
 
     if (tx_msg.msg[2] == '_') {
-        msg_set_text_fmt("Next TX: CQ %s", tx_msg.msg + 3);
+        msg_schedule_text_fmt("Next TX: CQ %s", tx_msg.msg + 3);
     } else {
-        msg_set_text_fmt("Next TX: %s", tx_msg.msg);
+        msg_schedule_text_fmt("Next TX: %s", tx_msg.msg);
     }
     tx_msg.repeats = -1;
     ftx_qso_processor_reset(qso_processor);
@@ -917,7 +917,7 @@ static void tx_call_off() {
 static void tx_call_en_cb(lv_event_t * e) {
     if (disable_buttons) return;
     if (strlen(params.callsign.x) == 0) {
-        msg_set_text_fmt("Call sign required");
+        msg_schedule_text_fmt("Call sign required");
 
         return;
     }
@@ -940,7 +940,7 @@ static void cell_press_cb(lv_event_t * e) {
             (cell_data->cell_type == CELL_TX_MSG) ||
             (cell_data->cell_type == CELL_RX_INFO)
         ) {
-            msg_set_text_fmt("What should I do about it?");
+            msg_schedule_text_fmt("What should I do about it?");
         } else {
             ftx_qso_processor_start_qso(qso_processor, &cell_data->meta, &tx_msg);
             if (strlen(tx_msg.msg) > 0) {
@@ -948,9 +948,9 @@ static void cell_press_cb(lv_event_t * e) {
                 tx_enabled = true;
                 buttons_load(2, &button_tx_call_dis);
                 add_info("Start QSO with %s", cell_data->meta.call_de);
-                msg_set_text_fmt("Next TX: %s", tx_msg.msg);
+                msg_schedule_text_fmt("Next TX: %s", tx_msg.msg);
             } else {
-                msg_set_text_fmt("Invalid message");
+                msg_schedule_text_fmt("Invalid message");
                 tx_call_off();
             }
         }
@@ -1001,7 +1001,7 @@ static bool keyboard_cancel_cb() {
 static bool keyboard_ok_cb() {
     char *cq_mod = (char *)textarea_window_get();
     if ((strlen(cq_mod) > 0) && !is_cq_modifier(cq_mod)) {
-        msg_set_text_fmt("Unsupported CQ modifier");
+        msg_schedule_text_fmt("Unsupported CQ modifier");
         return false;
     }
     params_str_set(&params.ft8_cq_modifier, cq_mod);
@@ -1172,7 +1172,7 @@ static void add_rx_text(int16_t snr, const char * text, slot_info_t *s_info) {
 
     if ((strlen(tx_msg.msg) > 0) && (strcmp(old_msg, tx_msg.msg) != 0)) {
         tx_time_slot = !s_info->odd;
-        msg_set_text_fmt("Next TX: %s", tx_msg.msg);
+        msg_schedule_text_fmt("Next TX: %s", tx_msg.msg);
         if (cq_enabled) {
             cq_enabled = false;
             scheduler_put(update_call_btn, NULL, 0);

@@ -56,14 +56,14 @@ static bool create_file() {
 void recorder_set_on(bool x) {
     if (x) {
         if (!create_file()) {
-            msg_set_text_fmt("Problem with create file");
+            msg_update_text_fmt("Problem with create file");
             return;
         } else {
-            msg_set_text_fmt("Recorder is on");
+            msg_update_text_fmt("Recorder is on");
         }
         on = true;
     } else {
-        msg_set_text_fmt("Recorder is off");
+        msg_update_text_fmt("Recorder is off");
         on = false;
         sf_close(file);
     }

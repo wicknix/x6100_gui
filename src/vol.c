@@ -28,7 +28,7 @@ void vol_update(int16_t diff, bool voice) {
     switch (vol_mode) {
         case VOL_VOL:
             x = radio_change_vol(diff);
-            msg_set_text_fmt("#%3X Volume: %i", color, x);
+            msg_update_text_fmt("#%3X Volume: %i", color, x);
 
             if (diff) {
                 voice_say_int("Audio level", x);
@@ -39,7 +39,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_RFG:
             x = radio_change_rfg(diff);
-            msg_set_text_fmt("#%3X RF gain: %i", color, x);
+            msg_update_text_fmt("#%3X RF gain: %i", color, x);
 
             if (diff) {
                 voice_say_int("RF gain", x);
@@ -50,7 +50,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_SQL:
             x = radio_change_sql(diff);
-            msg_set_text_fmt("#%3X Voice SQL: %i", color, x);
+            msg_update_text_fmt("#%3X Voice SQL: %i", color, x);
 
             if (diff) {
                 voice_say_int("Squelch level %i", x);
@@ -66,7 +66,7 @@ void vol_update(int16_t diff, bool voice) {
                 freq = align_int(freq + diff * 10, 10);
             }
             x = radio_change_filter_low(freq);
-            msg_set_text_fmt("#%3X Filter low: %i Hz", color, x);
+            msg_update_text_fmt("#%3X Filter low: %i Hz", color, x);
 
             if (diff) {
                 voice_delay_say_text_fmt("%i", x);
@@ -91,7 +91,7 @@ void vol_update(int16_t diff, bool voice) {
                 freq = align_int(freq + diff * freq_step, freq_step);
             }
             x = radio_change_filter_high(freq);
-            msg_set_text_fmt("#%3X Filter high: %i Hz", color, x);
+            msg_update_text_fmt("#%3X Filter high: %i Hz", color, x);
 
             if (diff) {
                 voice_say_int("High filter limit", x);
@@ -106,7 +106,7 @@ void vol_update(int16_t diff, bool voice) {
                 new_bw = align_int(new_bw + diff * 20, 20);
             }
             x = radio_change_filter_bw(new_bw);
-            msg_set_text_fmt("#%3X Filter bw: %i Hz", color, x);
+            msg_update_text_fmt("#%3X Filter bw: %i Hz", color, x);
 
             if (diff) {
                 voice_delay_say_text_fmt("%i", x);
@@ -117,7 +117,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_PWR:
             f = radio_change_pwr(diff);
-            msg_set_text_fmt("#%3X Power: %0.1f W", color, f);
+            msg_update_text_fmt("#%3X Power: %0.1f W", color, f);
 
             if (diff) {
                 voice_say_float("Transmit power", f);
@@ -129,7 +129,7 @@ void vol_update(int16_t diff, bool voice) {
         case VOL_MIC:
             x = radio_change_mic(diff);
             s = params_mic_str_get(x);
-            msg_set_text_fmt("#%3X MIC: %s", color, s);
+            msg_update_text_fmt("#%3X MIC: %s", color, s);
 
             if (diff) {
                 voice_say_text("Mic selector", s);
@@ -140,7 +140,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_HMIC:
             x = radio_change_hmic(diff);
-            msg_set_text_fmt("#%3X H-MIC gain: %i", color, x);
+            msg_update_text_fmt("#%3X H-MIC gain: %i", color, x);
 
             if (diff) {
                 voice_say_int("Hand microphone gain", x);
@@ -151,7 +151,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_IMIC:
             x = radio_change_imic(diff);
-            msg_set_text_fmt("#%3X I-MIC gain: %i", color, x);
+            msg_update_text_fmt("#%3X I-MIC gain: %i", color, x);
 
             if (diff) {
                 voice_say_int("Internal microphone gain", x);
@@ -162,7 +162,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_MONI:
             x = radio_change_moni(diff);
-            msg_set_text_fmt("#%3X Moni level: %i", color, x);
+            msg_update_text_fmt("#%3X Moni level: %i", color, x);
 
             if (diff) {
                 voice_say_int("Monitor level", x);
@@ -173,12 +173,12 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_SPMODE:
             b = radio_change_spmode(diff);
-            msg_set_text_fmt("#%3X Speaker mode: %s", color, b ? "On" : "Off");
+            msg_update_text_fmt("#%3X Speaker mode: %s", color, b ? "On" : "Off");
             break;
 
         case VOL_VOICE_LANG:
             s = voice_change(diff);
-            msg_set_text_fmt("#%3X Voice: %s", color, s);
+            msg_update_text_fmt("#%3X Voice: %s", color, s);
 
             if (diff) {
                 voice_say_lang();
@@ -189,7 +189,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_VOICE_RATE:
             x = params_uint8_change(&params.voice_rate, diff);
-            msg_set_text_fmt("#%3X Voice rate: %i", color, x);
+            msg_update_text_fmt("#%3X Voice rate: %i", color, x);
 
             if (diff == 0 && voice) {
                 voice_say_text_fmt(params.voice_rate.voice);
@@ -198,7 +198,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_VOICE_PITCH:
             x = params_uint8_change(&params.voice_pitch, diff);
-            msg_set_text_fmt("#%3X Voice pitch: %i", color, x);
+            msg_update_text_fmt("#%3X Voice pitch: %i", color, x);
 
             if (diff == 0 && voice) {
                 voice_say_text_fmt(params.voice_pitch.voice);
@@ -207,7 +207,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_VOICE_VOLUME:
             x = params_uint8_change(&params.voice_volume, diff);
-            msg_set_text_fmt("#%3X Voice volume: %i", color, x);
+            msg_update_text_fmt("#%3X Voice volume: %i", color, x);
 
             if (diff == 0 && voice) {
                 voice_say_text_fmt(params.voice_volume.voice);

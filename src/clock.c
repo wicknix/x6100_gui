@@ -204,7 +204,7 @@ static void check_time_sync_cb(lv_timer_t * t) {
     time_t new_time = get_last_sync_time();
     if (last_time_sync != new_time) {
         last_time_sync = new_time;
-        msg_set_text_fmt("Time is synchronized with NTP");
+        msg_schedule_text_fmt("Time is synchronized with NTP");
     }
 }
 

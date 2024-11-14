@@ -263,7 +263,7 @@ static void wifi_bt_toggle_cb(lv_event_t *e) {
     } else {
         wifi_power_on();
         start_refresh_ap_list();
-        msg_set_text_fmt("Turning on");
+        msg_update_text_fmt("Turning on");
     }
 }
 
@@ -275,9 +275,9 @@ static void start_scan_cb(lv_event_t *e) {
     if ((status == WIFI_OFF) || (status == WIFI_STARTING))
         return;
     if (wifi_scanning()) {
-        msg_set_text_fmt("Already scanning");
+        msg_update_text_fmt("Already scanning");
     } else {
-        msg_set_text_fmt("Start scan");
+        msg_update_text_fmt("Start scan");
         wifi_start_scan();
     }
 }
@@ -325,10 +325,10 @@ static void con_change_passwd_cb(lv_event_t *e) {
     wifi_ap_info_t *ap_info = (wifi_ap_info_t *)lv_table_get_cell_user_data(ap_table, row, col);
     if (ap_info) {
         if (!ap_info->known) {
-            msg_set_text_fmt("Can't update new connection");
+            msg_update_text_fmt("Can't update new connection");
             return;
         } else if (!ap_info->password_validator) {
-            msg_set_text_fmt("Password is not used");
+            msg_update_text_fmt("Password is not used");
             return;
         }
         cur_ap_info = *ap_info;
@@ -348,7 +348,7 @@ static void con_delete_cb(lv_event_t *e) {
     wifi_ap_info_t *ap_info = (wifi_ap_info_t *)lv_table_get_cell_user_data(ap_table, row, col);
     if (ap_info) {
         wifi_delete_connection(ap_info->ssid);
-        msg_set_text_fmt("Connection deleted");
+        msg_update_text_fmt("Connection deleted");
     }
 }
 
@@ -495,7 +495,7 @@ static void keyboard_close() {
 }
 
 static bool keyboard_cancel_cb() {
-    msg_set_text_fmt("Password is required");
+    msg_update_text_fmt("Password is required");
     keyboard_close();
     return true;
 }
@@ -505,7 +505,7 @@ static bool keyboard_ok_cb() {
 
     if (cur_ap_info.password_validator) {
         if (!cur_ap_info.password_validator(cur_password)) {
-            msg_set_text_fmt("Incorrect password");
+            msg_update_text_fmt("Incorrect password");
             return false;
         }
     }

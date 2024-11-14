@@ -446,10 +446,10 @@ static void button_vol_hold_cb(void * ptr) {
     params_unlock(&params.dirty.vol_modes);
 
     if (params.vol_modes & mask) {
-        msg_set_text_fmt("Added to VOL encoder");
+        msg_update_text_fmt("Added to VOL encoder");
         voice_say_text_fmt("Added to volume encoder");
     } else {
-        msg_set_text_fmt("Removed from VOL encoder");
+        msg_update_text_fmt("Removed from VOL encoder");
         voice_say_text_fmt("Removed from volume encoder");
     }
 }
@@ -463,10 +463,10 @@ static void button_mfk_hold_cb(void * ptr) {
     params_unlock(&params.dirty.mfk_modes);
 
     if (params.mfk_modes & mask) {
-        msg_set_text_fmt("Added to MFK encoder");
+        msg_update_text_fmt("Added to MFK encoder");
         voice_say_text_fmt("Added to MFK encoder");
     } else {
-        msg_set_text_fmt("Removed from MFK encoder");
+        msg_update_text_fmt("Removed from MFK encoder");
         voice_say_text_fmt("Removed from MFK encoder");
     }
 }

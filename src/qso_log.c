@@ -285,8 +285,7 @@ static void * import_adif_thread(void* args) {
         }
         if (c >= 10) {
             c = 0;
-            msg_set_text_fmt("Importing QSO: %zu/%zu", i + 1, cnt);
-            msg_set_timeout(5000);
+            msg_update_text_fmt("Importing QSO: %zu/%zu", i + 1, cnt);
         }
     }
     free(records);
@@ -294,8 +293,7 @@ static void * import_adif_thread(void* args) {
     char new_path[128] = {0};
     snprintf(new_path, sizeof(new_path), "%s.bak", path);
     rename(path, new_path);
-    msg_set_text_fmt("Imported %zu QSOs from %zu", updated_rows, cnt);
-    msg_set_timeout(2000);
+    msg_update_text_fmt("Imported %u QSOs from %i", updated_rows, cnt);
     pthread_exit(NULL);
 }
 

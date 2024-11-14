@@ -106,9 +106,9 @@ void mem_load(uint16_t id) {
 
     const char * label = params_band_label_get();
     if (strlen(label) > 0) {
-        msg_set_text_fmt("%s", label);
+        msg_update_text_fmt("%s", label);
     } else if (id <= MEM_NUM) {
-        msg_set_text_fmt("Loaded from memory %i", id);
+        msg_update_text_fmt("Loaded from memory %i", id);
     }
 }
 
@@ -116,7 +116,7 @@ void mem_save(uint16_t id) {
     params_memory_save(id);
 
     if (id <= MEM_NUM) {
-        msg_set_text_fmt("Saved in memory %i", id);
+        msg_update_text_fmt("Saved in memory %i", id);
     }
 }
 
@@ -184,7 +184,7 @@ static void check_cross_band(uint64_t freq, uint64_t prev_freq) {
 
 static void next_freq_step(bool up) {
     uint16_t new_step = params_current_mode_freq_step_change(up);
-    msg_set_text_fmt("Freq step: %i Hz", new_step);
+    msg_update_text_fmt("Freq step: %i Hz", new_step);
     voice_say_text_fmt("Frequency step %i herz", new_step);
 }
 
@@ -289,12 +289,12 @@ void main_screen_action(press_action_t action) {
 
         case ACTION_NR_TOGGLE:
             b = radio_change_nr(1);
-            msg_set_text_fmt("#FFFFFF NR: %s", b ? "On" : "Off");
+            msg_update_text_fmt("#FFFFFF NR: %s", b ? "On" : "Off");
             break;
 
         case ACTION_NB_TOGGLE:
             b = radio_change_nb(1);
-            msg_set_text_fmt("#FFFFFF NB: %s", b ? "On" : "Off");
+            msg_update_text_fmt("#FFFFFF NB: %s", b ? "On" : "Off");
             break;
 
         case ACTION_APP_RTTY:
@@ -681,7 +681,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                 x6100_vfo_t cur_vfo = params_band_vfo_get();
                 params_band_vfo_clone();
                 radio_vfo_set();
-                msg_set_text_fmt("Clone VFO %s", cur_vfo == X6100_VFO_A ? "A->B" : "B->A");
+                msg_update_text_fmt("Clone VFO %s", cur_vfo == X6100_VFO_A ? "A->B" : "B->A");
                 voice_say_text_fmt("V F O cloned %s", cur_vfo == X6100_VFO_A ? "from A to B" : "from B to A");
             }
             break;
@@ -691,7 +691,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                 backlight_switch();
             } else if (keypad->state == KEYPAD_LONG) {
                 voice_say_text_fmt("Power off");
-                msg_set_text_fmt("Power off");
+                msg_update_text_fmt("Power off");
                 radio_poweroff();
             }
             break;
@@ -1170,8 +1170,7 @@ lv_obj_t * main_screen() {
 
     cw_tune_init(obj);
 
-    msg_set_text_fmt("X6100 de R1CBU " VERSION);
-    msg_set_timeout(2000);
+    msg_schedule_text_fmt("X6100 de R1CBU " VERSION);
 
     uint16_t spectroom_zoom = params_current_mode_spectrum_factor_get();
     lv_msg_send(MSG_SPECTRUM_ZOOM_CHANGED, &spectroom_zoom);

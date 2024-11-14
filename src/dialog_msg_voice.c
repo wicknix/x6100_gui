@@ -209,7 +209,7 @@ static void * send_thread(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-    msg_set_text_fmt("Sending message");
+    msg_update_text_fmt("Sending message");
 
     radio_set_ptt(true);
     play_item();
@@ -233,14 +233,14 @@ static void * beacon_thread(void *arg) {
                 return NULL;
 
             case VOICE_BEACON_PLAY:
-                msg_set_text_fmt("Sending message");
+                msg_update_text_fmt("Sending message");
                 radio_set_ptt(true);
                 play_item();
                 radio_set_ptt(false);
                 break;
 
             case VOICE_BEACON_IDLE:
-                msg_set_text_fmt("Beacon pause: %i s", params.voice_msg_period);
+                msg_update_text_fmt("Beacon pause: %i s", params.voice_msg_period);
                 sleep(params.voice_msg_period);
                 break;
         }
@@ -437,7 +437,7 @@ void dialog_msg_voice_period_cb(lv_event_t * e) {
     }
 
     params_unlock(&params.dirty.voice_msg_period);
-    msg_set_text_fmt("Beacon period: %i s", params.voice_msg_period);
+    msg_update_text_fmt("Beacon period: %i s", params.voice_msg_period);
 }
 
 void dialog_msg_voice_rec_cb(lv_event_t * e) {
