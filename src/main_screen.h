@@ -11,9 +11,9 @@
 #include "lvgl/lvgl.h"
 #include "params/params.h"
 
-#define MEM_NUM         8
+#define MEM_HKEY_MAX_ID         9
 
-#define MEM_BACKUP_ID   (MEM_NUM + 1)
+#define MEM_BACKUP_ID   (MEM_HKEY_MAX_ID + 1)
 #define MEM_FT8_ID      100
 #define MEM_FT4_ID      200
 #define MEM_WSPR_ID     300

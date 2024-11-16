@@ -107,7 +107,7 @@ void mem_load(uint16_t id) {
     const char * label = params_band_label_get();
     if (strlen(label) > 0) {
         msg_update_text_fmt("%s", label);
-    } else if (id <= MEM_NUM) {
+    } else if (id <= MEM_HKEY_MAX_ID) {
         msg_update_text_fmt("Loaded from memory %i", id);
     }
 }
@@ -115,7 +115,7 @@ void mem_load(uint16_t id) {
 void mem_save(uint16_t id) {
     params_memory_save(id);
 
-    if (id <= MEM_NUM) {
+    if (id <= MEM_HKEY_MAX_ID) {
         msg_update_text_fmt("Saved in memory %i", id);
     }
 }
@@ -751,6 +751,7 @@ static void main_screen_hkey_cb(lv_event_t * e) {
         case HKEY_6:
         case HKEY_7:
         case HKEY_8:
+        case HKEY_9:
             if (hkey->state == HKEY_RELEASE) {
                 mem_load(hkey->key - HKEY_1 + 1);
                 voice_say_text_fmt("Memory %i loaded", hkey->key - HKEY_1 + 1);
