@@ -121,6 +121,23 @@ void mem_save(uint16_t id) {
 }
 
 /* * */
+static void freq_boundaries_update_cb(void *s, lv_msg_t *m) {
+    x6100_vfo_t vfo = params_band_vfo_get();
+    uint64_t    f = params_band_vfo_freq_get(vfo);
+    uint16_t    mhz, khz, hz;
+    uint32_t    half_width = 50000;
+    uint32_t    color = freq_lock ? 0xBBBBBB : 0xFFFFFF;
+
+    if (params.waterfall_zoom.x) {
+        half_width /= params_current_mode_spectrum_factor_get();
+    }
+
+    split_freq(f - half_width, &mhz, &khz, &hz);
+    lv_label_set_text_fmt(freq[0], "#%03X %i.%03i", color, mhz, khz);
+
+    split_freq(f + half_width, &mhz, &khz, &hz);
+    lv_label_set_text_fmt(freq[2], "#%03X %i.%03i", color, mhz, khz);
+}
 
 static void freq_update() {
     uint64_t    f;
@@ -134,9 +151,6 @@ static void freq_update() {
     f = params_band_vfo_freq_get(vfo);
 
     uint16_t    mhz, khz, hz;
-
-    split_freq(f - 50000, &mhz, &khz, &hz);
-    lv_label_set_text_fmt(freq[0], "#%03X %i.%03i", color, mhz, khz);
 
     split_freq(f, &mhz, &khz, &hz);
 
@@ -158,10 +172,7 @@ static void freq_update() {
     } else {
         lv_label_set_text_fmt(freq[1], "#%03X %i.%03i.%03i", color, mhz, khz, hz);
     }
-
-    split_freq(f + 50000, &mhz, &khz, &hz);
-    lv_label_set_text_fmt(freq[2], "#%03X %i.%03i", color, mhz, khz);
-
+    freq_boundaries_update_cb(NULL, NULL);
     band_info_update(f);
 }
 
@@ -1172,6 +1183,8 @@ lv_obj_t * main_screen() {
     cw_tune_init(obj);
 
     msg_schedule_text_fmt("X6100 de R1CBU " VERSION);
+
+    lv_msg_subscribe(MSG_SPECTRUM_ZOOM_CHANGED, freq_boundaries_update_cb, NULL);
 
     uint16_t spectroom_zoom = params_current_mode_spectrum_factor_get();
     lv_msg_send(MSG_SPECTRUM_ZOOM_CHANGED, &spectroom_zoom);
