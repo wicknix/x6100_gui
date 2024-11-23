@@ -246,8 +246,6 @@ static void redraw_cb(lv_event_t * e) {
     int32_t src_x_offset;
     uint16_t src_y, src_x, dst_y, dst_x;
 
-    uint8_t * temp_buf = (uint8_t *)frame->data;
-
     uint8_t current_zoom = 1;
     if (params.waterfall_zoom.x) {
         current_zoom = zoom;
@@ -266,14 +264,18 @@ static void redraw_cb(lv_event_t * e) {
     for (src_y = 0; src_y < height; src_y++) {
         dst_y = ((height - src_y + last_row_id) % height);
         src_x_offset = (freq_offsets[src_y] - wf_center_freq) * WATERFALL_NFFT / width_hz;
-        for (dst_x = 0; dst_x < width; dst_x++) {
-            src_x = mapping[dst_x] - src_x_offset;
-            if ((src_x < 0) || (src_x >= WATERFALL_NFFT)) {
-                px_color = black;
-            } else {
-                px_color = (lv_color_t)wf_palette[*(waterfall_cache + (src_y * WATERFALL_NFFT + src_x))];
+        if ((src_x_offset > WATERFALL_NFFT) || (src_x_offset < -WATERFALL_NFFT)) {
+            memset((lv_color_t *)frame->data + dst_y * width, 0, width * PX_BYTES);
+        } else {
+            for (dst_x = 0; dst_x < width; dst_x++) {
+                src_x = mapping[dst_x] - src_x_offset;
+                if ((src_x < 0) || (src_x >= WATERFALL_NFFT)) {
+                    px_color = black;
+                } else {
+                    px_color = (lv_color_t)wf_palette[*(waterfall_cache + (src_y * WATERFALL_NFFT + src_x))];
+                }
+                *((lv_color_t*)frame->data + (dst_y * width + dst_x)) = px_color;
             }
-            *((lv_color_t*)temp_buf + (dst_y * width + dst_x)) = px_color;
         }
     }
 }
