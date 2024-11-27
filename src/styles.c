@@ -8,7 +8,7 @@
 
 #include "styles.h"
 
-#define PATH "A:/usr/share/x6100/"
+#define PATH "A:/dev/shm/"
 
 const uint32_t wf_palette_legacy[256] = {
     0x000000, 0x000004, 0x000008, 0x00000c, 0x00000e, 0x000012, 0x000016, 0x000018,
@@ -121,6 +121,7 @@ void styles_init(themes_t theme) {
 
     lv_style_init(&spectrum_style);
     lv_style_set_bg_color(&spectrum_style, lv_color_hex(0x000000));
+    lv_style_set_bg_opa(&spectrum_style, LV_OPA_COVER);
     lv_style_set_border_color(&spectrum_style, lv_color_hex(0xAAAAAA));
     lv_style_set_border_width(&spectrum_style, 0);
     lv_style_set_radius(&spectrum_style, 0);
