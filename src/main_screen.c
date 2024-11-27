@@ -546,7 +546,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                 info_params_set();
 
                 if (params.mag_info.x) {
-                    msg_tiny_set_text_fmt("ATU: %s", params.atu ? "On" : "Off");
+                    msg_tiny_set_text_fmt("ATU: %s", params.atu.x ? "On" : "Off");
                 }
             } else if (keypad->state == KEYPAD_LONG) {
                 radio_start_atu();

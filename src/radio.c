@@ -119,9 +119,10 @@ bool radio_tick() {
                 if (pack->flag.atu_status && !pack->flag.tx) {
                     params_atu_save(pack->atu_params);
                     WITH_RADIO_LOCK(x6100_control_atu_tune(false));
+                    params_bool_set(&params.atu, true);
                     notify_rx();
 
-                    if (params.atu) {
+                    if (params.atu.x) {
                         WITH_RADIO_LOCK(x6100_control_cmd(x6100_atu_network, pack->atu_params));
                         params.atu_loaded = true;
                         notify_atu_update();
@@ -274,7 +275,7 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb, radio_st
     x6100_control_rxvol_set(params.vol);
     x6100_control_rfg_set(params_band_rfg_get());
     x6100_control_sql_set(params.sql);
-    x6100_control_atu_set(params.atu);
+    x6100_control_atu_set(params.atu.x);
     x6100_control_txpwr_set(params.pwr);
     x6100_control_charger_set(params.charger == RADIO_CHARGER_ON);
     x6100_control_bias_drive_set(params.bias_drive);
@@ -650,13 +651,13 @@ void radio_change_agc() {
 
 void radio_change_atu() {
     params_lock();
-    params.atu = !params.atu;
-    params_unlock(&params.dirty.atu);
+    params.atu.x = !params.atu.x;
+    params_unlock(&params.atu.dirty);
 
-    WITH_RADIO_LOCK(x6100_control_atu_set(params.atu));
+    WITH_RADIO_LOCK(x6100_control_atu_set(params.atu.x));
 
     radio_load_atu();
-    voice_say_text_fmt("Auto tuner %s", params.atu ? "On" : "Off");
+    voice_say_text_fmt("Auto tuner %s", params.atu.x ? "On" : "Off");
 }
 
 void radio_start_atu() {
@@ -689,7 +690,7 @@ void radio_stop_swrscan() {
 }
 
 void radio_load_atu() {
-    if (params.atu) {
+    if (params.atu.x) {
         if (params_band_cur_shift_get()) {
             info_atu_update();
 
@@ -698,11 +699,11 @@ void radio_load_atu() {
             return;
         }
 
-        uint32_t atu = params_atu_load(&params.atu_loaded);
+        uint32_t atu_params = params_atu_load(&params.atu_loaded);
 
         radio_lock();
         x6100_control_atu_set(true);
-        x6100_control_cmd(x6100_atu_network, atu);
+        x6100_control_cmd(x6100_atu_network, atu_params);
         radio_unlock();
 
         if (state != RADIO_SWRSCAN) {

@@ -85,7 +85,7 @@ typedef struct {
     int16_t             band;
     int16_t             vol;
     uint8_t             sql;
-    bool                atu;
+    params_bool_t       atu;
     bool                atu_loaded;
     uint8_t             ant;
     float               pwr;
