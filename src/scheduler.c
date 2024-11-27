@@ -49,6 +49,10 @@ void scheduler_put(scheduler_fn_t fn, void * arg, size_t arg_size) {
     pthread_mutex_unlock(&mutex);
 }
 
+void scheduler_put_noargs(scheduler_fn_t fn) {
+    return scheduler_put(fn, NULL, 0);
+}
+
 void scheduler_work() {
     while (queue_read != queue_write) {
         pthread_mutex_lock(&mutex);

@@ -18,6 +18,7 @@
 #include "rtty.h"
 #include "recorder.h"
 #include "pubsub_ids.h"
+#include "scheduler.h"
 
 #include <stdlib.h>
 #include <pthread.h>
@@ -236,6 +237,10 @@ static void rx_cb(lv_event_t * e) {
     visor_height = VISOR_HEIGHT_RX;
 }
 
+static void spectrum_refresh(void * data) {
+    lv_obj_invalidate(obj);
+}
+
 lv_obj_t * spectrum_init(lv_obj_t * parent) {
     pthread_mutex_init(&data_mux, NULL);
     spectrum_buf = malloc(spectrum_size * sizeof(float));
@@ -278,7 +283,7 @@ void spectrum_data(float *data_buf, uint16_t size, bool tx) {
     }
 
     pthread_mutex_unlock(&data_mux);
-    event_send(obj, LV_EVENT_REFRESH, NULL);
+    scheduler_put_noargs(spectrum_refresh);
 }
 
 void spectrum_min_max_reset() {

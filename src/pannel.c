@@ -11,7 +11,7 @@
 #include "pannel.h"
 #include "styles.h"
 #include "util.h"
-#include "events.h"
+#include "scheduler.h"
 #include "radio.h"
 #include "params/params.h"
 #include "rtty.h"
@@ -54,14 +54,13 @@ static void check_lines() {
     *last_line = '\0';
 }
 
-static void pannel_update_cb(lv_event_t * e) {
+static void pannel_update_cb(const char *text) {
     lv_point_t line_size;
     lv_point_t text_size;
 
     if (!last_line) {
         return;
     }
-    char *text = lv_event_get_param(e);
 
     if (strcmp(text, "\n") == 0) {
         if (last_line[strlen(last_line) - 1] != '\n') {
@@ -87,14 +86,13 @@ lv_obj_t * pannel_init(lv_obj_t *parent) {
     obj = lv_label_create(parent);
 
     lv_obj_add_style(obj, &pannel_style, 0);
-    lv_obj_add_event_cb(obj, pannel_update_cb, EVENT_PANNEL_UPDATE, NULL);
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
 
     return obj;
 }
 
 void pannel_add_text(const char * text) {
-    event_send(obj, EVENT_PANNEL_UPDATE, strdup(text));
+    scheduler_put(pannel_update_cb, text, strlen(text) + 1);
 }
 
 void pannel_hide() {

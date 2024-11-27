@@ -372,9 +372,8 @@ static void truncate_table() {
     }
 }
 
-static void add_msg_cb(lv_event_t * e) {
+static void add_msg_cb(void *data) {
     truncate_table();
-    cell_data_t *cell_data = (cell_data_t *) lv_event_get_param(e);
     uint16_t    row = 0;
     uint16_t    col = 0;
     bool        scroll;
@@ -387,6 +386,7 @@ static void add_msg_cb(lv_event_t * e) {
     scroll = table_rows == (row + 1);
 
     // Copy data, because original event data will be deleted
+    cell_data_t *cell_data = (cell_data_t*)data;
     cell_data_t *cell_data_copy = malloc(sizeof(cell_data_t));
     *cell_data_copy = *cell_data;
 
@@ -717,7 +717,6 @@ static void construct_cb(lv_obj_t *parent) {
     table = lv_table_create(dialog.obj);
 
     lv_obj_remove_style(table, NULL, LV_STATE_ANY | LV_PART_MAIN);
-    lv_obj_add_event_cb(table, add_msg_cb, EVENT_FT8_MSG, NULL);
     lv_obj_add_event_cb(table, cell_press_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(table, key_cb, LV_EVENT_KEY, NULL);
     lv_obj_add_event_cb(table, table_draw_part_begin_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
@@ -1136,29 +1135,28 @@ static void tx_worker() {
  */
 static void add_info(const char * fmt, ...) {
     va_list     args;
-    cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
-    cell_data->cell_type = CELL_RX_INFO;
+    cell_data_t  cell_data;
+    cell_data.cell_type = CELL_RX_INFO;
 
     va_start(args, fmt);
-    vsnprintf(cell_data->text, sizeof(cell_data->text), fmt, args);
+    vsnprintf(cell_data.text, sizeof(cell_data.text), fmt, args);
     va_end(args);
 
-    event_send(table, EVENT_FT8_MSG, cell_data);
+    scheduler_put(add_msg_cb, &cell_data, sizeof(cell_data_t));
 }
 
 /**
  * Add TX message to the table
  */
 static void add_tx_text(const char * text) {
-    cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
-    cell_data->cell_type = CELL_TX_MSG;
+    cell_data_t  cell_data;
+    cell_data.cell_type = CELL_TX_MSG;
 
-    strncpy(cell_data->text, text, sizeof(cell_data->text) - 1);
-    if (strncmp(cell_data->text, "CQ_", 3) == 0) {
-        cell_data->text[2] = ' ';
+    strncpy(cell_data.text, text, sizeof(cell_data.text) - 1);
+    if (strncmp(cell_data.text, "CQ_", 3) == 0) {
+        cell_data.text[2] = ' ';
     }
-
-    event_send(table, EVENT_FT8_MSG, cell_data);
+    scheduler_put(add_msg_cb, &cell_data, sizeof(cell_data_t));
 }
 
 /**
@@ -1175,7 +1173,7 @@ static void add_rx_text(int16_t snr, const char * text, slot_info_t *s_info) {
         msg_schedule_text_fmt("Next TX: %s", tx_msg.msg);
         if (cq_enabled) {
             cq_enabled = false;
-            scheduler_put(update_call_btn, NULL, 0);
+            scheduler_put_noargs(update_call_btn);
         }
     }
     free(old_msg);
@@ -1191,31 +1189,31 @@ static void add_rx_text(int16_t snr, const char * text, slot_info_t *s_info) {
         cell_type = CELL_RX_MSG;
     }
 
-    cell_data_t  *cell_data = malloc(sizeof(cell_data_t));
+    cell_data_t  cell_data;
     if (meta.type == FTX_MSG_TYPE_CQ) {
-        cell_data->worked_type = qso_log_search_worked(
+        cell_data.worked_type = qso_log_search_worked(
             meta.call_de,
             params.ft8_protocol == FTX_PROTOCOL_FT8 ? MODE_FT8 : MODE_FT4,
             qso_log_freq_to_band(params_band_cur_freq_get())
         );
     }
 
-    cell_data->cell_type = cell_type;
-    strncpy(cell_data->text, text, sizeof(cell_data->text) - 1);
-    cell_data->meta = meta;
-    cell_data->odd = s_info->odd;
+    cell_data.cell_type = cell_type;
+    strncpy(cell_data.text, text, sizeof(cell_data.text) - 1);
+    cell_data.meta = meta;
+    cell_data.odd = s_info->odd;
     if (params.qth.x[0] != 0) {
         if (strlen(meta.grid) > 0) {
             double lat, lon;
             qth_str_to_pos(meta.grid, &lat, &lon);
-            cell_data->dist = qth_pos_dist(lat, lon, cur_lat, cur_lon);
+            cell_data.dist = qth_pos_dist(lat, lon, cur_lat, cur_lon);
         } else {
-            cell_data->dist = 0;
+            cell_data.dist = 0;
         }
     } else {
-        cell_data->dist = 0;
+        cell_data.dist = 0;
     }
-    event_send(table, EVENT_FT8_MSG, cell_data);
+    scheduler_put(add_msg_cb, (void*)&cell_data, sizeof(cell_data_t));
 }
 
 static void received_message_cb(const char *text, int snr, float freq_hz, float time_sec, void *user_data) {

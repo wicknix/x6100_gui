@@ -118,7 +118,7 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
         uint8_t id = v * 255;
         waterfall_cache[last_row_id * size + size - 1 - x] = id;
     }
-    scheduler_put(refresh_waterfall, NULL, 0);
+    scheduler_put_noargs(refresh_waterfall);
 }
 
 static void do_scroll_cb(lv_event_t * event) {
@@ -130,7 +130,7 @@ static void do_scroll_cb(lv_event_t * event) {
     } else {
         wf_center_freq = radio_center_freq;
     }
-    scheduler_put(refresh_waterfall, NULL, 0);
+    scheduler_put_noargs(refresh_waterfall);
 }
 
 void waterfall_set_height(lv_coord_t h) {

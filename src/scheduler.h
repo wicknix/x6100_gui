@@ -19,6 +19,11 @@ void scheduler_put(scheduler_fn_t fn, void *arg, size_t arg_size);
 
 
 /**
+ * Schedule execution function without arguments in main thread
+ */
+void scheduler_put_noargs(scheduler_fn_t fn);
+
+/**
  * Execute scheduled functions
  */
 void scheduler_work();
