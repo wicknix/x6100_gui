@@ -1,5 +1,3 @@
-file(GLOB_RECURSE sources *.c)
-
 target_sources(${PROJECT_NAME} PUBLIC
-    ${sources}
+    band.c common.c db.c migrations.c modulation.c params.c
 )

@@ -6,11 +6,14 @@
  *  Copyright (c) 2024 Georgy Dyuldin aka R2RFE
  */
 
-#include <string.h>
-#include <lvgl/src/misc/lv_log.h>
 #include "db.h"
 
+#include "migrations.h"
 #include "../util.h"
+
+#include <string.h>
+#include <lvgl/src/misc/lv_log.h>
+
 
 sqlite3                 *db = NULL;
 
@@ -30,6 +33,11 @@ bool database_init() {
 
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Can't open params.db");
+        return false;
+    }
+
+    rc = migrations_apply();
+    if (rc != 0) {
         return false;
     }
 

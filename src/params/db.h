@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <sqlite3.h>
+#include <stdint.h>
 
 extern sqlite3          *db;
 
