@@ -14,7 +14,7 @@ start() {
 	echo 0 > /sys/class/graphics/fbcon/cursor_blink
 	[ ! -f /mnt/params.db ] && cp /usr/share/x6100/params.default.db /mnt/params.db
 	# shellcheck disable=SC2086 # we need the word splitting
-	start-stop-daemon -S -b -q -p "$PIDFILE" -x "/usr/sbin/$DAEMON"
+	start-stop-daemon -S -b -q -m -p "$PIDFILE" -x "/usr/sbin/$DAEMON"
 	status=$?
 	if [ "$status" -eq 0 ]; then
 		echo "OK"
