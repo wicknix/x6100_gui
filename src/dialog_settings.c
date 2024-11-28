@@ -1050,7 +1050,7 @@ static uint8_t make_transverter(uint8_t row, uint8_t n) {
     dialog_item(&dialog, obj);
 
     lv_spinbox_set_value(obj, transverter->shift / 1000000L);
-    lv_spinbox_set_range(obj, 100, 500);
+    lv_spinbox_set_range(obj, 42, 500);
     lv_spinbox_set_digit_format(obj,3, 0);
     lv_spinbox_set_digit_step_direction(obj, LV_DIR_LEFT);
     lv_obj_set_size(obj, SMALL_2, 56);
