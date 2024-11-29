@@ -52,8 +52,6 @@ CREATE TABLE memory(
     UNIQUE      (id, name) ON CONFLICT REPLACE
 );
 
-.import memory.csv memory
-
 CREATE TABLE msg_cw(
     id          INTEGER PRIMARY KEY,
     val         INTEGER
@@ -65,3 +63,20 @@ CREATE TABLE transverter(
     val         INTEGER,
     UNIQUE      (id, name) ON CONFLICT REPLACE
 );
+
+CREATE TABLE version(id INT NOT NULL DEFAULT 0);
+INSERT INTO version(id) values (1);
+
+CREATE TABLE digital_modes(
+    label varchar(64) NOT NULL,
+    freq INTEGER NOT NULL CHECK(freq > 0),
+    mode INTEGER NOT NULL DEFAULT 3 CHECK(mode >= 0 AND mode <= 7),
+    type INTEGER NOT NULL,
+    CONSTRAINT freq_type_uniq UNIQUE(freq, type)
+);
+CREATE INDEX digital_modes_type_idx ON digital_modes (type);
+CREATE INDEX digital_modes_freq_idx ON digital_modes (freq);
+
+.separator ","
+.import digital_modes.csv digital_modes
+
