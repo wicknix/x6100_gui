@@ -116,7 +116,6 @@ params_t params = {
 
     .ft8_show_all           = true,
     .ft8_protocol           = FTX_PROTOCOL_FT8,
-    .ft8_band               = 5,
     .ft8_tx_freq            = { .x = 1325,      .name = "ft8_tx_freq" },
     .ft8_auto               = { .x = true,      .name = "ft8_auto" },
     .ft8_output_gain_offset = { .x = 0.0f,      .name = "ft8_output_gain_offset" },
@@ -354,8 +353,6 @@ static bool params_load() {
             params.swrscan_span = i;
         } else if (strcmp(name, "ft8_show_all") == 0) {
             params.ft8_show_all = i;
-        } else if (strcmp(name, "ft8_band") == 0) {
-            params.ft8_band = i;
         } else if (strcmp(name, "ft8_protocol") == 0) {
             params.ft8_protocol = i;
         } else if (strcmp(name, "long_gen") == 0) {
@@ -534,7 +531,6 @@ static void params_save() {
     if (params.dirty.swrscan_span)          params_write_int("swrscan_span", params.swrscan_span, &params.dirty.swrscan_span);
 
     if (params.dirty.ft8_show_all)          params_write_int("ft8_show_all", params.ft8_show_all, &params.dirty.ft8_show_all);
-    if (params.dirty.ft8_band)              params_write_int("ft8_band", params.ft8_band, &params.dirty.ft8_band);
     if (params.dirty.ft8_protocol)          params_write_int("ft8_protocol", params.ft8_protocol, &params.dirty.ft8_protocol);
 
     if (params.dirty.long_gen)              params_write_int("long_gen", params.long_gen, &params.dirty.long_gen);

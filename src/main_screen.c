@@ -59,6 +59,7 @@ static uint16_t     freq_height = 36;
 static lv_obj_t     *obj;
 static bool         freq_lock = false;
 static bool         mode_lock = false;
+static bool         ab_lock = false;
 static bool         band_lock = false;
 
 static lv_obj_t     *spectrum;
@@ -72,14 +73,34 @@ static lv_obj_t     *tx_info;
 static void freq_shift(int16_t diff);
 static void next_freq_step(bool up);
 static void freq_update();
+static void change_band_setup();
 
 void mem_load(uint16_t id) {
     params_memory_load(id);
-
-    // Fix mode fox FT8/FT4
-    if ((id >= MEM_FT8_ID) && (id < MEM_FT4_ID + 100) && (params_band_cur_mode_get() != x6100_mode_usb_dig)) {
-        params_band_cur_mode_set_no_save(x6100_mode_usb_dig);
+    change_band_setup();
+    if (id != MEM_BACKUP_ID) {
+        msg_update_text_fmt("Loaded from memory %i", id);
     }
+}
+
+void mem_save(uint16_t id) {
+    params_memory_save(id);
+
+    if (id <= MEM_HKEY_MAX_ID) {
+        msg_update_text_fmt("Saved in memory %i", id);
+    }
+}
+
+bool digital_load(params_digital_type_t type, int8_t dir) {
+    bool res = params_digital_load(dir, type);
+    if (res) {
+        change_band_setup();
+        msg_update_text_fmt("%s", params_band_label_get());
+    }
+    return res;
+}
+
+static void change_band_setup() {
     if (params_bands_find(params_band_cur_freq_get(), &params.freq_band)) {
         if (params.freq_band.type != 0) {
             params.band = params.freq_band.id;
@@ -103,21 +124,6 @@ void mem_load(uint16_t id) {
     waterfall_set_freq(params_band_cur_freq_get());
     spectrum_clear();
     freq_update();
-
-    const char * label = params_band_label_get();
-    if (strlen(label) > 0) {
-        msg_update_text_fmt("%s", label);
-    } else if (id <= MEM_HKEY_MAX_ID) {
-        msg_update_text_fmt("Loaded from memory %i", id);
-    }
-}
-
-void mem_save(uint16_t id) {
-    params_memory_save(id);
-
-    if (id <= MEM_HKEY_MAX_ID) {
-        msg_update_text_fmt("Saved in memory %i", id);
-    }
 }
 
 /* * */
@@ -678,22 +684,24 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             break;
 
         case KEYPAD_AB:
-            if (keypad->state == KEYPAD_RELEASE) {
-                radio_toggle_vfo();
-                info_params_set();
-                waterfall_set_freq(params_band_cur_freq_get());
-                spectrum_clear();
-                main_screen_band_set();
+            if (!ab_lock) {
+                if (keypad->state == KEYPAD_RELEASE) {
+                    radio_toggle_vfo();
+                    info_params_set();
+                    waterfall_set_freq(params_band_cur_freq_get());
+                    spectrum_clear();
+                    main_screen_band_set();
 
-                if (params.mag_info.x) {
-                    msg_tiny_set_text_fmt("%s", info_params_vfo());
+                    if (params.mag_info.x) {
+                        msg_tiny_set_text_fmt("%s", info_params_vfo());
+                    }
+                } else if (keypad->state == KEYPAD_LONG) {
+                    x6100_vfo_t cur_vfo = params_band_vfo_get();
+                    params_band_vfo_clone();
+                    radio_vfo_set();
+                    msg_update_text_fmt("Clone VFO %s", cur_vfo == X6100_VFO_A ? "A->B" : "B->A");
+                    voice_say_text_fmt("V F O cloned %s", cur_vfo == X6100_VFO_A ? "from A to B" : "from B to A");
                 }
-            } else if (keypad->state == KEYPAD_LONG) {
-                x6100_vfo_t cur_vfo = params_band_vfo_get();
-                params_band_vfo_clone();
-                radio_vfo_set();
-                msg_update_text_fmt("Clone VFO %s", cur_vfo == X6100_VFO_A ? "A->B" : "B->A");
-                voice_say_text_fmt("V F O cloned %s", cur_vfo == X6100_VFO_A ? "from A to B" : "from B to A");
             }
             break;
 
@@ -1087,6 +1095,10 @@ void main_screen_lock_band(bool lock) {
 void main_screen_lock_mode(bool lock) {
     mode_lock = lock;
     info_lock_mode(lock);
+}
+
+void main_screen_lock_ab(bool lock) {
+    ab_lock = lock;
 }
 
 void main_screen_set_freq(uint64_t freq) {

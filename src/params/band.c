@@ -7,8 +7,6 @@
  */
 #include "band.h"
 
-#include <string.h>
-#include <lvgl/lvgl.h>
 
 #include "common.h"
 #include "types.h"
@@ -17,6 +15,10 @@
 #include "../meter.h"
 #include "../util.h"
 #include "../pubsub_ids.h"
+
+#include <string.h>
+#include <lvgl/lvgl.h>
+#include <stdio.h>
 
 typedef struct {
     params_uint64_t freq;
@@ -276,6 +278,45 @@ static void params_mb_save(uint16_t id) {
 
     if (params_band.rfg.dirty)
         params_mb_write_int(id, "rfg", params_band.rfg.x, &params_band.rfg.dirty);
+}
+
+/* Digital params */
+
+bool params_digital_load(int8_t dir, params_digital_type_t type) {
+    sqlite3_stmt *stmt;
+    int           rc;
+    bool          res;
+    if (dir > 0) {
+        rc = sqlite3_prepare_v2(
+            db, "SELECT label, freq, mode FROM digital_modes WHERE type = ? AND freq > ? ORDER BY freq ASC LIMIT 1", -1,
+            &stmt, 0);
+    } else if (dir == 0) {
+        rc = sqlite3_prepare_v2(
+            db, "SELECT label, freq, mode FROM digital_modes WHERE type = ? ORDER BY ABS(freq - ?) ASC LIMIT 1", -1,
+            &stmt, 0);
+    } else {
+        rc = sqlite3_prepare_v2(
+            db, "SELECT label, freq, mode FROM digital_modes WHERE type = ? AND freq < ? ORDER BY freq DESC LIMIT 1",
+            -1, &stmt, 0);
+    }
+    if (rc != SQLITE_OK) {
+        printf("Failed prepare statement: %s\n", sqlite3_errmsg(db));
+        return false;
+    }
+    sqlite3_bind_int(stmt, 1, type);
+    sqlite3_bind_int64(stmt, 2, params_band.vfo_x[params_band.vfo.x].freq.x);
+
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_DONE) {
+        res = false;
+    } else {
+        strcpy(params_band.label.x, sqlite3_column_text(stmt, 0));
+        params_band.vfo_x[params_band.vfo.x].freq.x = sqlite3_column_int64(stmt, 1);
+        params_band.vfo_x[params_band.vfo.x].mode.x = sqlite3_column_int(stmt, 2);
+        res = true;
+    }
+    sqlite3_finalize(stmt);
+    return res;
 }
 
 void params_band_vfo_clone()

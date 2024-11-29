@@ -48,27 +48,6 @@
 #include <errno.h>
 #include <ctype.h>
 
-#define FT8_160M_ID     (100 - MEM_FT8_ID)
-#define FT8_80M_ID      (101 - MEM_FT8_ID)
-#define FT8_60M_ID      (102 - MEM_FT8_ID)
-#define FT8_40M_ID      (103 - MEM_FT8_ID)
-#define FT8_30M_ID      (104 - MEM_FT8_ID)
-#define FT8_20M_ID      (105 - MEM_FT8_ID)
-#define FT8_17M_ID      (106 - MEM_FT8_ID)
-#define FT8_15M_ID      (107 - MEM_FT8_ID)
-#define FT8_12M_ID      (108 - MEM_FT8_ID)
-#define FT8_10M_ID      (109 - MEM_FT8_ID)
-#define FT8_6M_ID       (110 - MEM_FT8_ID)
-#define FT4_80M_ID      (200 - MEM_FT4_ID)
-#define FT4_40M_ID      (201 - MEM_FT4_ID)
-#define FT4_30M_ID      (202 - MEM_FT4_ID)
-#define FT4_20M_ID      (203 - MEM_FT4_ID)
-#define FT4_17M_ID      (204 - MEM_FT4_ID)
-#define FT4_15M_ID      (205 - MEM_FT4_ID)
-#define FT4_12M_ID      (206 - MEM_FT4_ID)
-#define FT4_10M_ID      (207 - MEM_FT4_ID)
-#define FT4_6M_ID       (208 - MEM_FT4_ID)
-
 #define DECIM           6
 #define SAMPLE_RATE     (AUDIO_CAPTURE_RATE / DECIM)
 
@@ -120,42 +99,6 @@ typedef struct {
     bool odd;
     bool answer_generated;
 } slot_info_t;
-
-
-typedef struct {
-    uint8_t cur;
-    uint8_t next;
-    uint8_t prev;
-    uint8_t another;
-} band_relations_t;
-
-band_relations_t ft8_relations[] = {
-    {FT8_160M_ID,   FT8_80M_ID,   FT8_6M_ID,    FT4_80M_ID},
-    {FT8_80M_ID,    FT8_60M_ID,   FT8_160M_ID,  FT4_80M_ID},
-    {FT8_60M_ID,    FT8_40M_ID,   FT8_80M_ID,   FT4_40M_ID},
-    {FT8_40M_ID,    FT8_30M_ID,   FT8_60M_ID,   FT4_40M_ID},
-    {FT8_30M_ID,    FT8_20M_ID,   FT8_40M_ID,   FT4_30M_ID},
-    {FT8_20M_ID,    FT8_17M_ID,   FT8_30M_ID,   FT4_20M_ID},
-    {FT8_17M_ID,    FT8_15M_ID,   FT8_20M_ID,   FT4_17M_ID},
-    {FT8_15M_ID,    FT8_12M_ID,   FT8_17M_ID,   FT4_15M_ID},
-    {FT8_12M_ID,    FT8_10M_ID,   FT8_15M_ID,   FT4_12M_ID},
-    {FT8_10M_ID,    FT8_6M_ID,    FT8_12M_ID,   FT4_10M_ID},
-    {FT8_6M_ID,     FT8_160M_ID,  FT8_10M_ID,   FT4_6M_ID},
-};
-
-
-band_relations_t ft4_relations[] = {
-    {FT4_80M_ID,   FT4_40M_ID,   FT4_6M_ID,    FT8_80M_ID},
-    {FT4_40M_ID,   FT4_30M_ID,   FT4_80M_ID,   FT8_40M_ID},
-    {FT4_30M_ID,   FT4_20M_ID,   FT4_40M_ID,   FT8_30M_ID},
-    {FT4_20M_ID,   FT4_17M_ID,   FT4_30M_ID,   FT8_20M_ID},
-    {FT4_17M_ID,   FT4_15M_ID,   FT4_20M_ID,   FT8_17M_ID},
-    {FT4_15M_ID,   FT4_12M_ID,   FT4_17M_ID,   FT8_15M_ID},
-    {FT4_12M_ID,   FT4_10M_ID,   FT4_15M_ID,   FT8_12M_ID},
-    {FT4_10M_ID,   FT4_6M_ID,    FT4_12M_ID,   FT8_10M_ID},
-    {FT4_6M_ID,    FT4_80M_ID,   FT4_10M_ID,   FT8_6M_ID},
-};
-
 
 static ft8_state_t          state = RX_PROCESS;
 static bool                 tx_enabled=true;
@@ -538,6 +481,7 @@ static void destruct_cb() {
     mem_load(MEM_BACKUP_ID);
 
     main_screen_lock_mode(false);
+    main_screen_lock_ab(false);
     main_screen_lock_freq(false);
     main_screen_lock_band(false);
 
@@ -545,21 +489,20 @@ static void destruct_cb() {
     adif_log_close(ft8_log);
 }
 
-static void load_band() {
-    uint16_t mem_id = 0;
-
+static void load_band(int8_t dir) {
+    params_digital_type_t type;
     switch (params.ft8_protocol) {
         case FTX_PROTOCOL_FT8:
-            mem_id = MEM_FT8_ID;
+            type = PARAMS_DIGI_TYPE_FT8;
             lv_finder_set_width(finder, FT8_WIDTH_HZ);
             break;
 
         case FTX_PROTOCOL_FT4:
-            mem_id = MEM_FT4_ID;
+            type = PARAMS_DIGI_TYPE_FT4;
             lv_finder_set_width(finder, FT4_WIDTH_HZ);
             break;
     }
-    mem_load(mem_id + params.ft8_band);
+    digital_load(type, dir);
 }
 
 /// @brief Clean waterfall and table
@@ -576,47 +519,16 @@ static void clean_screen() {
     lv_event_send(table, LV_EVENT_KEY, c);
 }
 
-static band_relations_t * get_band_relation() {
-    int band = params.ft8_band;
-
-    band_relations_t *rel;
-    size_t arr_size;
-
-    switch (params.ft8_protocol) {
-        case FTX_PROTOCOL_FT8:
-            rel = ft8_relations;
-            arr_size = ARRAY_SIZE(ft8_relations);
-            break;
-        case FTX_PROTOCOL_FT4:
-            rel = ft4_relations;
-            arr_size = ARRAY_SIZE(ft4_relations);
-            break;
-    }
-    for (size_t i = 0; i < arr_size; i++){
-        if (rel[i].cur == band) {
-            rel += i;
-            break;
-        }
-    }
-    return rel;
-}
-
 static void band_cb(lv_event_t * e) {
-    int band = params.ft8_band;
-    int max_band = 0;
-
-    band_relations_t *rel = get_band_relation();
+    int8_t dir;
 
     if (lv_event_get_code(e) == EVENT_BAND_UP) {
-        band = rel->next;
+        dir = 1;
     } else {
-        band = rel->prev;
+        dir = -1;
     }
 
-    params_lock();
-    params.ft8_band = band;
-    params_unlock(&params.dirty.ft8_band);
-    load_band();
+    load_band(dir);
 
     worker_done();
     worker_init();
@@ -778,7 +690,7 @@ static void construct_cb(lv_obj_t *parent) {
     buttons_load(4, &button_cq_mod);
 
     mem_save(MEM_BACKUP_ID);
-    load_band();
+    load_band(0);
 
     uint32_t f_low, f_high;
     params_current_mode_filter_get(&f_low, &f_high);
@@ -787,6 +699,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     qth_str_to_pos(params.qth.x, &cur_lat, &cur_lon);
 
+    main_screen_lock_ab(true);
     main_screen_lock_mode(true);
     main_screen_lock_freq(true);
     main_screen_lock_band(true);
@@ -827,12 +740,8 @@ static void show_all_cb(lv_event_t * e) {
 static void mode_ft4_cb(lv_event_t * e) {
     if (disable_buttons) return;
 
-    band_relations_t *rel = get_band_relation();
-
     params_lock();
     params.ft8_protocol = FTX_PROTOCOL_FT4;
-    params.ft8_band = rel->another;
-    params.dirty.ft8_band = true;
     params_unlock(&params.dirty.ft8_protocol);
 
     buttons_load(1, &button_mode_ft8);
@@ -840,16 +749,14 @@ static void mode_ft4_cb(lv_event_t * e) {
     worker_done();
     worker_init();
     clean_screen();
-    load_band();
+    load_band(0);
 }
 
 static void mode_ft8_cb(lv_event_t * e) {
     if (disable_buttons) return;
-    band_relations_t *rel = get_band_relation();
+
     params_lock();
     params.ft8_protocol = FTX_PROTOCOL_FT8;
-    params.ft8_band = rel->another;
-    params.dirty.ft8_band = true;
     params_unlock(&params.dirty.ft8_protocol);
 
     buttons_load(1, &button_mode_ft4);
@@ -857,7 +764,7 @@ static void mode_ft8_cb(lv_event_t * e) {
     worker_done();
     worker_init();
     clean_screen();
-    load_band();
+    load_band(0);
 }
 
 static void mode_auto_cb(lv_event_t * e) {
