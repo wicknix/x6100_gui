@@ -441,16 +441,18 @@ static void button_vol_hold_cb(void * ptr) {
     button_item_t   *item = (button_item_t*) ptr;
     uint64_t        mask = (uint64_t) 1L << item->data;
 
-    params_lock();
-    params.vol_modes ^= mask;
-    params_unlock(&params.dirty.vol_modes);
+    if (params.vol_modes ^ mask) {
+        params_lock();
+        params.vol_modes ^= mask;
+        params_unlock(&params.dirty.vol_modes);
 
-    if (params.vol_modes & mask) {
-        msg_update_text_fmt("Added to VOL encoder");
-        voice_say_text_fmt("Added to volume encoder");
-    } else {
-        msg_update_text_fmt("Removed from VOL encoder");
-        voice_say_text_fmt("Removed from volume encoder");
+        if (params.vol_modes & mask) {
+            msg_update_text_fmt("Added to VOL encoder");
+            voice_say_text_fmt("Added to volume encoder");
+        } else {
+            msg_update_text_fmt("Removed from VOL encoder");
+            voice_say_text_fmt("Removed from volume encoder");
+        }
     }
 }
 
@@ -458,16 +460,18 @@ static void button_mfk_hold_cb(void * ptr) {
     button_item_t   *item = (button_item_t*) ptr;
     uint64_t        mask = (uint64_t) 1L << item->data;
 
-    params_lock();
-    params.mfk_modes ^= mask;
-    params_unlock(&params.dirty.mfk_modes);
+    if (params.mfk_modes ^ mask) {
+        params_lock();
+        params.mfk_modes ^= mask;
+        params_unlock(&params.dirty.mfk_modes);
 
-    if (params.mfk_modes & mask) {
-        msg_update_text_fmt("Added to MFK encoder");
-        voice_say_text_fmt("Added to MFK encoder");
-    } else {
-        msg_update_text_fmt("Removed from MFK encoder");
-        voice_say_text_fmt("Removed from MFK encoder");
+        if (params.mfk_modes & mask) {
+            msg_update_text_fmt("Added to MFK encoder");
+            voice_say_text_fmt("Added to MFK encoder");
+        } else {
+            msg_update_text_fmt("Removed from MFK encoder");
+            voice_say_text_fmt("Removed from MFK encoder");
+        }
     }
 }
 
