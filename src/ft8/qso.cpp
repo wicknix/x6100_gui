@@ -72,8 +72,9 @@ std::string Candidate::get_tx_text(std::string local_callsign, std::string local
 }
 
 void Candidate::save_qso(save_qso_cb_t save_qso_cb) {
-    if ((!_remote_callsign.empty()) && (_rcvd_snr != DEFAULT_SNR) && (_sent_snr != DEFAULT_SNR))
+    if ((!_remote_callsign.empty()) && (_rcvd_snr != DEFAULT_SNR) && (_sent_snr != DEFAULT_SNR) && !_saved)
         save_qso_cb(_remote_callsign.c_str(), _grid.c_str(), _rcvd_snr, _sent_snr);
+        _saved = true;
 }
 
 FTxQsoProcessor::FTxQsoProcessor(std::string local_callsign, std::string local_qth, save_qso_cb_t save_qso_cb) {

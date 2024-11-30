@@ -60,6 +60,7 @@ class Candidate {
     std::string    _grid;
     int            _rcvd_snr;
     int            _sent_snr;
+    bool           _saved=false;
 };
 
 class FTxQsoProcessor {

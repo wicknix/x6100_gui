@@ -407,6 +407,14 @@ TEST_CASE("Check save qso", "[ft8_qso]") {
             }
             REQUIRE_THAT(std::get<1>(qso_vec[0]), Equals(""));
         }
+        SECTION("don't save again") {
+            q.add_rx_text("R2RFE EA1DX AB31", 5, &meta, &tx_msg);
+            q.start_new_slot();
+            q.add_rx_text("R2RFE EA1DX R+12", 7, &meta, &tx_msg);
+            q.start_new_slot();
+            q.add_rx_text("R2RFE EA1DX R+12", 7, &meta, &tx_msg);
+            REQUIRE_THAT(std::get<1>(qso_vec[0]), Equals("AB31"));
+        }
         REQUIRE(qso_vec.size() == 1);
         auto [remote_callsign, remote_grid, r_snr, s_snr] = qso_vec[0];
         REQUIRE_THAT(remote_callsign, Equals("EA1DX"));
