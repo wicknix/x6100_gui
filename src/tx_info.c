@@ -209,6 +209,8 @@ static void update_tx_info(void * arg)
     }
     if (dialog_is_run() || !params.mag_alc.x) {
         lv_label_set_text_fmt(alc_label, "ALC: %1.1f", alc);
+    } else {
+        lv_label_set_text(alc_label, "");
     }
 }
 
