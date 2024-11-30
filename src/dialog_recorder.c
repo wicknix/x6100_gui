@@ -384,14 +384,6 @@ void dialog_recorder_set_on(bool on) {
     }
 }
 
-void dialog_recorder_set_peak(float val) {
-    if (!dialog.run) {
-        return;
-    }
-    level_db = (int32_t) val;
-
-}
-
 static void update_level_cb(lv_timer_t * timer) {
-    lv_bar_set_value(level, level_db, LV_ANIM_OFF);
+    lv_bar_set_value(level, audio_get_peak_db(), LV_ANIM_OFF);
 }

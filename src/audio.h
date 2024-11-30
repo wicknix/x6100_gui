@@ -24,3 +24,5 @@ void audio_gain_db_transition(int16_t *buf, size_t samples, float gain1, float g
 
 float audio_set_play_vol(float db);
 float audio_set_rec_vol(float db);
+
+float audio_get_peak_db();

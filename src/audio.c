@@ -23,7 +23,6 @@
 #include "meter.h"
 #include "dsp.h"
 #include "params/params.h"
-#include "dialog_recorder.h"
 
 #define AUDIO_RATE_MS   100
 
@@ -38,6 +37,8 @@ static pa_stream            *capture_stm;
 static char                 *capture_device = "alsa_input.platform-sound.stereo-fallback";
 
 static pa_stream            *monitor_stm = NULL;
+
+static float                peak_db = -60.0f;
 
 static void record_monitor_setup();
 
@@ -275,6 +276,10 @@ float audio_set_rec_vol(float db) {
     return (float) db_long / 100.0f;
 }
 
+float audio_get_peak_db() {
+    return peak_db;
+}
+
 static void monitor_cb(pa_stream *stream, size_t length, void *udata) {
     int16_t *buf = NULL;
 
@@ -287,8 +292,7 @@ static void monitor_cb(pa_stream *stream, size_t length, void *udata) {
             max_val = cur_val;
         }
     }
-    float max_db = 20.0f * log10f((float) max_val / ((1UL << 15) - 1));
-    dialog_recorder_set_peak(max_db);
+    peak_db = 20.0f * log10f((float) max_val / ((1UL << 15) - 1));
     pa_stream_drop(stream);
 }
 
