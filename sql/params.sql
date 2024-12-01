@@ -68,6 +68,7 @@ CREATE TABLE version(id INT NOT NULL DEFAULT 0);
 INSERT INTO version(id) values (1);
 
 CREATE TABLE digital_modes(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     label varchar(64) NOT NULL,
     freq INTEGER NOT NULL CHECK(freq > 0),
     mode INTEGER NOT NULL DEFAULT 3 CHECK(mode >= 0 AND mode <= 7),

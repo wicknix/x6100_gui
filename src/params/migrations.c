@@ -41,6 +41,7 @@ static int _1_create_ftx_table() {
     rc = asprintf(&query,
         "BEGIN;"
         "CREATE TABLE IF NOT EXISTS digital_modes("
+            "id INTEGER PRIMARY KEY AUTOINCREMENT, "
             "label varchar(64) NOT NULL, "
             "freq INTEGER NOT NULL CHECK(freq > 0), "
             "mode INTEGER NOT NULL DEFAULT 3 CHECK(mode >= 0 AND mode <= 7), "
