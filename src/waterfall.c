@@ -291,4 +291,5 @@ static void refresh_waterfall( void * arg) {
 
 static void zoom_changed_cd(void * s, lv_msg_t * m) {
     zoom = *(uint16_t *) lv_msg_get_payload(m);
+    lv_style_set_line_width(&middle_line_style, zoom / 2 + 1);
 }
