@@ -200,7 +200,7 @@ void radio_vfo_set() {
     radio_unlock();
     lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 
-    params_bands_find(params_band_cur_freq_get(), &params.freq_band);
+    params_bands_find(params_band_cur_freq_get());
 }
 
 /**

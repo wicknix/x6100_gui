@@ -21,6 +21,8 @@
 #include "../dialog_msg_cw.h"
 #include "../qth/qth.h"
 
+#define BAND_NOT_LOADED -10
+
 params_t params = {
     .vol_modes              = (1 << VOL_VOL) | (1 << VOL_RFG) | (1 << VOL_FILTER_LOW) | (1 << VOL_FILTER_HIGH) | (1 << VOL_PWR) | (1 << VOL_HMIC),
     .mfk_modes              = (1 << MFK_SPECTRUM_FACTOR) | (1 << MFK_SPECTRUM_BETA) | (1 << MFK_PEAK_HOLD) | (1<< MFK_PEAK_SPEED),
@@ -150,6 +152,7 @@ params_t params = {
     .theme                  = { .x = THEME_SIMPLE, .name="theme"},
 
     .atu                    = { .x = false, .name="atu" },
+    .current_band           = { .id = BAND_NOT_LOADED },
 };
 
 transverter_t params_transverter[TRANSVERTER_NUM] = {
@@ -229,7 +232,7 @@ static bool params_load() {
         const char      *t = sqlite3_column_text(stmt, 1);
 
         if (strcmp(name, "band") == 0) {
-            params.band = i;
+            params.band_id = i;
             params_band_load(i);
         } else if (strcmp(name, "vol") == 0) {
             params.vol = i;
@@ -452,7 +455,7 @@ static void params_save() {
         return;
     }
 
-    if (params.dirty.band)                  params_write_int("band", params.band, &params.dirty.band);
+    if (params.dirty.band)                  params_write_int("band", params.band_id, &params.dirty.band);
     if (params.dirty.vol)                   params_write_int("vol", params.vol, &params.dirty.vol);
     if (params.dirty.sql)                   params_write_int("sql", params.sql, &params.dirty.sql);
     if (params.dirty.pwr)                   params_write_int("pwr", params.pwr * 10, &params.dirty.pwr);
@@ -655,7 +658,7 @@ static void * params_thread(void *arg) {
         pthread_mutex_lock(&params_mux);
         if (params_ready_to_save()){
             params_save();
-            params_band_save(params.band);
+            params_band_save(params.band_id);
             params_mode_save();
             transverter_save();
         }
@@ -879,20 +882,23 @@ band_t * params_bands_find_all(uint64_t freq, int32_t half_width, uint16_t *coun
     return res;
 }
 
-bool params_bands_find(uint64_t freq, band_t *band) {
+bool params_bands_find(uint64_t freq) {
+    if ((params.current_band.id != BAND_NOT_LOADED) && (params.current_band.start_freq <= freq) && (params.current_band.stop_freq >= freq)) {
+        return false;
+    }
     bool res = false;
 
     sqlite3_bind_int64(bands_find_stmt, 1, freq);
 
     if (sqlite3_step(bands_find_stmt) == SQLITE_ROW) {
-        if (band->name)
-            free(band->name);
+        if (params.current_band.name)
+            free(params.current_band.name);
 
-        band->id = sqlite3_column_int(bands_find_stmt, 0);
-        band->name = strdup(sqlite3_column_text(bands_find_stmt, 1));
-        band->start_freq = sqlite3_column_int64(bands_find_stmt, 2);
-        band->stop_freq = sqlite3_column_int64(bands_find_stmt, 3);
-        band->type = sqlite3_column_int(bands_find_stmt, 4);
+        params.current_band.id = sqlite3_column_int(bands_find_stmt, 0);
+        params.current_band.name = strdup(sqlite3_column_text(bands_find_stmt, 1));
+        params.current_band.start_freq = sqlite3_column_int64(bands_find_stmt, 2);
+        params.current_band.stop_freq = sqlite3_column_int64(bands_find_stmt, 3);
+        params.current_band.type = sqlite3_column_int(bands_find_stmt, 4);
 
         res = true;
     }
@@ -903,7 +909,7 @@ bool params_bands_find(uint64_t freq, band_t *band) {
     return res;
 }
 
-bool params_bands_find_next(uint64_t freq, bool up, band_t *band) {
+bool params_bands_find_next(uint64_t freq, bool up) {
     bool            res = false;
     sqlite3_stmt    *stmt;
     int             rc;
@@ -921,14 +927,14 @@ bool params_bands_find_next(uint64_t freq, bool up, band_t *band) {
     sqlite3_bind_int64(stmt, 1, freq);
 
     if (sqlite3_step(stmt) == SQLITE_ROW) {
-        if (band->name)
-            free(band->name);
+        if (params.current_band.name)
+            free(params.current_band.name);
 
-        band->id = sqlite3_column_int(stmt, 0);
-        band->name = strdup(sqlite3_column_text(stmt, 1));
-        band->start_freq = sqlite3_column_int64(stmt, 2);
-        band->stop_freq = sqlite3_column_int64(stmt, 3);
-        band->type = sqlite3_column_int(stmt, 4);
+        params.current_band.id = sqlite3_column_int(stmt, 0);
+        params.current_band.name = strdup(sqlite3_column_text(stmt, 1));
+        params.current_band.start_freq = sqlite3_column_int64(stmt, 2);
+        params.current_band.stop_freq = sqlite3_column_int64(stmt, 3);
+        params.current_band.type = sqlite3_column_int(stmt, 4);
 
         res = true;
     }

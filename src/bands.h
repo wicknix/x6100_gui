@@ -20,5 +20,5 @@ typedef struct {
     uint8_t     type;
 } band_t;
 
-void bands_activate(band_t *band, uint64_t *freq);
+void bands_activate(uint64_t *freq);
 void bands_change(bool up);

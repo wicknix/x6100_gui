@@ -21,19 +21,19 @@
 
 #include "lvgl/lvgl.h"
 
-void bands_activate(band_t *band, uint64_t *freq) {
+void bands_activate(uint64_t *freq) {
     params_lock();
-    params_band_save(params.band);
-    params.band = band->id;
-    params_band_load(params.band);
+    params_band_save(params.band_id);
+    params.band_id = params.current_band.id;
+    params_band_load(params.band_id);
     params_unlock(&params.dirty.band);
 
     if (freq) {
         params_band_cur_freq_set(*freq);
     } else {
         uint64_t new_freq = params_band_cur_freq_get();
-        if ((new_freq < band->start_freq) || (new_freq > band->stop_freq)) {
-            new_freq = (band->start_freq + band->stop_freq) / 2;
+        if ((new_freq < params.current_band.start_freq) || (new_freq > params.current_band.stop_freq)) {
+            new_freq = (params.current_band.start_freq + params.current_band.stop_freq) / 2;
             params_band_cur_freq_set(new_freq);
         }
     }
@@ -48,10 +48,8 @@ void bands_activate(band_t *band, uint64_t *freq) {
 }
 
 void bands_change(bool up) {
-    band_t band = { .name = NULL };
-
-    if (params_bands_find_next(params_band_cur_freq_get(), up, &band)) {
-        bands_activate(&band, NULL);
+    if (params_bands_find_next(params_band_cur_freq_get(), up)) {
+        bands_activate(NULL);
         radio_load_atu();
         info_params_set();
         pannel_visible();
@@ -59,6 +57,6 @@ void bands_change(bool up) {
         spectrum_clear();
         main_screen_band_set();
 
-        voice_say_text_fmt("Band %s", band.name);
+        voice_say_text_fmt("Band %s", params.current_band.name);
     }
 }

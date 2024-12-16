@@ -101,14 +101,14 @@ bool digital_load(params_digital_type_t type, int8_t dir) {
 }
 
 static void change_band_setup() {
-    if (params_bands_find(params_band_cur_freq_get(), &params.freq_band)) {
-        if (params.freq_band.type != 0) {
-            params.band = params.freq_band.id;
+    if (params_bands_find(params_band_cur_freq_get())) {
+        if (params.current_band.type != 0) {
+            params.band_id = params.current_band.id;
         } else {
-            params.band = -1;
+            params.band_id = -1;
         }
     } else {
-        params.band = -1;
+        params.band_id = -1;
     }
 
     radio_vfo_set();
@@ -183,19 +183,19 @@ static void freq_update() {
 }
 
 static void check_cross_band(uint64_t freq, uint64_t prev_freq) {
-    if (params_bands_find(freq, &params.freq_band)) {
-        if (params.freq_band.type != 0) {
-            if (params.freq_band.id != params.band) {
+    if (params_bands_find(freq)) {
+        if (params.current_band.type != 0) {
+            if (params.current_band.id != params.band_id) {
                 params_band_cur_freq_set(prev_freq);
-                bands_activate(&params.freq_band, &freq);
+                bands_activate(&freq);
                 info_params_set();
                 pannel_visible();
             }
         } else {
-            params.band = -1;
+            params.band_id = -1;
         }
     } else {
-        params.band = -1;
+        params.band_id = -1;
     }
 }
 
@@ -1104,11 +1104,11 @@ void main_screen_lock_ab(bool lock) {
 void main_screen_set_freq(uint64_t freq) {
     uint64_t    prev_freq = params_band_cur_freq_get();
 
-    if (params_bands_find(freq, &params.freq_band)) {
-        if (params.freq_band.type != 0) {
-            if (params.freq_band.id != params.band) {
+    if (params_bands_find(freq)) {
+        if (params.current_band.type != 0) {
+            if (params.current_band.id != params.band_id) {
                 params_band_cur_freq_set(prev_freq);
-                bands_activate(&params.freq_band, &freq);
+                bands_activate(&freq);
                 info_params_set();
                 pannel_visible();
             }

@@ -168,8 +168,8 @@ static void set_freq(void * arg) {
         LV_LOG_ERROR("arg is NULL");
     }
     uint64_t freq = * (uint64_t*) arg;
-    if (params_bands_find(freq, &params.freq_band)) {
-        bands_activate(&params.freq_band, NULL);
+    if (params_bands_find(freq)) {
+        bands_activate(NULL);
     }
 
     radio_set_freq(freq);

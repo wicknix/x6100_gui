@@ -78,11 +78,11 @@ typedef struct {
 
     /* band info */
 
-    band_t              freq_band;
+    band_t              current_band;
 
     /* radio */
 
-    int16_t             band;
+    int16_t             band_id;
     int16_t             vol;
     uint8_t             sql;
     params_bool_t       atu;
@@ -379,8 +379,8 @@ void params_msg_cw_edit(uint32_t id, const char *val);
 void params_msg_cw_delete(uint32_t id);
 
 band_t * params_bands_find_all(uint64_t freq, int32_t half_width, uint16_t *count);
-bool params_bands_find(uint64_t freq, band_t *band);
-bool params_bands_find_next(uint64_t freq, bool up, band_t *band);
+bool params_bands_find(uint64_t freq);
+bool params_bands_find_next(uint64_t freq, bool up);
 
 char *params_charger_str_get(radio_charger_t val);
 

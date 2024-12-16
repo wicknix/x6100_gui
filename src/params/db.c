@@ -24,7 +24,6 @@ static void errorLogCallback(void *pArg, int iErrCode, const char *zMsg){
     LV_LOG_ERROR("(%d) %s\n", iErrCode, zMsg);
 }
 
-
 bool database_init() {
     sqlite3_config(SQLITE_CONFIG_LOG, errorLogCallback, NULL);
     sqlite3_config(SQLITE_CONFIG_SERIALIZED);
