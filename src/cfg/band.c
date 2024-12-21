@@ -15,6 +15,8 @@ static sqlite3_stmt *write_stmt;
 static sqlite3_stmt *read_stmt;
 static sqlite3_stmt *read_band_by_pk_stmt;
 static sqlite3_stmt *read_band_by_freq_stmt;
+static sqlite3_stmt *find_up_band_stmt;
+static sqlite3_stmt *find_down_band_stmt;
 static sqlite3_stmt *read_all_bands_stmt;
 
 static band_info_t _band_info_cache = {.id = BAND_UNDEFINED, .start_freq=0, .stop_freq=0};
@@ -53,6 +55,18 @@ void cfg_band_params_init(sqlite3 *database) {
         -1, &read_band_by_freq_stmt, 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed prepare read_band_by_freq_stmt statement: %s", sqlite3_errmsg(db));
+        exit(1);
+    }
+    rc = sqlite3_prepare_v2(db, "SELECT id, name, start_freq, stop_freq, type FROM bands "
+                "WHERE :freq <= start_freq AND id != :id AND type = 1 ORDER BY start_freq LIMIT 1", -1, &find_up_band_stmt, 0);
+    if (rc != SQLITE_OK) {
+        LV_LOG_ERROR("Failed prepare find_up_band_stmt statement: %s", sqlite3_errmsg(db));
+        exit(1);
+    }
+    rc = sqlite3_prepare_v2(db, "SELECT id, name, start_freq, stop_freq, type FROM bands "
+                "WHERE :freq >= stop_freq AND id != :id AND type = 1 ORDER BY start_freq DESC LIMIT 1", -1, &find_down_band_stmt, 0);
+    if (rc != SQLITE_OK) {
+        LV_LOG_ERROR("Failed prepare find_down_band_stmt statement: %s", sqlite3_errmsg(db));
         exit(1);
     }
     rc = sqlite3_prepare_v2(db, "SELECT id, name, start_freq, stop_freq, type FROM bands", -1, &read_all_bands_stmt, 0);
@@ -139,7 +153,49 @@ band_info_t *get_band_info_by_freq(uint32_t freq) {
     } else {
         return NULL;
     }
+}
 
+band_info_t *get_band_info_next(uint32_t freq, bool up, int32_t cur_id) {
+    int rc;
+    sqlite3_stmt *stmt;
+    if (up) {
+        stmt = find_up_band_stmt;
+    } else {
+        stmt = find_down_band_stmt;
+    }
+    rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":freq"), freq);
+    if (rc != SQLITE_OK) {
+        LV_LOG_ERROR("Failed to bind freq %lu to find up/down stmt: %s", freq, sqlite3_errmsg(db));
+        return NULL;
+    }
+    rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), cur_id);
+    if (rc != SQLITE_OK) {
+        LV_LOG_ERROR("Failed to current band id %i to find up/down stmt: %s", cur_id, sqlite3_errmsg(db));
+        return NULL;
+    }
+    rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW) {
+        if (_band_info_cache.name) {
+            free(_band_info_cache.name);
+            _band_info_cache.name = NULL;
+        }
+        _band_info_cache.id = sqlite3_column_int(stmt, 0);
+        _band_info_cache.name = strdup(sqlite3_column_text(stmt, 1));
+        _band_info_cache.active = true;
+        _band_info_cache.start_freq = sqlite3_column_int(stmt, 2);
+        _band_info_cache.stop_freq = sqlite3_column_int(stmt, 3);
+        rc = 0;
+    } else {
+        LV_LOG_INFO("No next band info for freq: %lu, cur_id: %i and direction: %u", freq, cur_id, up);
+        rc = -1;
+    }
+    sqlite3_reset(stmt);
+    sqlite3_clear_bindings(stmt);
+    if (rc == 0) {
+        return &_band_info_cache;
+    } else {
+        return NULL;
+    }
 }
 
 int cfg_band_params_load_item(cfg_item_t *item) {
