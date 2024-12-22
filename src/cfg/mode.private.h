@@ -1,0 +1,16 @@
+#pragma once
+
+#define MODE_UNDEFINED -1
+
+#include "cfg.h"
+
+#include <aether_radio/x6100_control/control.h>
+#include <sqlite3.h>
+
+typedef int32_t db_mode_t;
+
+void cfg_mode_params_init(sqlite3 *database);
+int cfg_mode_params_load_item(cfg_item_t *item);
+int cfg_mode_params_save_item(cfg_item_t *item);
+db_mode_t xmode_2_db(x6100_mode_t mode);
+bool mode_default_values(db_mode_t mode, uint32_t *low, uint32_t *high, uint32_t *step, uint32_t *zoom);

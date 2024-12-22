@@ -1,5 +1,5 @@
 /**
- * Work with band_params table on DB
+ * Work with bands and band_params table on DB
  */
 #include "band.private.h"
 

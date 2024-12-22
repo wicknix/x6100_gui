@@ -140,6 +140,55 @@ void test_switch_band_down() {
     }
 }
 
+void test_cur_freq_tracking() {
+    subject_set_int(cfg_band.vfo_a.freq.val, 14200000);
+    subject_set_int(cfg_band.vfo_b.freq.val, 14210000);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
+    assert(subject_get_int(cfg_cur.freq) == 14200000);
+    subject_set_int(cfg_band.vfo_a.freq.val, 14220000);
+    assert(subject_get_int(cfg_cur.freq) == 14220000);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_B);
+    assert(subject_get_int(cfg_cur.freq) == 14210000);
+}
+
+void test_ab_freq_tracking_cur() {
+    subject_set_int(cfg_band.vfo_a.freq.val, 14200000);
+    subject_set_int(cfg_band.vfo_b.freq.val, 14210000);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
+    subject_set_int(cfg_cur.freq, 14220000);
+    assert(subject_get_int(cfg_band.vfo_a.freq.val) == 14220000);
+    assert(subject_get_int(cfg_band.vfo_b.freq.val) == 14210000);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_B);
+    subject_set_int(cfg_cur.freq, 14230000);
+    assert(subject_get_int(cfg_band.vfo_b.freq.val) == 14230000);
+    assert(subject_get_int(cfg_band.vfo_a.freq.val) == 14220000);
+}
+
+void test_cur_mode_tracking() {
+    subject_set_int(cfg_band.vfo_a.mode.val, x6100_mode_am);
+    subject_set_int(cfg_band.vfo_b.mode.val, x6100_mode_cw);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
+    assert(subject_get_int(cfg_cur.mode) == x6100_mode_am);
+    subject_set_int(cfg_band.vfo_a.mode.val, x6100_mode_lsb);
+    assert(subject_get_int(cfg_cur.mode) == x6100_mode_lsb);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_B);
+    assert(subject_get_int(cfg_cur.mode) == x6100_mode_cw);
+}
+
+void test_ab_mode_tracking_cur() {
+    subject_set_int(cfg_band.vfo_a.mode.val, x6100_mode_usb_dig);
+    subject_set_int(cfg_band.vfo_b.mode.val, x6100_mode_cwr);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
+    subject_set_int(cfg_cur.mode, x6100_mode_am);
+    assert(subject_get_int(cfg_band.vfo_a.mode.val) == x6100_mode_am);
+    assert(subject_get_int(cfg_band.vfo_b.mode.val) == x6100_mode_cwr);
+    subject_set_int(cfg_band.vfo.val, X6100_VFO_B);
+    subject_set_int(cfg_cur.mode, x6100_mode_nfm);
+    assert(subject_get_int(cfg_band.vfo_b.mode.val) == x6100_mode_nfm);
+    assert(subject_get_int(cfg_band.vfo_a.mode.val) == x6100_mode_am);
+}
+
+
 void test() {
     subject_set_int(cfg.band_id.val, 6);
     printf("Start testing\n");
@@ -149,6 +198,10 @@ void test() {
     CHECK(test_set_another_band_using_freq());
     CHECK(test_switch_band_up());
     CHECK(test_switch_band_down());
+    CHECK(test_cur_freq_tracking());
+    CHECK(test_ab_freq_tracking_cur());
+    CHECK(test_cur_mode_tracking());
+    CHECK(test_ab_mode_tracking_cur());
     printf("Testing is done\n");
     exit(0);
 }

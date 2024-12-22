@@ -1,11 +1,12 @@
 #include "cfg.private.h"
 
 #include "band.private.h"
+#include "mode.private.h"
 #include "params.private.h"
 #include "subjects.private.h"
 
-#include "../util.h"
 #include "../lvgl/lvgl.h"
+#include "../util.h"
 #include <aether_radio/x6100_control/control.h>
 
 #include <stdio.h>
@@ -14,19 +15,30 @@
 cfg_t      cfg;
 cfg_band_t cfg_band;
 
+cfg_cur_t cfg_cur;
+
+static cfg_mode_t cfg_mode;
+
 static band_info_t cur_band_info;
 
 static int init_params_cfg(sqlite3 *db);
 static int init_band_cfg(sqlite3 *db);
+static int init_mode_cfg(sqlite3 *db);
 
 static void  init_items(cfg_item_t *cfg_arr, uint32_t count);
 static int   load_items_from_db(cfg_item_t *cfg_arr, uint32_t count);
+static void  save_item_to_db(cfg_item_t *item, bool force);
 static void  save_items_to_db(cfg_item_t *cfg_arr, uint32_t cfg_size);
 static void *params_save_thread(void *arg);
 
 static void on_item_change(subject_t subj, void *user_data);
+static void on_vfo_change(subject_t subj, void *user_data);
 static void on_band_id_change(subject_t subj, void *user_data);
-static void on_freq_change(subject_t subj, void *user_data);
+static void on_ab_freq_change(subject_t subj, void *user_data);
+static void on_ab_mode_change(subject_t subj, void *user_data);
+
+static void on_cur_freq_change(subject_t subj, void *user_data);
+static void on_cur_mode_change(subject_t subj, void *user_data);
 
 /*
 
@@ -51,13 +63,19 @@ int cfg_init(sqlite3 *db) {
         return rc;
     }
 
+    rc = init_mode_cfg(db);
+    if (rc != 0) {
+        LV_LOG_ERROR("Error during loading mode params");
+        return rc;
+    }
+
     pthread_t thread;
     pthread_create(&thread, NULL, params_save_thread, NULL);
     pthread_detach(thread);
 
 // #define TEST_CFG
 #ifdef TEST_CFG
-    #include "test_cfg.c"
+#include "test_cfg.c"
     test();
 #endif
     return rc;
@@ -97,35 +115,113 @@ static void on_band_id_change(subject_t subj, void *user_data) {
     load_items_from_db(cfg_band_arr, cfg_band_size);
 }
 
+static void on_vfo_change(subject_t subj, void *user_data) {
+    subject_t freq_src, mode_src;
+    if (subject_get_int(subj) == X6100_VFO_A) {
+        freq_src = cfg_band.vfo_a.freq.val;
+        mode_src = cfg_band.vfo_a.mode.val;
+    } else {
+        freq_src = cfg_band.vfo_b.freq.val;
+        mode_src = cfg_band.vfo_b.mode.val;
+    }
+    subject_set_int(cfg_cur.freq, subject_get_int(freq_src));
+    subject_set_int(cfg_cur.mode, subject_get_int(mode_src));
+}
+
 /**
  * On changing freq
  */
-static void on_freq_change(subject_t subj, void *user_data) {
+static void on_ab_freq_change(subject_t subj, void *user_data) {
     /**
      * change freq (on cfg_band->freq change):
-        * check for cross band
-        * find band
-        * save new band vfo (a/b) and freq from current values
-        * select band (update cfg->band_id)
+     * check for cross band
+     * find band
+     * save new band vfo (a/b) and freq from current values
+     * select band (update cfg->band_id)
      */
     cfg_item_t *cfg_band_arr;
     cfg_band_arr = (cfg_item_t *)&cfg_band;
     uint32_t cfg_band_size = sizeof(cfg_band) / sizeof(cfg_item_t);
 
-    cfg_item_t  *item = (cfg_item_t *)user_data;
-    uint32_t     freq = subject_get_int(subj);
+    cfg_item_t *item = (cfg_item_t *)user_data;
+    uint32_t    freq = subject_get_int(subj);
+    x6100_vfo_t vfo = subject_get_int(cfg_band.vfo.val);
+    bool        is_active = ((vfo == X6100_VFO_A) && (strcmp(item->db_name, "vfoa_freq") == 0)) ||
+                     ((vfo == X6100_VFO_B) && (strcmp(item->db_name, "vfob_freq")) == 0);
+
+    if (is_active) {
+        // Set freq to current
+        subject_set_int(cfg_cur.freq, freq);
+    }
+
     band_info_t *band_info = get_band_info_by_freq(freq);
     LV_LOG_INFO("Loaded band info: %i for freq: %lu (pk = %i, name: %s)", band_info->id, freq, item->pk, item->db_name);
 
     if ((band_info->id != item->pk) && (band_info->id != BAND_UNDEFINED)) {
-        x6100_vfo_t vfo = subject_get_int(cfg_band.vfo.val);
-        if (((vfo == X6100_VFO_A) && (item->db_name == "vfoa_freq")) || (vfo == X6100_VFO_B) && (item->db_name == "vfob_freq")) {
+        if (is_active) {
             LV_LOG_INFO("Save new freq and vfo with target band_id");
             item->pk = band_info->id;
-            item->save(item);
+            save_item_to_db(item, true);
             cfg_band.vfo.pk = band_info->id;
-            cfg_band.vfo.save(&cfg_band.vfo);
+            save_item_to_db(&cfg_band.vfo, true);
             subject_set_int(cfg.band_id.val, band_info->id);
+        }
+    }
+}
+
+/**
+ * On changing mode
+ */
+static void on_ab_mode_change(subject_t subj, void *user_data) {
+    cfg_item_t  *item = (cfg_item_t *)user_data;
+    x6100_mode_t mode = subject_get_int(subj);
+    x6100_vfo_t  vfo = subject_get_int(cfg_band.vfo.val);
+    bool         is_active = ((vfo == X6100_VFO_A) && (strcmp(item->db_name, "vfoa_mode") == 0)) ||
+                     ((vfo == X6100_VFO_B) && (strcmp(item->db_name, "vfob_mode")) == 0);
+
+    if (is_active) {
+        // Set mode to current
+        subject_set_int(cfg_cur.mode, mode);
+    }
+}
+
+static void on_cur_freq_change(subject_t subj, void *user_data) {
+    // Copy freq to active vfo
+    subject_t target_subj;
+    if (subject_get_int(cfg_band.vfo.val) == X6100_VFO_A) {
+        target_subj = cfg_band.vfo_a.freq.val;
+    } else {
+        target_subj = cfg_band.vfo_b.freq.val;
+    }
+    subject_set_int(target_subj, subject_get_int(subj));
+}
+
+static void on_cur_mode_change(subject_t subj, void *user_data) {
+    // Copy mode to active vfo
+    x6100_mode_t new_mode = subject_get_int(subj);
+    subject_t    target_subj;
+    if (subject_get_int(cfg_band.vfo.val) == X6100_VFO_A) {
+        target_subj = cfg_band.vfo_a.mode.val;
+    } else {
+        target_subj = cfg_band.vfo_b.mode.val;
+    }
+    subject_set_int(target_subj, new_mode);
+
+    if (cfg_mode.filter_high.dirty == NULL) {
+        LV_LOG_USER("Skip updating mode values, not initialized");
+        return;
+    }
+
+    // Update mode params
+    db_mode_t   db_mode = xmode_2_db(new_mode);
+    cfg_item_t *cfg_mode_arr;
+    cfg_mode_arr = (cfg_item_t *)&cfg_mode;
+    uint32_t cfg_mode_size = sizeof(cfg_mode) / sizeof(cfg_item_t);
+    for (size_t i = 0; i < cfg_mode_size; i++) {
+        if (cfg_mode_arr[i].pk != db_mode) {
+            save_item_to_db(&cfg_mode_arr[i], true);
+            cfg_mode_arr[i].pk = db_mode;
+            cfg_mode_arr[i].load(&cfg_mode_arr[i]);
         }
     }
 }
@@ -160,18 +256,24 @@ static int load_items_from_db(cfg_item_t *cfg_arr, uint32_t count) {
 /**
  * Save items to db
  */
+
+static void save_item_to_db(cfg_item_t *item, bool force) {
+    int rc;
+    pthread_mutex_lock(&item->dirty->mux);
+    if (item->dirty->val || force) {
+        rc = item->save(item);
+        if (rc != 0) {
+            LV_LOG_USER("Can't save %s", item->db_name);
+        }
+        item->dirty->val = false;
+    }
+    pthread_mutex_unlock(&item->dirty->mux);
+}
+
 static void save_items_to_db(cfg_item_t *cfg_arr, uint32_t cfg_size) {
     int rc;
     for (size_t i = 0; i < cfg_size; i++) {
-        pthread_mutex_lock(&cfg_arr[i].dirty->mux);
-        if (cfg_arr[i].dirty->val) {
-            rc = cfg_arr[i].save(&cfg_arr[i]);
-            if (rc != 0) {
-                LV_LOG_USER("Can't save %s", cfg_arr[i].db_name);
-            }
-            cfg_arr[i].dirty->val = false;
-        }
-        pthread_mutex_unlock(&cfg_arr[i].dirty->mux);
+        save_item_to_db(&cfg_arr[i], false);
     }
 }
 
@@ -187,9 +289,14 @@ static void *params_save_thread(void *arg) {
     cfg_band_arr = (cfg_item_t *)&cfg_band;
     uint32_t cfg_band_size = sizeof(cfg_band) / sizeof(cfg_item_t);
 
+    cfg_item_t *cfg_mode_arr;
+    cfg_mode_arr = (cfg_item_t *)&cfg_mode;
+    uint32_t cfg_mode_size = sizeof(cfg_mode) / sizeof(cfg_item_t);
+
     while (true) {
         save_items_to_db(cfg_arr, cfg_size);
         save_items_to_db(cfg_band_arr, cfg_band_size);
+        save_items_to_db(cfg_mode_arr, cfg_mode_size);
         sleep_usec(500000);
     }
 }
@@ -236,11 +343,24 @@ static int init_band_cfg(sqlite3 *db) {
 
     cfg_band_params_init(db);
 
+    x6100_mode_t default_mode;
     band_info_t *band_info = get_band_info_by_pk(subject_get_int(cfg.band_id.val));
     uint32_t     default_freq = 14000000;
     if (band_info) {
         default_freq = (band_info->start_freq + band_info->stop_freq) / 2;
     }
+
+    if (default_freq > 10000000) {
+        default_mode = x6100_mode_usb;
+    } else {
+        default_mode = x6100_mode_lsb;
+    }
+
+    cfg_cur.freq = subject_create_int(default_freq);
+    subject_add_observer(cfg_cur.freq, on_cur_freq_change, NULL);
+
+    cfg_cur.mode = subject_create_int(default_mode);
+    subject_add_observer(cfg_cur.mode, on_cur_mode_change, NULL);
 
     /* Fill band configuration */
     int32_t band_id = subject_get_int(cfg.band_id.val);
@@ -252,9 +372,23 @@ static int init_band_cfg(sqlite3 *db) {
         .save = cfg_band_params_save_item,
         .pk = band_id,
     };
+    cfg_band.vfo_a.mode = (cfg_item_t){
+        .val = subject_create_int(default_mode),
+        .db_name = "vfoa_mode",
+        .load = cfg_band_params_load_item,
+        .save = cfg_band_params_save_item,
+        .pk = band_id,
+    };
     cfg_band.vfo_b.freq = (cfg_item_t){
         .val = subject_create_int(default_freq),
         .db_name = "vfob_freq",
+        .load = cfg_band_params_load_item,
+        .save = cfg_band_params_save_item,
+        .pk = band_id,
+    };
+    cfg_band.vfo_b.mode = (cfg_item_t){
+        .val = subject_create_int(default_mode),
+        .db_name = "vfob_mode",
         .load = cfg_band_params_load_item,
         .save = cfg_band_params_save_item,
         .pk = band_id,
@@ -267,12 +401,66 @@ static int init_band_cfg(sqlite3 *db) {
         .pk = band_id,
     };
 
-    subject_add_observer(cfg_band.vfo_a.freq.val, on_freq_change, &cfg_band.vfo_a.freq);
-    subject_add_observer(cfg_band.vfo_b.freq.val, on_freq_change, &cfg_band.vfo_b.freq);
+    subject_add_observer(cfg_band.vfo_a.freq.val, on_ab_freq_change, &cfg_band.vfo_a.freq);
+    subject_add_observer(cfg_band.vfo_b.freq.val, on_ab_freq_change, &cfg_band.vfo_b.freq);
+
+    subject_add_observer(cfg_band.vfo_a.mode.val, on_ab_mode_change, &cfg_band.vfo_a.mode);
+    subject_add_observer(cfg_band.vfo_b.mode.val, on_ab_mode_change, &cfg_band.vfo_b.mode);
+
+    subject_add_observer(cfg_band.vfo.val, on_vfo_change, NULL);
 
     /* Load values from table */
     cfg_item_t *cfg_arr = (cfg_item_t *)&cfg_band;
     uint32_t    cfg_size = sizeof(cfg_band) / sizeof(*cfg_arr);
+    init_items(cfg_arr, cfg_size);
+    return load_items_from_db(cfg_arr, cfg_size);
+}
+
+static int init_mode_cfg(sqlite3 *db) {
+    int rc;
+
+    cfg_mode_params_init(db);
+
+    /* Fill mode configuration */
+    db_mode_t db_mode = xmode_2_db(subject_get_int(cfg_cur.mode));
+    uint32_t  low, high, step, zoom;
+    mode_default_values(db_mode, &low, &high, &step, &zoom);
+
+    cfg_mode.filter_low = (cfg_item_t){
+        .val = subject_create_int(low),
+        .db_name = "filter_low",
+        .load = cfg_mode_params_load_item,
+        .save = cfg_mode_params_save_item,
+        .pk = db_mode,
+    };
+    cfg_mode.filter_high = (cfg_item_t){
+        .val = subject_create_int(high),
+        .db_name = "filter_high",
+        .load = cfg_mode_params_load_item,
+        .save = cfg_mode_params_save_item,
+        .pk = db_mode,
+    };
+    cfg_mode.freq_step = (cfg_item_t){
+        .val = subject_create_int(step),
+        .db_name = "freq_step",
+        .load = cfg_mode_params_load_item,
+        .save = cfg_mode_params_save_item,
+        .pk = db_mode,
+    };
+    cfg_mode.zoom = (cfg_item_t){
+        .val = subject_create_int(zoom),
+        .db_name = "spectrum_factor",
+        .load = cfg_mode_params_load_item,
+        .save = cfg_mode_params_save_item,
+        .pk = db_mode,
+    };
+
+    // subject_add_observer(cfg_band.vfo_a.freq.val, on_ab_freq_change, &cfg_band.vfo_a.freq);
+    // subject_add_observer(cfg_band.vfo_b.freq.val, on_ab_freq_change, &cfg_band.vfo_b.freq);
+
+    /* Load values from table */
+    cfg_item_t *cfg_arr = (cfg_item_t *)&cfg_mode;
+    uint32_t    cfg_size = sizeof(cfg_mode) / sizeof(*cfg_arr);
     init_items(cfg_arr, cfg_size);
     return load_items_from_db(cfg_arr, cfg_size);
 }

@@ -23,6 +23,7 @@ typedef struct {
 
 struct vfo_params {
     cfg_item_t freq;
+    cfg_item_t mode;
 };
 
 typedef struct {
@@ -33,5 +34,14 @@ typedef struct {
 
 extern cfg_t      cfg;
 extern cfg_band_t cfg_band;
+
+/* Current params */
+
+typedef struct {
+    subject_t   freq;
+    subject_t   mode;
+} cfg_cur_t;
+
+extern cfg_cur_t cfg_cur;
 
 int cfg_init(sqlite3 *db);

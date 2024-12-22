@@ -66,14 +66,24 @@ int cfg_params_load_item(cfg_item_t *item) {
 
 int cfg_params_save_item(cfg_item_t *item) {
     int rc;
-    sqlite3_bind_text(write_stmt, sqlite3_bind_parameter_index(write_stmt, ":name"), item->db_name, strlen(item->db_name), 0);
+    rc = sqlite3_bind_text(write_stmt, sqlite3_bind_parameter_index(write_stmt, ":name"), item->db_name, strlen(item->db_name), 0);
+    if (rc != SQLITE_OK) {
+        LV_LOG_WARN("Can't bind name %s to save params query", item->db_name);
+        return rc;
+    }
     int val_index = sqlite3_bind_parameter_index(write_stmt, ":val");
     switch (item->val->dtype) {
         case DTYPE_INT:
-            sqlite3_bind_int(write_stmt, val_index, item->val->int_val);
+            rc = sqlite3_bind_int(write_stmt, val_index, item->val->int_val);
+            if (rc != SQLITE_OK) {
+                LV_LOG_WARN("Can't bind val %i to save params query", item->val->int_val);
+            }
             break;
         case DTYPE_UINT64:
-            sqlite3_bind_int64(write_stmt, val_index, item->val->uint64_val);
+            rc = sqlite3_bind_int64(write_stmt, val_index, item->val->uint64_val);
+            if (rc != SQLITE_OK) {
+                LV_LOG_WARN("Can't bind val %llu to save params query", item->val->uint64_val);
+            }
             break;
         default:
             LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, item->val->dtype);
@@ -82,9 +92,13 @@ int cfg_params_save_item(cfg_item_t *item) {
             return -1;
             break;
     }
-    rc = sqlite3_step(write_stmt);
-    if (rc != SQLITE_DONE) {
-        LV_LOG_ERROR("Failed save item %s: %s", item->db_name, sqlite3_errmsg(db));
+    if (rc == SQLITE_OK) {
+        rc = sqlite3_step(write_stmt);
+        if (rc != SQLITE_DONE) {
+            LV_LOG_ERROR("Failed save item %s: %s", item->db_name, sqlite3_errmsg(db));
+        } else {
+            rc = 0;
+        }
     }
     sqlite3_reset(write_stmt);
     sqlite3_clear_bindings(write_stmt);
