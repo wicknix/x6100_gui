@@ -51,7 +51,7 @@ int cfg_mode_params_load_item(cfg_item_t *item) {
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Failed to bind mode %s: %s", item->pk, sqlite3_errmsg(db));
+        LV_LOG_ERROR("Failed to bind mode %i: %s", item->pk, sqlite3_errmsg(db));
         sqlite3_reset(stmt);
         sqlite3_clear_bindings(stmt);
         pthread_mutex_unlock(&read_mutex);
@@ -109,7 +109,7 @@ int cfg_mode_params_save_item(cfg_item_t *item) {
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Failed to bind mode %s: %s", item->pk, sqlite3_errmsg(db));
+        LV_LOG_ERROR("Failed to bind mode %i: %s", item->pk, sqlite3_errmsg(db));
         sqlite3_reset(stmt);
         sqlite3_clear_bindings(stmt);
         pthread_mutex_unlock(&write_mutex);

@@ -92,7 +92,7 @@ band_info_t *get_band_info_by_pk(int32_t band_id) {
     pthread_mutex_lock(&read_band_by_pk_mutex);
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), band_id);
     if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Failed to bind bands_id %s: %s", band_id, sqlite3_errmsg(db));
+        LV_LOG_ERROR("Failed to bind bands_id %i: %s", band_id, sqlite3_errmsg(db));
         pthread_mutex_unlock(&read_band_by_pk_mutex);
         return NULL;
     }
@@ -238,7 +238,7 @@ int cfg_band_params_load_item(cfg_item_t *item) {
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Failed to bind bands_id %s: %s", item->pk, sqlite3_errmsg(db));
+        LV_LOG_ERROR("Failed to bind bands_id %i: %s", item->pk, sqlite3_errmsg(db));
         pthread_mutex_unlock(&read_mutex);
         return rc;
     }
@@ -308,7 +308,7 @@ int cfg_band_params_save_item(cfg_item_t *item) {
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Failed to bind bands_id %s: %s", item->pk, sqlite3_errmsg(db));
+        LV_LOG_ERROR("Failed to bind bands_id %i: %s", item->pk, sqlite3_errmsg(db));
         pthread_mutex_unlock(&write_mutex);
         return rc;
     }

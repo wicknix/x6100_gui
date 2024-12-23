@@ -19,6 +19,8 @@ typedef struct {
     cfg_item_t key_tone;
     cfg_item_t vol;
     cfg_item_t band_id;
+    cfg_item_t ant_id;
+    cfg_item_t atu_enabled;
 } cfg_t;
 
 struct vfo_params {
@@ -35,16 +37,20 @@ typedef struct {
 extern cfg_t      cfg;
 extern cfg_band_t cfg_band;
 
-/* Current params */
+/* Current band/mode params */
 
 typedef struct {
-    subject_t   freq;
-    subject_t   mode;
-    subject_t   filter_low;
-    subject_t   filter_high;
-    subject_t   filter_bw;
-    subject_t   freq_step;
-    subject_t   zoom;
+    subject_t freq;
+    subject_t mode;
+    subject_t filter_low;
+    subject_t filter_high;
+    subject_t filter_bw;
+    subject_t freq_step;
+    subject_t zoom;
+    struct {
+        subject_t loaded;
+        subject_t network;
+    } atu;
 } cfg_cur_t;
 
 extern cfg_cur_t cfg_cur;
