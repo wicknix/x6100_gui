@@ -40,6 +40,11 @@ extern cfg_band_t cfg_band;
 typedef struct {
     subject_t   freq;
     subject_t   mode;
+    subject_t   filter_low;
+    subject_t   filter_high;
+    subject_t   filter_bw;
+    subject_t   freq_step;
+    subject_t   zoom;
 } cfg_cur_t;
 
 extern cfg_cur_t cfg_cur;

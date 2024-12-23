@@ -14,6 +14,8 @@
 static sqlite3      *db;
 static sqlite3_stmt *write_stmt;
 static sqlite3_stmt *read_stmt;
+static pthread_mutex_t write_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t read_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 void cfg_params_init(sqlite3 *database) {
@@ -34,9 +36,11 @@ void cfg_params_init(sqlite3 *database) {
 
 int cfg_params_load_item(cfg_item_t *item) {
     int rc;
+    pthread_mutex_lock(&read_mutex);
     rc = sqlite3_bind_text(read_stmt, sqlite3_bind_parameter_index(read_stmt, ":name"), item->db_name, strlen(item->db_name), 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind name %s: %s", item->db_name, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&read_mutex);
         return rc;
     }
 
@@ -51,6 +55,7 @@ int cfg_params_load_item(cfg_item_t *item) {
                 break;
             default:
                 LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, item->val->dtype);
+                pthread_mutex_unlock(&read_mutex);
                 return -1;
         }
         rc = 0;
@@ -60,15 +65,18 @@ int cfg_params_load_item(cfg_item_t *item) {
     }
     sqlite3_reset(read_stmt);
     sqlite3_clear_bindings(read_stmt);
+    pthread_mutex_unlock(&read_mutex);
     return rc;
 }
 
 
 int cfg_params_save_item(cfg_item_t *item) {
     int rc;
+    pthread_mutex_lock(&write_mutex);
     rc = sqlite3_bind_text(write_stmt, sqlite3_bind_parameter_index(write_stmt, ":name"), item->db_name, strlen(item->db_name), 0);
     if (rc != SQLITE_OK) {
         LV_LOG_WARN("Can't bind name %s to save params query", item->db_name);
+        pthread_mutex_unlock(&write_mutex);
         return rc;
     }
     int val_index = sqlite3_bind_parameter_index(write_stmt, ":val");
@@ -89,6 +97,7 @@ int cfg_params_save_item(cfg_item_t *item) {
             LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, item->val->dtype);
             sqlite3_reset(write_stmt);
             sqlite3_clear_bindings(write_stmt);
+            pthread_mutex_unlock(&write_mutex);
             return -1;
             break;
     }
@@ -102,5 +111,6 @@ int cfg_params_save_item(cfg_item_t *item) {
     }
     sqlite3_reset(write_stmt);
     sqlite3_clear_bindings(write_stmt);
+    pthread_mutex_unlock(&write_mutex);
     return rc;
 }

@@ -19,6 +19,13 @@ static sqlite3_stmt *find_up_band_stmt;
 static sqlite3_stmt *find_down_band_stmt;
 static sqlite3_stmt *read_all_bands_stmt;
 
+static pthread_mutex_t write_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t read_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t read_band_by_pk_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t read_band_by_freq_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t find_up_down_band_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t read_all_bands_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 static band_info_t _band_info_cache = {.id = BAND_UNDEFINED, .start_freq=0, .stop_freq=0};
 
 void cfg_band_params_init(sqlite3 *database) {
@@ -78,13 +85,15 @@ void cfg_band_params_init(sqlite3 *database) {
 
 band_info_t *get_band_info_by_pk(int32_t band_id) {
     int rc;
-    sqlite3_stmt *stmt = read_band_by_pk_stmt;
     if (_band_info_cache.id == band_id) {
         return &_band_info_cache;
     }
+    sqlite3_stmt *stmt = read_band_by_pk_stmt;
+    pthread_mutex_lock(&read_band_by_pk_mutex);
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), band_id);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind bands_id %s: %s", band_id, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&read_band_by_pk_mutex);
         return NULL;
     }
     rc = sqlite3_step(stmt);
@@ -105,6 +114,7 @@ band_info_t *get_band_info_by_pk(int32_t band_id) {
     }
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
+    pthread_mutex_unlock(&read_band_by_pk_mutex);
     if (rc == 0)
         return &_band_info_cache;
     else
@@ -116,9 +126,11 @@ band_info_t *get_band_info_by_freq(uint32_t freq) {
         return &_band_info_cache;
     int rc;
     sqlite3_stmt *stmt = read_band_by_freq_stmt;
+    pthread_mutex_lock(&read_band_by_freq_mutex);
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":freq"), freq);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind freq %lu to read_band_by_freq_stmt: %s", freq, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&read_band_by_freq_mutex);
         return NULL;
     }
     rc = sqlite3_step(stmt);
@@ -148,6 +160,7 @@ band_info_t *get_band_info_by_freq(uint32_t freq) {
     }
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
+    pthread_mutex_unlock(&read_band_by_freq_mutex);
     if (rc == 0) {
         return &_band_info_cache;
     } else {
@@ -158,6 +171,7 @@ band_info_t *get_band_info_by_freq(uint32_t freq) {
 band_info_t *get_band_info_next(uint32_t freq, bool up, int32_t cur_id) {
     int rc;
     sqlite3_stmt *stmt;
+    pthread_mutex_lock(&find_up_down_band_mutex);
     if (up) {
         stmt = find_up_band_stmt;
     } else {
@@ -166,11 +180,13 @@ band_info_t *get_band_info_next(uint32_t freq, bool up, int32_t cur_id) {
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":freq"), freq);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind freq %lu to find up/down stmt: %s", freq, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&find_up_down_band_mutex);
         return NULL;
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), cur_id);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to current band id %i to find up/down stmt: %s", cur_id, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&find_up_down_band_mutex);
         return NULL;
     }
     rc = sqlite3_step(stmt);
@@ -191,6 +207,7 @@ band_info_t *get_band_info_next(uint32_t freq, bool up, int32_t cur_id) {
     }
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
+    pthread_mutex_unlock(&find_up_down_band_mutex);
     if (rc == 0) {
         return &_band_info_cache;
     } else {
@@ -209,17 +226,20 @@ int cfg_band_params_load_item(cfg_item_t *item) {
         return -1;
     }
     sqlite3_stmt *stmt = read_stmt;
+    pthread_mutex_lock(&read_mutex);
     int rc;
     int32_t int_val;
     rc = sqlite3_bind_text(stmt, sqlite3_bind_parameter_index(stmt, ":name"), item->db_name,
                            strlen(item->db_name), 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind name %s: %s", item->db_name, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&read_mutex);
         return rc;
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind bands_id %s: %s", item->pk, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&read_mutex);
         return rc;
     }
 
@@ -241,6 +261,7 @@ int cfg_band_params_load_item(cfg_item_t *item) {
             break;
         default:
             LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, item->val->dtype);
+            pthread_mutex_unlock(&read_mutex);
             return -1;
         }
         rc = 0;
@@ -258,6 +279,7 @@ int cfg_band_params_load_item(cfg_item_t *item) {
     }
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
+    pthread_mutex_unlock(&read_mutex);
     return rc;
 }
 
@@ -273,7 +295,7 @@ int cfg_band_params_save_item(cfg_item_t *item) {
         return -1;
     }
     sqlite3_stmt *stmt = write_stmt;
-
+    pthread_mutex_lock(&write_mutex);
     int      rc;
     int32_t int_val;
 
@@ -281,11 +303,13 @@ int cfg_band_params_save_item(cfg_item_t *item) {
                            strlen(item->db_name), 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind name %s: %s", item->db_name, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&write_mutex);
         return rc;
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind bands_id %s: %s", item->pk, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&write_mutex);
         return rc;
     }
     int val_index = sqlite3_bind_parameter_index(stmt, ":val");
@@ -308,11 +332,13 @@ int cfg_band_params_save_item(cfg_item_t *item) {
         LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, item->val->dtype);
         sqlite3_reset(stmt);
         sqlite3_clear_bindings(stmt);
+        pthread_mutex_unlock(&write_mutex);
         return -1;
         break;
     }
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind val for name %s: %s", item->db_name, sqlite3_errmsg(db));
+        pthread_mutex_unlock(&write_mutex);
         return rc;
     }
     rc = sqlite3_step(stmt);
@@ -323,5 +349,6 @@ int cfg_band_params_save_item(cfg_item_t *item) {
     }
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
+    pthread_mutex_unlock(&write_mutex);
     return rc;
 }

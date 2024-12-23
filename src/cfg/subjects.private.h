@@ -34,3 +34,6 @@ struct __observer {
     struct __subject *subj;
     uint8_t cb_id;
 };
+
+bool subject_set_int_no_notify(subject_t subj, int32_t val);
+void subject_notify(subject_t subj);

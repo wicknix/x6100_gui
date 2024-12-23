@@ -1,43 +1,47 @@
-#include "cfg.h"
+#include "cfg.private.h"
 
 #include "band.private.h"
 
 #include <aether_radio/x6100_control/control.h>
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #define kHz 1000
 #define MHz 1000 * kHz
 
-#define CHECK(fn) ({printf("Start " #fn ":\n"); fn; printf(" OK\n");})
+#define CHECK(fn)                                                                                                      \
+    ({                                                                                                                 \
+        printf("Start " #fn ":\n");                                                                                    \
+        fn;                                                                                                            \
+        printf(" OK\n");                                                                                               \
+    })
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
 
-
-void test_load_band_by_freq() {
+static void test_load_band_by_freq() {
     struct data_t {
         uint32_t freq;
-        int32_t expected_bands;
+        int32_t  expected_bands;
     } data[] = {
-        {400 * kHz, -1},
-        {14 * MHz - 1, -1},
-        {14 * MHz, -1},
-        {14 * MHz + 1, 6},
-        {14070 * kHz - 1, 6},
-        {14070 * kHz, 6},
-        {14070 * kHz + 1, 7},
-        {14350 * kHz, 7},
-        {14350 * kHz  + 1, -1},
-        {99 * MHz, -1},
-        {14350 * kHz, 7},
-        {14070 * kHz + 1, 7},
-        {14070 * kHz, 6},
-        {14 * MHz + 1, 6},
-        {14 * MHz, -1},
+        {400 * kHz,       -1},
+        {14 * MHz - 1,    -1},
+        {14 * MHz,        -1},
+        {14 * MHz + 1,    6 },
+        {14070 * kHz - 1, 6 },
+        {14070 * kHz,     6 },
+        {14070 * kHz + 1, 7 },
+        {14350 * kHz,     7 },
+        {14350 * kHz + 1, -1},
+        {99 * MHz,        -1},
+        {14350 * kHz,     7 },
+        {14070 * kHz + 1, 7 },
+        {14070 * kHz,     6 },
+        {14 * MHz + 1,    6 },
+        {14 * MHz,        -1},
     };
     size_t freq_len = sizeof(data) / sizeof(*data);
-    bool success = true;
+    bool   success = true;
     for (size_t i = 0; i < freq_len; i++) {
         int32_t id = get_band_info_by_freq(data[i].freq)->id;
         if (id != data[i].expected_bands) {
@@ -49,14 +53,14 @@ void test_load_band_by_freq() {
         exit(1);
 }
 
-void test_load_band_by_pk() {
+static void test_load_band_by_pk() {
     band_info_t *info = get_band_info_by_pk(7);
     assert(info->start_freq == 14070 * kHz && "Wrong start freq");
     assert(info->stop_freq == 14350 * kHz && "Wrong stop freq");
     assert(strcmp("20m SSB", info->name) == 0 && "Wrong name");
 }
 
-void test_set_another_band() {
+static void test_set_another_band() {
     int32_t new_band = 7;
     assert(cfg_band.vfo_a.freq.pk != new_band);
     assert(cfg_band.vfo_b.freq.pk != new_band);
@@ -65,7 +69,8 @@ void test_set_another_band() {
     uint32_t freq_b = subject_get_int(cfg_band.vfo_b.freq.val);
     printf("freq_a: %lu, freq_b: %lu\n", freq_a, freq_b);
     subject_set_int(cfg.band_id.val, new_band);
-    printf("freq_a: %lu, freq_b: %lu\n", subject_get_int(cfg_band.vfo_a.freq.val), subject_get_int(cfg_band.vfo_b.freq.val));
+    printf("freq_a: %lu, freq_b: %lu\n", subject_get_int(cfg_band.vfo_a.freq.val),
+           subject_get_int(cfg_band.vfo_b.freq.val));
     assert(subject_get_int(cfg_band.vfo_a.freq.val) != freq_a && "Freq is not changed");
     assert(subject_get_int(cfg_band.vfo_b.freq.val) != freq_b && "Freq is not changed");
     assert(cfg_band.vfo_a.freq.pk == new_band);
@@ -73,11 +78,11 @@ void test_set_another_band() {
     assert(cfg_band.vfo.pk == new_band);
 }
 
-void test_set_another_band_using_freq() {
+static void test_set_another_band_using_freq() {
     subject_set_int(cfg.band_id.val, 6);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
     uint32_t prev_a_freq = subject_get_int(cfg_band.vfo_a.freq.val);
-    subject_set_int(cfg_band.vfo_a.freq.val , 14200 * kHz);
+    subject_set_int(cfg_band.vfo_a.freq.val, 14200 * kHz);
     assert(subject_get_int(cfg.band_id.val) == 7);
     assert(subject_get_int(cfg_band.vfo_a.freq.val) == 14200 * kHz);
     assert(cfg_band.vfo.pk == 7);
@@ -88,59 +93,61 @@ void test_set_another_band_using_freq() {
     assert(subject_get_int(cfg_band.vfo_a.freq.val) == prev_a_freq);
 }
 
-void test_switch_band_up() {
+static void test_switch_band_up() {
     struct {
         uint32_t freq;
-        int32_t cur_id;
-        int32_t expected_id;
+        int32_t  cur_id;
+        int32_t  expected_id;
     } data[] = {
-        {14000 * kHz - 1, BAND_UNDEFINED, 6},
-        {14000 * kHz, 6, 7},
-        {14000 * kHz + 1, 6, 7},
-        {14070 * kHz - 1, 6, 7},
-        {14070 * kHz, 6, 7},
-        {14070 * kHz, 7, 8},
-        {600 * MHz, -1, -1},
+        {14000 * kHz - 1, BAND_UNDEFINED, 6 },
+        {14000 * kHz,     6,              7 },
+        {14000 * kHz + 1, 6,              7 },
+        {14070 * kHz - 1, 6,              7 },
+        {14070 * kHz,     6,              7 },
+        {14070 * kHz,     7,              8 },
+        {600 * MHz,       -1,             -1},
     };
     for (size_t i = 0; i < ARRAY_SIZE(data); i++) {
-        band_info_t * band = get_band_info_next(data[i].freq, true, data[i].cur_id);
+        band_info_t *band = get_band_info_next(data[i].freq, true, data[i].cur_id);
         if (data[i].expected_id < 0) {
             assert(band == NULL);
         } else {
             assert(band != NULL);
-            printf("%lu next -> %s, %lu, %lu, %i\n", data[i].freq, band->name, band->start_freq, band->stop_freq, band->id);
+            printf("%lu next -> %s, %lu, %lu, %i\n", data[i].freq, band->name, band->start_freq, band->stop_freq,
+                   band->id);
             assert(band->id == data[i].expected_id);
         }
     }
 }
 
-void test_switch_band_down() {
+static void test_switch_band_down() {
     struct {
         uint32_t freq;
-        int32_t cur_id;
-        int32_t expected_id;
+        int32_t  cur_id;
+        int32_t  expected_id;
     } data[] = {
-        {14350 * kHz + 1, BAND_UNDEFINED, 7},
-        {14350 * kHz, 7, 6},
-        {14070 * kHz + 1, 7, 6},
-        {14070 * kHz, 7, 6},
-        {14070 * kHz, 6, 5},
-        {14000 * kHz, 6, 5},
-        {1000 * kHz, -1, -1},
+        {14350 * kHz + 1, BAND_UNDEFINED, 7 },
+        {14350 * kHz,     7,              6 },
+        {14070 * kHz + 1, 7,              6 },
+        {14070 * kHz,     7,              6 },
+        {14070 * kHz,     6,              5 },
+        {14000 * kHz,     6,              5 },
+        {1000 * kHz,      -1,             -1},
     };
     for (size_t i = 0; i < ARRAY_SIZE(data); i++) {
-        band_info_t * band = get_band_info_next(data[i].freq, false, data[i].cur_id);
+        band_info_t *band = get_band_info_next(data[i].freq, false, data[i].cur_id);
         if (data[i].expected_id < 0) {
             assert(band == NULL);
         } else {
             assert(band != NULL);
-            printf("%lu prev -> %s, %lu, %lu, %i\n", data[i].freq, band->name, band->start_freq, band->stop_freq, band->id);
+            printf("%lu prev -> %s, %lu, %lu, %i\n", data[i].freq, band->name, band->start_freq, band->stop_freq,
+                   band->id);
             assert(band->id == data[i].expected_id);
         }
     }
 }
 
-void test_cur_freq_tracking() {
+static void test_cur_freq_tracking() {
     subject_set_int(cfg_band.vfo_a.freq.val, 14200000);
     subject_set_int(cfg_band.vfo_b.freq.val, 14210000);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
@@ -151,7 +158,7 @@ void test_cur_freq_tracking() {
     assert(subject_get_int(cfg_cur.freq) == 14210000);
 }
 
-void test_ab_freq_tracking_cur() {
+static void test_ab_freq_tracking_cur() {
     subject_set_int(cfg_band.vfo_a.freq.val, 14200000);
     subject_set_int(cfg_band.vfo_b.freq.val, 14210000);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
@@ -164,7 +171,7 @@ void test_ab_freq_tracking_cur() {
     assert(subject_get_int(cfg_band.vfo_a.freq.val) == 14220000);
 }
 
-void test_cur_mode_tracking() {
+static void test_cur_mode_tracking() {
     subject_set_int(cfg_band.vfo_a.mode.val, x6100_mode_am);
     subject_set_int(cfg_band.vfo_b.mode.val, x6100_mode_cw);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
@@ -175,7 +182,7 @@ void test_cur_mode_tracking() {
     assert(subject_get_int(cfg_cur.mode) == x6100_mode_cw);
 }
 
-void test_ab_mode_tracking_cur() {
+static void test_ab_mode_tracking_cur() {
     subject_set_int(cfg_band.vfo_a.mode.val, x6100_mode_usb_dig);
     subject_set_int(cfg_band.vfo_b.mode.val, x6100_mode_cwr);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
@@ -188,8 +195,104 @@ void test_ab_mode_tracking_cur() {
     assert(subject_get_int(cfg_band.vfo_a.mode.val) == x6100_mode_am);
 }
 
+static void test_change_filters_am_fm() {
+    x6100_mode_t modes[] = {x6100_mode_am, x6100_mode_nfm};
+    for (size_t i = 0; i < 2; i++) {
+        subject_set_int(cfg_cur.mode, modes[i]);
+        subject_set_int(cfg_cur.filter_low, 0);
+        subject_set_int(cfg_cur.filter_high, 4000);
+        assert(subject_get_int(cfg_cur.filter_bw) == 4000);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 4000);
+        assert(subject_get_int(cfg_cur.filter_low) == 0);
 
-void test() {
+        subject_set_int(cfg_cur.filter_high, 3500);
+        assert(subject_get_int(cfg_cur.filter_bw) == 3500);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 3500);
+        assert(subject_get_int(cfg_cur.filter_low) == 0);
+
+        subject_set_int(cfg_cur.filter_bw, 4000);
+        assert(subject_get_int(cfg_cur.filter_high) == 4000);
+        assert(subject_get_int(cfg_cur.filter_low) == 0);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 4000);
+
+        subject_set_int(cfg_mode.filter_high.val, 3900);
+        assert(subject_get_int(cfg_cur.filter_high) == 3900);
+        assert(subject_get_int(cfg_cur.filter_low) == 0);
+        assert(subject_get_int(cfg_cur.filter_bw) == 3900);
+    }
+}
+
+static void test_change_filters_cw() {
+    x6100_mode_t modes[] = {x6100_mode_cw, x6100_mode_cwr};
+    for (size_t i = 0; i < 2; i++) {
+        subject_set_int(cfg_cur.mode, modes[i]);
+        subject_set_int(cfg_cur.filter_bw, 400);
+        subject_set_int(cfg.key_tone.val, 700);
+        assert(subject_get_int(cfg_cur.filter_high) == 700+200);
+        assert(subject_get_int(cfg_cur.filter_low) == 700-200);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 400);
+
+        subject_set_int(cfg_cur.filter_bw, 200);
+        assert(subject_get_int(cfg_cur.filter_high) == 700+100);
+        assert(subject_get_int(cfg_cur.filter_low) == 700-100);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 200);
+
+        subject_set_int(cfg.key_tone.val, 800);
+        assert(subject_get_int(cfg_cur.filter_high) == 800+100);
+        assert(subject_get_int(cfg_cur.filter_low) == 800-100);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 200);
+
+        subject_set_int(cfg_cur.filter_high, 1000);
+        assert(subject_get_int(cfg_cur.filter_bw) == 400);
+        assert(subject_get_int(cfg_cur.filter_low) == 600);
+
+        subject_set_int(cfg_cur.filter_low, 550);
+        assert(subject_get_int(cfg_cur.filter_bw) == 500);
+        assert(subject_get_int(cfg_cur.filter_high) == 1050);
+
+        subject_set_int(cfg_mode.filter_high.val, 100);
+        assert(subject_get_int(cfg_cur.filter_bw) == 100);
+        assert(subject_get_int(cfg_cur.filter_high) == 800+50);
+        assert(subject_get_int(cfg_cur.filter_low) == 800-50);
+    }
+}
+
+static void test_change_filters_ssb() {
+    x6100_mode_t modes[] = {x6100_mode_lsb, x6100_mode_lsb_dig, x6100_mode_usb, x6100_mode_usb_dig};
+    for (size_t i = 0; i < 4; i++) {
+        subject_set_int(cfg_cur.mode, modes[i]);
+        subject_set_int(cfg_cur.filter_low, 100);
+        subject_set_int(cfg_cur.filter_high, 2900);
+        assert(subject_get_int(cfg_cur.filter_bw) == 2800);
+        assert(subject_get_int(cfg_mode.filter_low.val) == 100);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 2900);
+
+        subject_set_int(cfg_cur.filter_bw, 2600);
+        assert(subject_get_int(cfg_cur.filter_low) == 200);
+        assert(subject_get_int(cfg_cur.filter_high) == 2800);
+        assert(subject_get_int(cfg_mode.filter_low.val) == 200);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 2800);
+
+        subject_set_int(cfg_cur.filter_low, 100);
+        assert(subject_get_int(cfg_cur.filter_bw) == 2700);
+        assert(subject_get_int(cfg_mode.filter_low.val) == 100);
+
+        subject_set_int(cfg_cur.filter_high, 2900);
+        assert(subject_get_int(cfg_cur.filter_bw) == 2800);
+        assert(subject_get_int(cfg_mode.filter_high.val) == 2900);
+
+        subject_set_int(cfg_mode.filter_high.val, 2800);
+        assert(subject_get_int(cfg_cur.filter_bw) == 2700);
+        assert(subject_get_int(cfg_cur.filter_high) == 2800);
+
+        subject_set_int(cfg_mode.filter_low.val, 150);
+        assert(subject_get_int(cfg_cur.filter_bw) == 2650);
+        assert(subject_get_int(cfg_cur.filter_low) == 150);
+
+    }
+}
+
+static void run_tests(void) {
     subject_set_int(cfg.band_id.val, 6);
     printf("Start testing\n");
     CHECK(test_load_band_by_freq());
@@ -202,6 +305,9 @@ void test() {
     CHECK(test_ab_freq_tracking_cur());
     CHECK(test_cur_mode_tracking());
     CHECK(test_ab_mode_tracking_cur());
+    CHECK(test_change_filters_am_fm());
+    CHECK(test_change_filters_cw());
+    CHECK(test_change_filters_ssb());
     printf("Testing is done\n");
     exit(0);
 }

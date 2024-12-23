@@ -1,5 +1,6 @@
 #include "subjects.private.h"
 
+#include "subjects.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,8 +63,8 @@ observer_t subject_add_observer(subject_t subj, void (*fn)(subject_t, void *), v
         return NULL;
     }
     pthread_mutex_lock(&subj->mutex_subscribe);
-    bool added = false;
-    uint8_t i;
+    bool       added = false;
+    uint8_t    i;
     observer_t observer;
     for (i = 0; i < MAX_OBSERVERS; i++) {
         if (!subj->observers[i]) {
@@ -93,16 +94,8 @@ observer_t subject_add_observer_and_call(subject_t subj, void (*fn)(subject_t, v
 }
 
 void subject_set_int(subject_t subj, int32_t val) {
-    if (subj->dtype != DTYPE_INT)
-        printf("WARNING: subject dtype (%d) is not INT, set result might be wrong\n", subj->dtype);
-    pthread_mutex_lock(&subj->mutex_set);
-    if (subj->int_val != val) {
-        subj->int_val = val;
-        pthread_mutex_unlock(&subj->mutex_set);
+    if (subject_set_int_no_notify(subj, val))
         call_observers(subj);
-    } else {
-        pthread_mutex_unlock(&subj->mutex_set);
-    }
 }
 
 void subject_set_uint64(subject_t subj, uint64_t val) {
@@ -116,6 +109,22 @@ void subject_set_uint64(subject_t subj, uint64_t val) {
     } else {
         pthread_mutex_unlock(&subj->mutex_set);
     }
+}
+
+bool subject_set_int_no_notify(subject_t subj, int32_t val) {
+    if (subj->dtype != DTYPE_INT)
+        printf("WARNING: subject dtype (%d) is not INT, set result might be wrong\n", subj->dtype);
+    bool changed = false;
+    pthread_mutex_lock(&subj->mutex_set);
+    if (subj->int_val != val) {
+        subj->int_val = val;
+        changed = true;
+    }
+    pthread_mutex_unlock(&subj->mutex_set);
+    return changed;
+}
+void subject_notify(subject_t subj) {
+    call_observers(subj);
 }
 
 void observer_remove(observer_t observer) {

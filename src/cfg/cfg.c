@@ -17,7 +17,7 @@ cfg_band_t cfg_band;
 
 cfg_cur_t cfg_cur;
 
-static cfg_mode_t cfg_mode;
+cfg_mode_t cfg_mode;
 
 static band_info_t cur_band_info;
 
@@ -31,14 +31,24 @@ static void  save_item_to_db(cfg_item_t *item, bool force);
 static void  save_items_to_db(cfg_item_t *cfg_arr, uint32_t cfg_size);
 static void *params_save_thread(void *arg);
 
+static void on_key_tone_change(subject_t subj, void *user_data);
 static void on_item_change(subject_t subj, void *user_data);
 static void on_vfo_change(subject_t subj, void *user_data);
 static void on_band_id_change(subject_t subj, void *user_data);
 static void on_ab_freq_change(subject_t subj, void *user_data);
 static void on_ab_mode_change(subject_t subj, void *user_data);
+static void on_filter_low_change(subject_t subj, void *user_data);
+static void on_filter_high_change(subject_t subj, void *user_data);
+static void on_freq_step_change(subject_t subj, void *user_data);
+static void on_zoom_change(subject_t subj, void *user_data);
 
 static void on_cur_freq_change(subject_t subj, void *user_data);
 static void on_cur_mode_change(subject_t subj, void *user_data);
+static void on_cur_filter_low_change(subject_t subj, void *user_data);
+static void on_cur_filter_high_change(subject_t subj, void *user_data);
+static void on_cur_filter_bw_change(subject_t subj, void *user_data);
+static void on_cur_freq_step_change(subject_t subj, void *user_data);
+static void on_cur_zoom_change(subject_t subj, void *user_data);
 
 /*
 
@@ -48,6 +58,11 @@ select band (on cfg->band_id change)
 * load band params (if band_id != -1)
 
  */
+
+// #define TEST_CFG
+#ifdef TEST_CFG
+#include "test_cfg.c"
+#endif
 
 int cfg_init(sqlite3 *db) {
     int rc;
@@ -73,10 +88,8 @@ int cfg_init(sqlite3 *db) {
     pthread_create(&thread, NULL, params_save_thread, NULL);
     pthread_detach(thread);
 
-// #define TEST_CFG
 #ifdef TEST_CFG
-#include "test_cfg.c"
-    test();
+    run_tests();
 #endif
     return rc;
 }
@@ -89,6 +102,22 @@ static void on_item_change(subject_t subj, void *user_data) {
     pthread_mutex_lock(&item->dirty->mux);
     item->dirty->val = true;
     pthread_mutex_unlock(&item->dirty->mux);
+}
+
+/**
+ * Changing of key tone
+ */
+static void on_key_tone_change(subject_t subj, void *user_data) {
+    int32_t key_tone = subject_get_int(subj);
+    x6100_mode_t db_mode = xmode_2_db(subject_get_int(cfg_cur.mode));
+    if (db_mode == x6100_mode_cw) {
+        int32_t high, low, bw;
+        bw = subject_get_int(cfg_cur.filter_bw);
+        low = key_tone - bw / 2;
+        high = low + bw;
+        subject_set_int(cfg_cur.filter_high, high);
+        subject_set_int(cfg_cur.filter_low, low);
+    }
 }
 
 /**
@@ -185,6 +214,62 @@ static void on_ab_mode_change(subject_t subj, void *user_data) {
     }
 }
 
+/**
+ * On changing mode params
+ */
+static void on_filter_low_change(subject_t subj, void *user_data) {
+    cfg_item_t  *item = (cfg_item_t *)user_data;
+    int32_t cur_low = subject_get_int(subj);
+    switch (item->pk) {
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+        case x6100_mode_am:
+        case x6100_mode_nfm:
+            // cur_low = subject_get_int(cfg.key_tone.val) - subject_get_int(cfg_mode.filter_high.val) / 2;
+            return;
+            break;
+
+        default:
+            break;
+    }
+    subject_set_int(cfg_cur.filter_low, cur_low);
+}
+
+static void on_filter_high_change(subject_t subj, void *user_data) {
+    cfg_item_t  *item = (cfg_item_t *)user_data;
+    int32_t cur_high = subject_get_int(subj);
+    int32_t bw;
+    switch (item->pk) {
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            bw = cur_high;
+            cur_high = subject_get_int(cfg.key_tone.val) + bw / 2;
+            subject_set_int(cfg_cur.filter_low, cur_high - bw);
+            break;
+
+        case x6100_mode_am:
+        case x6100_mode_nfm:
+            subject_set_int(cfg_cur.filter_low, 0);
+            break;
+
+        default:
+            break;
+    }
+    subject_set_int(cfg_cur.filter_high, cur_high);
+}
+
+static void on_freq_step_change(subject_t subj, void *user_data) {
+    subject_set_int(cfg_cur.freq_step, subject_get_int(subj));
+}
+
+static void on_zoom_change(subject_t subj, void *user_data) {
+    subject_set_int(cfg_cur.zoom, subject_get_int(subj));
+}
+
+/**
+ * On changing current params
+ */
+
 static void on_cur_freq_change(subject_t subj, void *user_data) {
     // Copy freq to active vfo
     subject_t target_subj;
@@ -224,6 +309,76 @@ static void on_cur_mode_change(subject_t subj, void *user_data) {
             cfg_mode_arr[i].load(&cfg_mode_arr[i]);
         }
     }
+}
+
+static void on_cur_filter_low_change(subject_t subj, void *user_data) {
+    int32_t new_low = subject_get_int(subj);
+    LV_LOG_INFO("New current low=%i", new_low);
+    subject_set_int(cfg_cur.filter_bw, subject_get_int(cfg_cur.filter_high) - new_low);
+    int32_t new_high;
+    switch (cfg_mode.filter_low.pk) {
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            new_high = (subject_get_int(cfg.key_tone.val) - new_low) * 2;
+            subject_set_int(cfg_mode.filter_high.val, new_high);
+            break;
+
+        default:
+            subject_set_int(cfg_mode.filter_low.val, new_low);
+            break;
+    }
+}
+
+static void on_cur_filter_high_change(subject_t subj, void *user_data) {
+    int32_t new_high = subject_get_int(subj);
+    LV_LOG_INFO("New current high=%i", new_high);
+    subject_set_int(cfg_cur.filter_bw, new_high - subject_get_int(cfg_cur.filter_low));
+    switch (cfg_mode.filter_high.pk) {
+        case x6100_mode_cw:
+        case x6100_mode_cwr:
+            new_high = (new_high - subject_get_int(cfg.key_tone.val)) * 2;
+            subject_set_int(cfg_mode.filter_high.val, new_high);
+            break;
+
+        default:
+            subject_set_int(cfg_mode.filter_high.val, new_high);
+            break;
+    }
+}
+
+static void on_cur_filter_bw_change(subject_t subj, void *user_data) {
+    if (cfg_mode.filter_low.pk != cfg_mode.filter_high.pk) {
+        LV_LOG_INFO("Skip update bw, different modes");
+        return;
+    }
+    int32_t new_bw = subject_get_int(subj);
+    int32_t new_low, new_high;
+    switch (cfg_mode.filter_high.pk) {
+        case x6100_mode_am:
+        case x6100_mode_nfm:
+            new_low = subject_get_int(cfg_cur.filter_low);
+            new_high = new_low + new_bw;
+            break;
+        default:
+            new_low = (subject_get_int(cfg_cur.filter_high) + subject_get_int(cfg_cur.filter_low) - new_bw) / 2;
+            new_high = new_low + new_bw;
+            break;
+    }
+    LV_LOG_INFO("New bw=%i, set cur filters: low=%i high=%i", new_bw, new_low, new_high);
+
+    subject_set_int(cfg_cur.filter_low, new_low);
+    subject_set_int(cfg_cur.filter_high, new_high);
+}
+
+static void on_cur_freq_step_change(subject_t subj, void *user_data) {
+    if (cfg_mode.freq_step.dirty == NULL) {
+        LV_LOG_USER("Freq step is not initialized, skip updating");
+    }
+    subject_set_int(cfg_mode.freq_step.val, subject_get_int(subj));;
+}
+
+static void on_cur_zoom_change(subject_t subj, void *user_data) {
+    subject_set_int(cfg_mode.zoom.val, subject_get_int(subj));;
 }
 
 /**
@@ -330,6 +485,7 @@ static int init_params_cfg(sqlite3 *db) {
 
     /* Bind callbacks */
     subject_add_observer(cfg.band_id.val, on_band_id_change, NULL);
+    subject_add_observer(cfg.key_tone.val, on_key_tone_change, NULL);
 
     /* Load values from table */
     cfg_item_t *cfg_arr = (cfg_item_t *)&cfg;
@@ -423,8 +579,27 @@ static int init_mode_cfg(sqlite3 *db) {
 
     /* Fill mode configuration */
     db_mode_t db_mode = xmode_2_db(subject_get_int(cfg_cur.mode));
-    uint32_t  low, high, step, zoom;
+    uint32_t  low, high, step, zoom, cur_low, cur_high;
     mode_default_values(db_mode, &low, &high, &step, &zoom);
+    if (db_mode == x6100_mode_cw) {
+        cur_low = subject_get_int(cfg.key_tone.val) - high / 2;
+        cur_high = subject_get_int(cfg.key_tone.val) + high / 2;
+    } else {
+        cur_low = low;
+        cur_high = high;
+    }
+
+    cfg_cur.filter_low = subject_create_int(cur_low);
+    cfg_cur.filter_high = subject_create_int(cur_high);
+    cfg_cur.filter_bw = subject_create_int(high - low);
+    cfg_cur.freq_step = subject_create_int(step);
+    cfg_cur.zoom = subject_create_int(zoom);
+
+    subject_add_observer(cfg_cur.filter_low, on_cur_filter_low_change, NULL);
+    subject_add_observer(cfg_cur.filter_high, on_cur_filter_high_change, NULL);
+    subject_add_observer(cfg_cur.filter_bw, on_cur_filter_bw_change, NULL);
+    subject_add_observer(cfg_cur.freq_step, on_cur_freq_step_change, NULL);
+    subject_add_observer(cfg_cur.zoom, on_cur_zoom_change, NULL);
 
     cfg_mode.filter_low = (cfg_item_t){
         .val = subject_create_int(low),
@@ -455,8 +630,10 @@ static int init_mode_cfg(sqlite3 *db) {
         .pk = db_mode,
     };
 
-    // subject_add_observer(cfg_band.vfo_a.freq.val, on_ab_freq_change, &cfg_band.vfo_a.freq);
-    // subject_add_observer(cfg_band.vfo_b.freq.val, on_ab_freq_change, &cfg_band.vfo_b.freq);
+    subject_add_observer(cfg_mode.filter_low.val, on_filter_low_change, &cfg_mode.filter_low);
+    subject_add_observer(cfg_mode.filter_high.val, on_filter_high_change, &cfg_mode.filter_high);
+    subject_add_observer(cfg_mode.freq_step.val, on_freq_step_change, NULL);
+    subject_add_observer(cfg_mode.zoom.val, on_zoom_change, NULL);
 
     /* Load values from table */
     cfg_item_t *cfg_arr = (cfg_item_t *)&cfg_mode;

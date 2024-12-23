@@ -10,11 +10,8 @@
 static sqlite3      *db;
 static sqlite3_stmt *write_stmt;
 static sqlite3_stmt *read_stmt;
-static sqlite3_stmt *read_band_by_pk_stmt;
-static sqlite3_stmt *read_band_by_freq_stmt;
-static sqlite3_stmt *find_up_band_stmt;
-static sqlite3_stmt *find_down_band_stmt;
-static sqlite3_stmt *read_all_bands_stmt;
+static pthread_mutex_t write_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t read_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
 void cfg_mode_params_init(sqlite3 *database) {
@@ -40,16 +37,24 @@ int cfg_mode_params_load_item(cfg_item_t *item) {
         return 0;
     }
     int rc;
+    int32_t val;
     sqlite3_stmt *stmt = read_stmt;
+    pthread_mutex_lock(&read_mutex);
     rc = sqlite3_bind_text(stmt, sqlite3_bind_parameter_index(stmt, ":name"), item->db_name,
                            strlen(item->db_name), 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind name %s: %s", item->db_name, sqlite3_errmsg(db));
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+        pthread_mutex_unlock(&read_mutex);
         return rc;
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind mode %s: %s", item->pk, sqlite3_errmsg(db));
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+        pthread_mutex_unlock(&read_mutex);
         return rc;
     }
 
@@ -57,10 +62,18 @@ int cfg_mode_params_load_item(cfg_item_t *item) {
     if (rc == SQLITE_ROW) {
         switch (item->val->dtype) {
         case DTYPE_INT:
-            subject_set_int(item->val, sqlite3_column_int(stmt, 0));
+            val = sqlite3_column_int(stmt, 0);
+            if (val < 0) {
+                LV_LOG_WARN("%s can't be negative (%i), ignore DB value", item->db_name, val);
+            } else {
+                subject_set_int(item->val, val);
+            }
             break;
         default:
             LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, item->val->dtype);
+            sqlite3_reset(stmt);
+            sqlite3_clear_bindings(stmt);
+            pthread_mutex_unlock(&read_mutex);
             return -1;
         }
         rc = 0;
@@ -72,6 +85,7 @@ int cfg_mode_params_load_item(cfg_item_t *item) {
     }
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
+    pthread_mutex_unlock(&read_mutex);
     return rc;
 }
 
@@ -83,33 +97,48 @@ int cfg_mode_params_save_item(cfg_item_t *item) {
     int      rc;
 
     sqlite3_stmt *stmt = write_stmt;
-
+    pthread_mutex_lock(&write_mutex);
     rc = sqlite3_bind_text(stmt, sqlite3_bind_parameter_index(stmt, ":name"), item->db_name,
                            strlen(item->db_name), 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind name %s: %s", item->db_name, sqlite3_errmsg(db));
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+        pthread_mutex_unlock(&write_mutex);
         return rc;
     }
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":id"), item->pk);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind mode %s: %s", item->pk, sqlite3_errmsg(db));
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+        pthread_mutex_unlock(&write_mutex);
         return rc;
     }
     int val_index = sqlite3_bind_parameter_index(stmt, ":val");
 
     switch (item->val->dtype) {
     case DTYPE_INT:
-        rc = sqlite3_bind_int(stmt, val_index, item->val->int_val);
+        if (item->val->int_val < 0) {
+            LV_LOG_ERROR("%s can't be negative (%i), will not save", item->db_name, item->val->int_val);
+            sqlite3_reset(stmt);
+            sqlite3_clear_bindings(stmt);
+            pthread_mutex_unlock(&write_mutex);
+            return -1;
+        } else {
+            rc = sqlite3_bind_int(stmt, val_index, item->val->int_val);
+        }
         break;
     default:
         LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, item->val->dtype);
-        sqlite3_reset(stmt);
-        sqlite3_clear_bindings(stmt);
-        return -1;
+        rc = -1;
         break;
     }
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed to bind val for name %s: %s", item->db_name, sqlite3_errmsg(db));
+        sqlite3_reset(stmt);
+        sqlite3_clear_bindings(stmt);
+        pthread_mutex_unlock(&write_mutex);
         return rc;
     }
     rc = sqlite3_step(stmt);
@@ -120,6 +149,7 @@ int cfg_mode_params_save_item(cfg_item_t *item) {
     }
     sqlite3_reset(stmt);
     sqlite3_clear_bindings(stmt);
+    pthread_mutex_unlock(&write_mutex);
     return rc;
 }
 

@@ -11,8 +11,10 @@ struct dirty_t {
 };
 
 typedef struct {
-    cfg_item_t  filter_low;
     cfg_item_t  filter_high;
+    cfg_item_t  filter_low;
     cfg_item_t  freq_step;
     cfg_item_t  zoom;
 } cfg_mode_t;
+
+extern cfg_mode_t cfg_mode;
