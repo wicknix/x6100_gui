@@ -181,7 +181,7 @@ static void set_vfo(void * arg) {
         LV_LOG_ERROR("arg is NULL");
     }
     x6100_vfo_t vfo = * (x6100_vfo_t*) arg;
-    radio_set_vfo(vfo);
+    subject_set_int(cfg_cur.band->vfo.val, vfo);
     lv_event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
 }
 
@@ -246,8 +246,8 @@ static uint8_t x_mode_2_ci_mode(x6100_mode_t mode) {
 
 
 static uint8_t get_if_bandwidth() {
-    uint32_t bw = params_current_mode_filter_bw_get();
-    switch (params_band_cur_mode_get())
+    int32_t bw = subject_get_int(cfg_cur.filter.bw);
+    switch (subject_get_int(cfg_cur.mode))
     {
     case x6100_mode_cw:
     case x6100_mode_cwr:
@@ -277,9 +277,9 @@ static void frame_parse(uint16_t len) {
         return;
     }
     uint64_t new_freq;
-    x6100_vfo_t cur_vfo = params_band_vfo_get();
-    uint64_t cur_freq = params_band_cur_freq_get();
-    x6100_mode_t cur_mode = params_band_cur_mode_get();
+    x6100_vfo_t cur_vfo = subject_get_int(cfg_cur.band->vfo.val);
+    uint64_t cur_freq = subject_get_int(cfg_cur.fg_freq);
+    x6100_mode_t cur_mode = subject_get_int(cfg_cur.mode);
     x6100_vfo_t target_vfo = cur_vfo;
 
 #if 0
@@ -396,7 +396,8 @@ static void frame_parse(uint16_t len) {
                 target_vfo = (cur_vfo == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A;
             }
             if (frame[6] == FRAME_END) {
-                uint8_t v = x_mode_2_ci_mode(params_band_vfo_mode_get(target_vfo));
+                // uint8_t v = x_mode_2_ci_mode(params_band_vfo_mode_get(target_vfo));
+                v = 0;
                 frame[6] = v;
                 frame[7] = 0;
                 frame[8] = 1;

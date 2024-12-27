@@ -1,18 +1,13 @@
 #pragma once
 
-#include "subjects.h"
+#include "common.h"
+#include "atu.h"
+#include "band.h"
 
 #include <pthread.h>
 #include <sqlite3.h>
 
-typedef struct cfg_item_t {
-    const char     *db_name;
-    int             pk;
-    subject_t       val;
-    struct dirty_t *dirty;
-    int (*load)(struct cfg_item_t *item);
-    int (*save)(struct cfg_item_t *item);
-} cfg_item_t;
+
 
 /* configuration structs. Should contain same types (for correct initialization) */
 typedef struct {
@@ -23,34 +18,32 @@ typedef struct {
     cfg_item_t atu_enabled;
 } cfg_t;
 
-struct vfo_params {
-    cfg_item_t freq;
-    cfg_item_t mode;
-};
-
-typedef struct {
-    struct vfo_params vfo_a;
-    struct vfo_params vfo_b;
-    cfg_item_t        vfo;
-} cfg_band_t;
-
-extern cfg_t      cfg;
-extern cfg_band_t cfg_band;
+extern cfg_t cfg;
 
 /* Current band/mode params */
 
 typedef struct {
-    subject_t freq;
-    subject_t mode;
-    subject_t filter_low;
-    subject_t filter_high;
-    subject_t filter_bw;
-    subject_t freq_step;
-    subject_t zoom;
+    subject_t      fg_freq;
+    subject_t      bg_freq;
+    subject_t      lo_offset;
+    subject_t      freq_shift;
+    subject_t      mode;
+    subject_t      agc;
+    subject_t      att;
+    subject_t      pre;
     struct {
-        subject_t loaded;
-        subject_t network;
-    } atu;
+        subject_t      low;
+        subject_t      high;
+        subject_t      bw;
+        struct {
+            subject_t      from;
+            subject_t      to;
+        } real;
+    } filter;
+    subject_t      freq_step;
+    subject_t      zoom;
+    atu_network_t *atu;
+    cfg_band_t    *band;
 } cfg_cur_t;
 
 extern cfg_cur_t cfg_cur;

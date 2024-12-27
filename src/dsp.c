@@ -6,70 +6,79 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-#include <stdlib.h>
-#include <stdbool.h>
-#include <pthread.h>
-#include <math.h>
-
 #include "dsp.h"
-#include "spectrum.h"
-#include "waterfall.h"
-#include "util.h"
-#include "radio.h"
-#include "meter.h"
+
 #include "audio.h"
+#include "cfg/cfg.h"
 #include "cw.h"
-#include "rtty.h"
 #include "dialog_ft8.h"
 #include "dialog_msg_voice.h"
+#include "meter.h"
+#include "radio.h"
 #include "recorder.h"
+#include "rtty.h"
+#include "spectrum.h"
+#include "util.h"
+#include "waterfall.h"
 
-static iirfilt_cccf     dc_block;
+#include <math.h>
+#include <pthread.h>
+#include <stdlib.h>
 
-static pthread_mutex_t  spectrum_mux = PTHREAD_MUTEX_INITIALIZER;
+static iirfilt_cccf dc_block;
 
-static uint8_t          spectrum_factor = 1;
-static firdecim_crcf    spectrum_decim_rx;
-static firdecim_crcf    spectrum_decim_tx;
+static pthread_mutex_t spectrum_mux = PTHREAD_MUTEX_INITIALIZER;
 
-static spgramcf         spectrum_sg_rx;
-static spgramcf         spectrum_sg_tx;
-static float            *spectrum_psd;
-static float            *spectrum_psd_filtered;
-static float            spectrum_beta = 0.7f;
-static uint8_t          spectrum_fps_ms = (1000 / 15);
-static uint64_t         spectrum_time;
-static float complex    *spectrum_dec_buf;
+static uint8_t       spectrum_factor = 1;
+static firdecim_crcf spectrum_decim_rx;
+static firdecim_crcf spectrum_decim_tx;
 
-static spgramcf         waterfall_sg_rx;
-static spgramcf         waterfall_sg_tx;
-static float            *waterfall_psd;
-static uint8_t          waterfall_fps_ms = (1000 / 25);
-static uint64_t         waterfall_time;
+static spgramcf       spectrum_sg_rx;
+static spgramcf       spectrum_sg_tx;
+static float         *spectrum_psd;
+static float         *spectrum_psd_filtered;
+static float          spectrum_beta   = 0.7f;
+static uint8_t        spectrum_fps_ms = (1000 / 15);
+static uint64_t       spectrum_time;
+static float complex *spectrum_dec_buf;
 
-static float complex    buf_filtered[RADIO_SAMPLES];
+static spgramcf waterfall_sg_rx;
+static spgramcf waterfall_sg_tx;
+static float   *waterfall_psd;
+static uint8_t  waterfall_fps_ms = (1000 / 25);
+static uint64_t waterfall_time;
 
-static uint8_t          psd_delay;
-static uint8_t          min_max_delay;
+static float complex buf_filtered[RADIO_SAMPLES];
 
-static firhilbf         audio_hilb;
-static float complex    *audio;
+static uint8_t psd_delay;
+static uint8_t min_max_delay;
 
-static bool             ready = false;
+static firhilbf       audio_hilb;
+static float complex *audio;
+
+static bool ready = false;
+
+static int32_t filter_from = 0;
+static int32_t filter_to   = 3000;
+static x6100_mode_t cur_mode;
 
 static void dsp_update_min_max(float *data_buf, uint16_t size);
 static void setup_spectrum_spgram();
+static void on_zoom_change(subject_t subj, void *user_data);
+static void on_real_filter_from_change(subject_t subj, void *user_data);
+static void on_real_filter_to_change(subject_t subj, void *user_data);
+static void on_cur_mode_change(subject_t subj, void *user_data);
 
 /* * */
 
-void dsp_init(uint8_t factor) {
+void dsp_init() {
+
     dc_block = iirfilt_cccf_create_dc_blocker(0.005f);
 
     setup_spectrum_spgram();
 
-    spectrum_psd = malloc(SPECTRUM_NFFT * sizeof(float));
+    spectrum_psd          = malloc(SPECTRUM_NFFT * sizeof(float));
     spectrum_psd_filtered = malloc(SPECTRUM_NFFT * sizeof(float));
-    dsp_set_spectrum_factor(factor);
 
     waterfall_sg_rx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, WATERFALL_NFFT, WATERFALL_NFFT / 4);
     spgramcf_set_alpha(waterfall_sg_rx, 0.2f);
@@ -78,14 +87,18 @@ void dsp_init(uint8_t factor) {
 
     waterfall_psd = malloc(WATERFALL_NFFT * sizeof(float));
 
-    spectrum_time = get_time();
+    spectrum_time  = get_time();
     waterfall_time = get_time();
 
     psd_delay = 4;
 
-    audio = (float complex *) malloc(AUDIO_CAPTURE_RATE * sizeof(float complex));
+    audio      = (float complex *)malloc(AUDIO_CAPTURE_RATE * sizeof(float complex));
     audio_hilb = firhilbf_create(7, 60.0f);
 
+    subject_add_observer_and_call(cfg_cur.zoom, on_zoom_change, NULL);
+    subject_add_observer_and_call(cfg_cur.filter.real.from, on_real_filter_from_change, NULL);
+    subject_add_observer_and_call(cfg_cur.filter.real.to, on_real_filter_to_change, NULL);
+    subject_add_observer_and_call(cfg_cur.mode, on_cur_mode_change, NULL);
     ready = true;
 }
 
@@ -97,11 +110,8 @@ void dsp_reset() {
     spgramcf_reset(waterfall_sg_rx);
 }
 
-static void process_samples(
-    float complex *buf_samples, uint16_t size,
-    firdecim_crcf sp_decim, spgramcf sp_sg,
-    spgramcf wf_sg
-) {
+static void process_samples(float complex *buf_samples, uint16_t size, firdecim_crcf sp_decim, spgramcf sp_sg,
+                            spgramcf wf_sg) {
     iirfilt_cccf_execute_block(dc_block, buf_samples, size, buf_filtered);
 
     if (spectrum_factor > 1) {
@@ -119,7 +129,7 @@ static bool update_spectrum(spgramcf sp_sg, uint64_t now, bool tx) {
         spgramcf_get_psd(sp_sg, spectrum_psd);
         liquid_vectorf_addscalar(spectrum_psd, SPECTRUM_NFFT, -30.0f, spectrum_psd);
         // Decrease beta for high zoom
-        float new_beta = powf(spectrum_beta, ((float) spectrum_factor - 1.0f) / 2.0f + 1.0f);
+        float new_beta = powf(spectrum_beta, ((float)spectrum_factor - 1.0f) / 2.0f + 1.0f);
         lpf_block(spectrum_psd_filtered, spectrum_psd, new_beta, SPECTRUM_NFFT);
         spectrum_data(spectrum_psd_filtered, SPECTRUM_NFFT, tx);
         spectrum_time = now;
@@ -139,12 +149,9 @@ static bool update_waterfall(spgramcf wf_sg, uint64_t now, bool tx) {
     return false;
 }
 
-static void update_s_meter(){
+static void update_s_meter() {
     if (dialog_msg_voice_get_state() != MSG_VOICE_RECORD) {
-        int32_t filter_from, filter_to;
         int32_t from, to;
-
-        radio_filter_get(&filter_from, &filter_to);
 
         from = WATERFALL_NFFT / 2;
         from -= filter_to * WATERFALL_NFFT / 100000;
@@ -164,8 +171,8 @@ static void update_s_meter(){
 
 void dsp_samples(float complex *buf_samples, uint16_t size, bool tx) {
     firdecim_crcf sp_decim;
-    spgramcf sp_sg, wf_sg;
-    uint64_t now = get_time();
+    spgramcf      sp_sg, wf_sg;
+    uint64_t      now = get_time();
 
     if (psd_delay) {
         psd_delay--;
@@ -174,12 +181,12 @@ void dsp_samples(float complex *buf_samples, uint16_t size, bool tx) {
     pthread_mutex_lock(&spectrum_mux);
     if (tx) {
         sp_decim = spectrum_decim_tx;
-        sp_sg = spectrum_sg_tx;
-        wf_sg = waterfall_sg_tx;
+        sp_sg    = spectrum_sg_tx;
+        wf_sg    = waterfall_sg_tx;
     } else {
         sp_decim = spectrum_decim_rx;
-        sp_sg = spectrum_sg_rx;
-        wf_sg = waterfall_sg_rx;
+        sp_sg    = spectrum_sg_rx;
+        wf_sg    = waterfall_sg_rx;
     }
     process_samples(buf_samples, size, sp_decim, sp_sg, wf_sg);
     update_spectrum(sp_sg, now, tx);
@@ -195,7 +202,8 @@ void dsp_samples(float complex *buf_samples, uint16_t size, bool tx) {
     }
 }
 
-void dsp_set_spectrum_factor(uint8_t x) {
+static void on_zoom_change(subject_t subj, void *user_data) {
+    int32_t x = subject_get_int(subj);
     if (x == spectrum_factor)
         return;
 
@@ -222,10 +230,10 @@ void dsp_set_spectrum_factor(uint8_t x) {
 
     if (spectrum_factor > 1) {
         spectrum_decim_rx = firdecim_crcf_create_kaiser(spectrum_factor, 16, 40.0f);
-        firdecim_crcf_set_scale(spectrum_decim_rx, sqrt(1.0f/(float)spectrum_factor));
+        firdecim_crcf_set_scale(spectrum_decim_rx, sqrt(1.0f / (float)spectrum_factor));
         spectrum_decim_tx = firdecim_crcf_create_kaiser(spectrum_factor, 16, 40.0f);
-        firdecim_crcf_set_scale(spectrum_decim_tx, sqrt(1.0f/(float)spectrum_factor));
-        spectrum_dec_buf = (float complex *) malloc(RADIO_SAMPLES * sizeof(float complex) / spectrum_factor);
+        firdecim_crcf_set_scale(spectrum_decim_tx, sqrt(1.0f / (float)spectrum_factor));
+        spectrum_dec_buf = (float complex *)malloc(RADIO_SAMPLES * sizeof(float complex) / spectrum_factor);
     }
 
     spgramcf_reset(spectrum_sg_rx);
@@ -235,6 +243,18 @@ void dsp_set_spectrum_factor(uint8_t x) {
         spectrum_psd_filtered[i] = S_MIN;
 
     pthread_mutex_unlock(&spectrum_mux);
+}
+
+static void on_real_filter_from_change(subject_t subj, void *user_data) {
+    filter_from = subject_get_int(subj);
+}
+
+static void on_real_filter_to_change(subject_t subj, void *user_data) {
+    filter_to = subject_get_int(subj);
+}
+
+static void on_cur_mode_change(subject_t subj, void *user_data) {
+    cur_mode = subject_get_int(subj);
 }
 
 float dsp_get_spectrum_beta() {
@@ -262,11 +282,9 @@ void dsp_put_audio_samples(size_t nsamples, int16_t *samples) {
     for (uint16_t i = 0; i < nsamples; i++)
         firhilbf_r2c_execute(audio_hilb, samples[i] / 32768.0f, &audio[i]);
 
-    x6100_mode_t    mode = radio_current_mode();
-
     if (rtty_get_state() == RTTY_RX) {
         rtty_put_audio_samples(nsamples, audio);
-    } else if (mode == x6100_mode_cw || mode == x6100_mode_cwr) {
+    } else if (cur_mode == x6100_mode_cw || cur_mode == x6100_mode_cwr) {
         cw_put_audio_samples(nsamples, audio);
     } else {
         dialog_audio_samples(nsamples, audio);
@@ -274,8 +292,8 @@ void dsp_put_audio_samples(size_t nsamples, int16_t *samples) {
 }
 
 static int compare_fft(const void *p1, const void *p2) {
-    float *i1 = (float *) p1;
-    float *i2 = (float *) p2;
+    float *i1 = (float *)p1;
+    float *i2 = (float *)p2;
 
     return (*i1 < *i2) ? -1 : 1;
 }
@@ -286,12 +304,11 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
         return;
     }
     qsort(data_buf, size, sizeof(float), compare_fft);
-    uint16_t    min_nth = 15;
-    uint16_t    max_nth = 10;
+    uint16_t min_nth = 15;
+    uint16_t max_nth = 10;
 
-    float       min = data_buf[min_nth];
-    float       max = data_buf[size - max_nth - 1];
-
+    float min = data_buf[min_nth];
+    float max = data_buf[size - max_nth - 1];
 
     if (max > S9_40) {
         max = S9_40;

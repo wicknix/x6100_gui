@@ -8,6 +8,7 @@
 
 #include "dialog_settings.h"
 
+#include "cfg/transverter.h"
 #include "lvgl/lvgl.h"
 #include "dialog.h"
 #include "styles.h"
@@ -974,35 +975,26 @@ static uint8_t make_audio_gain(uint8_t row) {
 
 static void transverter_from_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    transverter_t   *transverter = lv_event_get_user_data(e);
-
-    params_lock();
-    transverter->from = lv_spinbox_get_value(obj) * 1000000L;
-    params_unlock(&transverter->dirty.from);
+    cfg_transverter_t   *transverter = lv_event_get_user_data(e);
+    subject_set_int(transverter->from.val, lv_spinbox_get_value(obj) * 1000000L);
 }
 
 static void transverter_to_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    transverter_t   *transverter = lv_event_get_user_data(e);
-
-    params_lock();
-    transverter->to = lv_spinbox_get_value(obj) * 1000000L;
-    params_unlock(&transverter->dirty.to);
+    cfg_transverter_t   *transverter = lv_event_get_user_data(e);
+    subject_set_int(transverter->to.val, lv_spinbox_get_value(obj) * 1000000L);
 }
 
 static void transverter_shift_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    transverter_t   *transverter = lv_event_get_user_data(e);
-
-    params_lock();
-    transverter->shift = lv_spinbox_get_value(obj) * 1000000L;
-    params_unlock(&transverter->dirty.shift);
+    cfg_transverter_t   *transverter = lv_event_get_user_data(e);
+    subject_set_int(transverter->shift.val, lv_spinbox_get_value(obj) * 1000000L);
 }
 
 static uint8_t make_transverter(uint8_t row, uint8_t n) {
     lv_obj_t        *obj;
     uint8_t         col = 0;
-    transverter_t   *transverter = &params_transverter[n];
+    cfg_transverter_t   *transverter = &cfg_transverters[n];
 
     /* Label */
 
@@ -1019,7 +1011,7 @@ static uint8_t make_transverter(uint8_t row, uint8_t n) {
 
     dialog_item(&dialog, obj);
 
-    lv_spinbox_set_value(obj, transverter->from / 1000000L);
+    lv_spinbox_set_value(obj, subject_get_int(transverter->from.val) / 1000000L);
     lv_spinbox_set_range(obj, 70, 500);
     lv_spinbox_set_digit_format(obj, 3, 0);
     lv_spinbox_set_digit_step_direction(obj, LV_DIR_LEFT);
@@ -1034,7 +1026,7 @@ static uint8_t make_transverter(uint8_t row, uint8_t n) {
 
     dialog_item(&dialog, obj);
 
-    lv_spinbox_set_value(obj, transverter->to / 1000000L);
+    lv_spinbox_set_value(obj, subject_get_int(transverter->to.val) / 1000000L);
     lv_spinbox_set_range(obj, 70, 500);
     lv_spinbox_set_digit_format(obj, 3, 0);
     lv_spinbox_set_digit_step_direction(obj, LV_DIR_LEFT);
@@ -1049,7 +1041,7 @@ static uint8_t make_transverter(uint8_t row, uint8_t n) {
 
     dialog_item(&dialog, obj);
 
-    lv_spinbox_set_value(obj, transverter->shift / 1000000L);
+    lv_spinbox_set_value(obj, subject_get_int(transverter->shift.val) / 1000000L);
     lv_spinbox_set_range(obj, 42, 500);
     lv_spinbox_set_digit_format(obj,3, 0);
     lv_spinbox_set_digit_step_direction(obj, LV_DIR_LEFT);

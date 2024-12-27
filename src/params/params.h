@@ -85,9 +85,6 @@ typedef struct {
 
     int16_t             band_id;
     uint8_t             sql;
-    params_bool_t       atu;
-    bool                atu_loaded;
-    uint8_t             ant;
     float               pwr;
     x6100_mic_sel_t     mic;
     uint8_t             hmic;
@@ -253,8 +250,6 @@ typedef struct {
 
         bool    band;
         bool    sql;
-        bool    atu;
-        bool    ant;
         bool    pwr;
         bool    mic;
         bool    hmic;
@@ -338,22 +333,8 @@ typedef struct {
     } dirty;
 } params_t;
 
-typedef struct {
-    uint64_t        from;
-    uint64_t        to;
-    uint64_t        shift;
-
-    struct {
-        bool        from;
-        bool        to;
-        bool        shift;
-    } dirty;
-} transverter_t;
-
-#define TRANSVERTER_NUM 2
 
 extern params_t params;
-extern transverter_t params_transverter[TRANSVERTER_NUM];
 
 void params_init();
 
@@ -365,10 +346,7 @@ void params_float_set(params_float_t *var, float x);
 
 uint8_t params_uint8_change(params_uint8_t *var, int16_t df);
 
-int32_t params_lo_offset_get();
-
-void params_atu_save(uint32_t val);
-uint32_t params_atu_load(bool *loaded);
+// int32_t params_lo_offset_get();
 
 void params_msg_cw_load();
 void params_msg_cw_new(const char *val);

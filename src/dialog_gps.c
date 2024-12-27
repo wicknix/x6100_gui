@@ -185,7 +185,7 @@ static void gps_cb(lv_event_t * e) {
         deg_to_str2(deg_type, msg->fix.longitude, str, sizeof(str), "E", "W");
         lv_label_set_text(lon, str);
 
-        const char * qth_val[9];
+        char qth_val[9];
         qth_pos_to_str(msg->fix.latitude, msg->fix.longitude, qth_val);
         lv_label_set_text(qth, qth_val);
 

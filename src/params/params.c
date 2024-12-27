@@ -56,7 +56,6 @@ params_t params = {
     .clock_power_timeout    = 3,
     .clock_tx_timeout       = 1,
 
-    .ant                    = 1,
     .pwr                    = 5.0f,
     .mic                    = x6100_mic_auto,
     .hmic                   = 20,
@@ -153,18 +152,10 @@ params_t params = {
 
     .theme                  = { .x = THEME_SIMPLE, .name="theme"},
 
-    .atu                    = { .x = false, .name="atu" },
     .current_band           = { .id = BAND_NOT_LOADED },
 };
 
-transverter_t params_transverter[TRANSVERTER_NUM] = {
-    { .from = 144000000,    .to = 150000000,    .shift = 116000000 },
-    { .from = 432000000,    .to = 438000000,    .shift = 404000000 }
-};
-
 static sqlite3_stmt     *write_mode_stmt;
-static sqlite3_stmt     *save_atu_stmt;
-static sqlite3_stmt     *load_atu_stmt;
 static sqlite3_stmt     *bands_find_all_stmt;
 static sqlite3_stmt     *bands_find_stmt;
 
@@ -320,8 +311,6 @@ static bool params_load() {
             params.rtty_center = i;
         } else if (strcmp(name, "rtty_reverse") == 0) {
             params.rtty_reverse = i;
-        } else if (strcmp(name, "ant") == 0) {
-            params.ant = i;
         } else if (strcmp(name, "rit") == 0) {
             params.rit = i;
         } else if (strcmp(name, "xit") == 0) {
@@ -377,8 +366,6 @@ static bool params_load() {
         } else if (strcmp(name, "long_f2") == 0) {
             params.long_f2 = i;
         }
-
-        if (params_load_bool(&params.atu, name, i)) continue;
 
         if (params_load_float(&params.play_gain_db_f, name, f)) continue;
         if (params_load_float(&params.rec_gain_db_f, name, f)) continue;
@@ -507,7 +494,6 @@ static void params_save() {
     if (params.dirty.rtty_center)           params_write_int("rtty_center", params.rtty_center, &params.dirty.rtty_center);
     if (params.dirty.rtty_reverse)          params_write_int("rtty_reverse", params.rtty_reverse, &params.dirty.rtty_reverse);
 
-    if (params.dirty.ant)                   params_write_int("ant", params.ant, &params.dirty.ant);
     if (params.dirty.rit)                   params_write_int("rit", params.rit, &params.dirty.rit);
     if (params.dirty.xit)                   params_write_int("xit", params.xit, &params.dirty.xit);
 
@@ -556,8 +542,6 @@ static void params_save() {
 
     params_save_uint16(&params.ft8_tx_freq);
 
-    params_save_bool(&params.atu);
-
     params_save_bool(&params.mag_freq);
     params_save_bool(&params.mag_info);
     params_save_bool(&params.mag_alc);
@@ -581,72 +565,6 @@ static void params_save() {
     sql_query_exec("COMMIT");
 }
 
-/* Transverter */
-
-bool transverter_load() {
-    sqlite3_stmt    *stmt;
-    int             rc;
-
-    rc = sqlite3_prepare_v2(db, "SELECT * FROM transverter", -1, &stmt, 0);
-
-    if (rc != SQLITE_OK) {
-        return false;
-    }
-
-    while (sqlite3_step(stmt) != SQLITE_DONE) {
-        const int       id = sqlite3_column_int(stmt, 0);
-        const char      *name = sqlite3_column_text(stmt, 1);
-        const uint64_t  val = sqlite3_column_int64(stmt, 2);
-
-        if (strcmp(name, "from") == 0) {
-            params_transverter[id].from = val;
-        } else if (strcmp(name, "to") == 0) {
-            params_transverter[id].to = val;
-        } else if (strcmp(name, "shift") == 0) {
-            params_transverter[id].shift = val;
-        }
-    }
-
-    sqlite3_finalize(stmt);
-    return true;
-}
-
-static void transverter_write(sqlite3_stmt *stmt, uint8_t id, const char *name, uint64_t data, bool *dirty) {
-    sqlite3_bind_int64(stmt, 1, id);
-    sqlite3_bind_text(stmt, 2, name, strlen(name), 0);
-    sqlite3_bind_int64(stmt, 3, data);
-    sqlite3_step(stmt);
-    sqlite3_reset(stmt);
-    sqlite3_clear_bindings(stmt);
-
-    *dirty = false;
-}
-
-void transverter_save() {
-    sqlite3_stmt    *stmt;
-    int             rc;
-
-    rc = sqlite3_prepare_v2(db, "INSERT INTO transverter(id, name, val) VALUES(?, ?, ?)", -1, &stmt, 0);
-
-    if (rc != SQLITE_OK) {
-        return;
-    }
-
-    if (!sql_query_exec("BEGIN")) {
-        return;
-    }
-
-    for (uint8_t i = 0; i < TRANSVERTER_NUM; i++) {
-        transverter_t *transverter = &params_transverter[i];
-
-        if (transverter->dirty.from)    transverter_write(stmt, i, "from", transverter->from, &transverter->dirty.from);
-        if (transverter->dirty.to)      transverter_write(stmt, i, "to", transverter->to, &transverter->dirty.to);
-        if (transverter->dirty.shift)   transverter_write(stmt, i, "shift", transverter->shift, &transverter->dirty.shift);
-    }
-
-    sql_query_exec("COMMIT");
-}
-
 /* * */
 
 static void * params_thread(void *arg) {
@@ -655,8 +573,7 @@ static void * params_thread(void *arg) {
         if (params_ready_to_save()){
             params_save();
             params_band_save(params.band_id);
-            params_mode_save();
-            transverter_save();
+            // params_mode_save();
         }
         pthread_mutex_unlock(&params_mux);
         usleep(100000);
@@ -683,18 +600,6 @@ void params_init() {
             LV_LOG_ERROR("Prepare mode write");
         }
 
-        rc = sqlite3_prepare_v2(db, "INSERT INTO atu(ant, freq, val) VALUES(?, ?, ?)", -1, &save_atu_stmt, 0);
-
-        if (rc != SQLITE_OK) {
-            LV_LOG_ERROR("Prepare atu save");
-        }
-
-        rc = sqlite3_prepare_v2(db, "SELECT val FROM atu WHERE ant = ? AND freq = ?", -1, &load_atu_stmt, 0);
-
-        if (rc != SQLITE_OK) {
-            LV_LOG_ERROR("Prepare atu load");
-        }
-
         rc = sqlite3_prepare_v2(db,
             "SELECT id,name,start_freq,stop_freq,type FROM bands "
                 "WHERE (stop_freq BETWEEN ? AND ?) OR (start_freq BETWEEN ? AND ?) OR (start_freq <= ? AND stop_freq >= ?) "
@@ -712,9 +617,6 @@ void params_init() {
             LV_LOG_ERROR("Prepare bands find");
         }
 
-        if (!transverter_load()) {
-            LV_LOG_ERROR("Load transverter");
-        }
     } else {
         LV_LOG_ERROR("Open params.db");
     }
@@ -723,60 +625,20 @@ void params_init() {
 
     pthread_create(&thread, NULL, params_thread, NULL);
     pthread_detach(thread);
-    params_modulation_setup(&params_lo_offset_get);
+    // params_modulation_setup(&params_lo_offset_get);
 }
 
 int32_t params_lo_offset_get() {
-    x6100_mode_t mode = radio_current_mode();
-    int32_t key_tone = subject_get_int(cfg.key_tone.val);
-    switch (mode) {
-        case x6100_mode_cw:
-            return -key_tone;
-        case x6100_mode_cwr:
-            return key_tone;
-        default:
-            return 0;
-    }
-}
-
-void params_atu_save(uint32_t val) {
-    uint64_t freq = params_band_cur_freq_get();
-
-    params_lock();
-
-    sqlite3_bind_int(save_atu_stmt, 1, params.ant);
-    sqlite3_bind_int(save_atu_stmt, 2, freq / 50000);
-    sqlite3_bind_int(save_atu_stmt, 3, val);
-
-    sqlite3_step(save_atu_stmt);
-    sqlite3_reset(save_atu_stmt);
-    sqlite3_clear_bindings(save_atu_stmt);
-
-    params_unlock(NULL);
-}
-
-uint32_t params_atu_load(bool *loaded) {
-    uint32_t    res = 0;
-    uint64_t    freq = params_band_cur_freq_get();
-
-    *loaded = false;
-
-    params_lock();
-
-    sqlite3_bind_int(load_atu_stmt, 1, params.ant);
-    sqlite3_bind_int(load_atu_stmt, 2, freq / 50000);
-
-    if (sqlite3_step(load_atu_stmt) != SQLITE_DONE) {
-        res = sqlite3_column_int64(load_atu_stmt, 0);
-        *loaded = true;
-    }
-
-    sqlite3_reset(load_atu_stmt);
-    sqlite3_clear_bindings(load_atu_stmt);
-
-    params_unlock(NULL);
-
-    return res;
+    // x6100_mode_t mode = radio_current_mode();
+    // int32_t key_tone = subject_get_int(cfg.key_tone.val);
+    // switch (mode) {
+    //     case x6100_mode_cw:
+    //         return -key_tone;
+    //     case x6100_mode_cwr:
+    //         return key_tone;
+    //     default:
+    //         return 0;
+    // }
 }
 
 void params_msg_cw_load() {

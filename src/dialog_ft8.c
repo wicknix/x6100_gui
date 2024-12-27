@@ -134,6 +134,8 @@ static FTxQsoProcessor         *qso_processor;
 
 static double               cur_lat, cur_lon;
 
+static int32_t  filter_low, filter_high;
+
 static uint8_t  button_page = 0;
 
 static float base_gain_offset;
@@ -200,7 +202,7 @@ static void save_qso(const char *remote_callsign, const char *remote_grid, const
         params.callsign.x,
         canonized_call,
         now, params.ft8_protocol == FTX_PROTOCOL_FT8 ? MODE_FT8 : MODE_FT4,
-        s_snr, r_snr, params_band_cur_freq_get(), NULL, NULL,
+        s_snr, r_snr, subject_get_int(cfg_cur.fg_freq), NULL, NULL,
         params.qth.x, remote_grid
     );
     free(canonized_call);
@@ -258,8 +260,8 @@ void static waterfall_process(float complex *frame, const size_t size) {
     spgramcf_write(waterfall_sg, frame, size);
 
     if (now - waterfall_time > waterfall_fps_ms) {
-        uint32_t low_bin = waterfall_nfft / 2 + waterfall_nfft * params_current_mode_filter_low_get() / SAMPLE_RATE;
-        uint32_t high_bin = waterfall_nfft / 2 + waterfall_nfft * params_current_mode_filter_high_get() / SAMPLE_RATE;
+        uint32_t low_bin = waterfall_nfft / 2 + waterfall_nfft * filter_low / SAMPLE_RATE;
+        uint32_t high_bin = waterfall_nfft / 2 + waterfall_nfft * filter_high / SAMPLE_RATE;
 
         spgramcf_get_psd(waterfall_sg, waterfall_psd);
         // Normalize FFT
@@ -543,15 +545,13 @@ static void fade_ready(lv_anim_t * a) {
 
 static void rotary_cb(int32_t diff) {
     uint32_t f = params.ft8_tx_freq.x + diff;
-    uint32_t f_low, f_high;
-    params_current_mode_filter_get(&f_low, &f_high);
 
-    if (f > f_high) {
-        f = f_high;
+    if (f > filter_high) {
+        f = filter_high;
     }
 
-    if (f < f_low) {
-        f = f_low;
+    if (f < filter_low) {
+        f = filter_low;
     }
 
     params_uint16_set(&params.ft8_tx_freq, f);
@@ -666,10 +666,11 @@ static void construct_cb(lv_obj_t *parent) {
     mem_save(MEM_BACKUP_ID);
     load_band(0);
 
-    uint32_t f_low, f_high;
-    params_current_mode_filter_get(&f_low, &f_high);
+    filter_low = subject_get_int(cfg_cur.filter.low);
+    filter_high = subject_get_int(cfg_cur.filter.high);
+    // params_current_mode_filter_get(&f_low, &f_high);
 
-    lv_finder_set_range(finder, f_low, f_high);
+    lv_finder_set_range(finder, filter_low, filter_high);
 
     qth_str_to_pos(params.qth.x, &cur_lat, &cur_lon);
 
@@ -1004,7 +1005,7 @@ static void tx_worker() {
     gain_offset -= play_gain_offset;
 
     // Change freq before tx
-    uint64_t radio_freq = params_band_cur_freq_get();
+    uint64_t radio_freq = subject_get_int(cfg_cur.fg_freq);
     radio_set_freq(radio_freq + params.ft8_tx_freq.x - signal_freq);
     radio_set_modem(true);
 
@@ -1115,7 +1116,7 @@ static void add_rx_text(int16_t snr, const char * text, slot_info_t *s_info) {
         cell_data.worked_type = qso_log_search_worked(
             meta.call_de,
             params.ft8_protocol == FTX_PROTOCOL_FT8 ? MODE_FT8 : MODE_FT4,
-            qso_log_freq_to_band(params_band_cur_freq_get())
+            qso_log_freq_to_band(subject_get_int(cfg_cur.fg_freq))
         );
     }
 
@@ -1211,7 +1212,7 @@ static void * decode_thread(void *arg) {
                 state = RX_PROCESS;
                 if ((!have_tx_msg || !tx_enabled)) {
                     ts = localtime(&now.tv_sec);
-                    add_info("RX %s %02i:%02i:%02i", params_band_label_get(),
+                    add_info("RX %s %02i:%02i:%02i", cfg_band_label_get(),
                         ts->tm_hour, ts->tm_min, ts->tm_sec);
                 }
             }

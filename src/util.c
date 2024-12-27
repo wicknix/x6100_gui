@@ -37,7 +37,7 @@ void get_time_str(char *str, size_t str_size) {
     snprintf(str, str_size, "%04i-%02i-%02i %02i-%02i-%02i", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 }
 
-void split_freq(uint64_t freq, uint16_t *mhz, uint16_t *khz, uint16_t *hz) {
+void split_freq(int32_t freq, uint16_t *mhz, uint16_t *khz, uint16_t *hz) {
     *mhz = freq / 1000000;
     *khz = (freq / 1000) % 1000;
     *hz = freq % 1000;

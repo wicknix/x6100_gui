@@ -5,16 +5,18 @@
 #include <pthread.h>
 #include <sqlite3.h>
 
-struct dirty_t {
-    bool            val;
-    pthread_mutex_t mux;
+enum item_state_t {
+    ITEM_STATE_CLEAN,
+    ITEM_STATE_CHANGED,
+    ITEM_STATE_LOADING,
 };
 
-typedef struct {
-    cfg_item_t  filter_high;
-    cfg_item_t  filter_low;
-    cfg_item_t  freq_step;
-    cfg_item_t  zoom;
-} cfg_mode_t;
+struct dirty_t {
+    enum item_state_t val;
+    pthread_mutex_t   mux;
+};
 
-extern cfg_mode_t cfg_mode;
+void init_items(cfg_item_t *cfg_arr, uint32_t count, int (*load)(struct cfg_item_t *item),
+                int (*save)(struct cfg_item_t *item));
+int  load_items_from_db(cfg_item_t *cfg_arr, uint32_t count);
+void save_item_to_db(cfg_item_t *item, bool force);

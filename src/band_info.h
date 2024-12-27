@@ -14,4 +14,4 @@
 #include "lvgl/lvgl.h"
 
 lv_obj_t * band_info_init(lv_obj_t *parent);
-void band_info_update(uint64_t f);
+void band_info_update(int32_t f);

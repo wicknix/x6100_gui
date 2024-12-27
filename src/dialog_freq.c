@@ -82,9 +82,9 @@ static void enter_freq() {
         return;
     }
 
-    uint64_t    f = atof(str) * 1000000L;
+    int32_t    f = atof(str) * 1000000L;
 
-    if (radio_check_freq(f, NULL)) {
+    if (radio_check_freq(f)) {
         main_screen_set_freq(f);
         voice_say_text_fmt("Frequency has been set %s", str);
     } else {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cfg.h"
+#include "band.h"
 
 #define BAND_UNDEFINED -1
 
@@ -13,6 +13,8 @@ typedef struct {
     uint32_t stop_freq;
     int32_t  active;
 } band_info_t;
+
+extern cfg_band_t cfg_band;
 
 void cfg_band_params_init(sqlite3 *db);
 

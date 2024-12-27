@@ -45,12 +45,13 @@ static float            grid_max = DEFAULT_MAX;
 static lv_img_dsc_t     *frame;
 static uint8_t          delay = 0;
 
-static int64_t          *freq_offsets;
+static int32_t          *freq_offsets;
 static uint16_t         last_row_id;
 static uint8_t          *waterfall_cache;
 
-static int64_t          radio_center_freq = 0;
-static int64_t          wf_center_freq = 0;
+static int32_t          radio_center_freq = 0;
+static int32_t          wf_center_freq = 0;
+static int32_t          lo_offset = 0;
 
 static uint8_t          refresh_period = 1;
 static uint8_t          refresh_counter = 0;
@@ -60,12 +61,14 @@ static uint8_t          zoom = 1;
 static void refresh_waterfall( void * arg);
 static void draw_middle_line();
 static void redraw_cb(lv_event_t * e);
-static void zoom_changed_cd(void * s, lv_msg_t * m);
+static void on_zoom_changed(subject_t subj, void *user_data);
+static void on_fg_freq_change(subject_t subj, void *user_data);
+static void on_lo_offset_change(subject_t subj, void *user_data);
 
 
-lv_obj_t * waterfall_init(lv_obj_t * parent, uint64_t cur_freq) {
-    radio_center_freq = cur_freq;
-    wf_center_freq = cur_freq;
+lv_obj_t * waterfall_init(lv_obj_t * parent) {
+    subject_add_observer_and_call(cfg_cur.fg_freq, on_fg_freq_change, NULL);
+    wf_center_freq = radio_center_freq;
 
     obj = lv_obj_create(parent);
 
@@ -79,7 +82,8 @@ lv_obj_t * waterfall_init(lv_obj_t * parent, uint64_t cur_freq) {
     lv_style_set_line_opa(&middle_line_style, LV_OPA_60);
     lv_style_set_blend_mode(&middle_line_style, LV_BLEND_MODE_ADDITIVE);
 
-    lv_msg_subscribe(MSG_SPECTRUM_ZOOM_CHANGED, zoom_changed_cd, NULL);
+    subject_add_observer_and_call(cfg_cur.zoom, on_zoom_changed, NULL);
+    subject_add_observer_and_call(cfg_cur.lo_offset, on_lo_offset_change, NULL);
 
     return obj;
 }
@@ -105,7 +109,7 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
         max = grid_max;
     }
 
-    freq_offsets[last_row_id] = radio_center_freq + params_lo_offset_get();
+    freq_offsets[last_row_id] = radio_center_freq + lo_offset;
 
     for (uint16_t x = 0; x < size; x++) {
         float       v = (data_buf[x] - min) / (max - min);
@@ -227,11 +231,6 @@ void waterfall_update_min(float db) {
     }
 }
 
-void waterfall_set_freq(uint64_t freq) {
-    delay = 2;
-    radio_center_freq = freq;
-}
-
 void waterfall_refresh_reset() {
     refresh_period = 1;
 }
@@ -290,7 +289,16 @@ static void refresh_waterfall( void * arg) {
     }
 }
 
-static void zoom_changed_cd(void * s, lv_msg_t * m) {
-    zoom = *(uint16_t *) lv_msg_get_payload(m);
+static void on_zoom_changed(subject_t subj, void *user_data) {
+    zoom = subject_get_int(subj);
     lv_style_set_line_width(&middle_line_style, zoom / 2 + 2);
+}
+
+static void on_fg_freq_change(subject_t subj, void *user_data) {
+    delay = 2;
+    radio_center_freq = subject_get_int(subj);
+}
+
+static void on_lo_offset_change(subject_t subj, void *user_data) {
+    lo_offset = subject_get_int(subj);
 }

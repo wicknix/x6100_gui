@@ -96,19 +96,18 @@ int main(void) {
     vol_change_mode(0);
     styles_init(params.theme.x);
 
-    dsp_init(params_current_mode_spectrum_factor_get());
+    dsp_init();
     lv_obj_t *main_obj = main_screen();
 
     cw_init();
     rtty_init();
     radio_init(
         &main_screen_notify_tx,
-        &main_screen_notify_rx,
-        &main_screen_notify_atu_update
+        &main_screen_notify_rx
     );
     wifi_power_setup();
     backlight_init();
-    cat_init();
+    // cat_init();
     pannel_visible();
     gps_init();
     if (!qso_log_init()) {

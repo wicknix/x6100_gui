@@ -35,26 +35,26 @@ typedef enum {
 
 typedef void (*radio_state_change_t) ();
 
-void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb, radio_state_change_t atu_update_cb);
+void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb);
 void radio_bb_reset();
 bool radio_tick();
 radio_state_t radio_get_state();
 
-void radio_set_freq(uint64_t freq);
-bool radio_check_freq(uint64_t freq, uint64_t *shift);
-uint64_t radio_change_freq(int32_t df, uint64_t *prev_freq);
+void radio_set_freq(int32_t freq);
+bool radio_check_freq(int32_t freq);
+int32_t radio_change_freq(int32_t df, int32_t *prev_freq);
 
-void radio_set_mode(x6100_vfo_t vfo,  x6100_mode_t mode);
-void radio_set_cur_mode(x6100_mode_t mode);
-x6100_mode_t radio_current_mode();
+// void radio_set_mode(x6100_vfo_t vfo,  x6100_mode_t mode);
+// void radio_set_cur_mode(x6100_mode_t mode);
+// x6100_mode_t radio_current_mode();
 
 x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo);
 x6100_vfo_t radio_toggle_vfo();
 
 uint16_t radio_change_vol(int16_t df);
-uint16_t radio_change_rfg(int16_t df);
+// uint16_t radio_change_rfg(int16_t df);
 uint16_t radio_change_sql(int16_t df);
-uint32_t radio_change_filter_low(int32_t freq);
+// uint32_t radio_change_filter_low(int32_t freq);
 uint32_t radio_change_filter_high(int32_t freq);
 uint32_t radio_change_filter_bw(int32_t bw);
 uint16_t radio_change_moni(int16_t df);
@@ -62,11 +62,10 @@ bool radio_change_spmode(int16_t df);
 
 void radio_change_mute();
 
-bool radio_change_pre();
-bool radio_change_att();
-void radio_change_agc();
+// bool radio_change_pre();
+// bool radio_change_att();
+// void radio_change_agc();
 void radio_change_atu();
-void radio_toggle_split();
 float radio_change_pwr(int16_t d);
 void radio_set_pwr(float d);
 
@@ -106,7 +105,7 @@ void radio_stop_swrscan();
 void radio_vfo_set();
 void radio_filters_setup();
 
-void radio_filter_get(int32_t *from_freq, int32_t *to_freq);
+// void radio_filter_get(int32_t *from_freq, int32_t *to_freq);
 void radio_poweroff();
 void radio_set_ptt(bool tx);
 void radio_set_modem(bool tx);

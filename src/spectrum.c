@@ -8,58 +8,67 @@
 
 #include "spectrum.h"
 
-#include "styles.h"
-#include "radio.h"
-#include "events.h"
 #include "dsp.h"
-#include "params/params.h"
-#include "util.h"
+#include "events.h"
 #include "meter.h"
-#include "rtty.h"
-#include "recorder.h"
+#include "params/params.h"
 #include "pubsub_ids.h"
+#include "radio.h"
+#include "recorder.h"
+#include "rtty.h"
 #include "scheduler.h"
+#include "styles.h"
+#include "util.h"
 
-#include <stdlib.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 #define DEFAULT_MIN S4
 #define DEFAULT_MAX S9_20
 #define VISOR_HEIGHT_TX (100 - 61)
 #define VISOR_HEIGHT_RX 100
 
-static float            grid_min = DEFAULT_MIN;
-static float            grid_max = DEFAULT_MAX;
+static float grid_min = DEFAULT_MIN;
+static float grid_max = DEFAULT_MAX;
 
-static lv_obj_t         *obj;
+static lv_obj_t *obj;
 
-static int32_t          width_hz = 100000;
-static int16_t          visor_height = 100;
+static int32_t width_hz     = 100000;
+static int16_t visor_height = 100;
 
-static uint16_t         spectrum_size = 800;
-static float            *spectrum_buf = NULL;
-static uint8_t          zoom_factor = 1;
+static uint16_t spectrum_size = 800;
+static float   *spectrum_buf  = NULL;
+static uint8_t  zoom_factor   = 1;
 
-static int16_t          delta_surplus = 0;
+static int16_t delta_surplus = 0;
 
-static bool             spectrum_tx = false;
+static bool spectrum_tx = false;
+
+static int32_t filter_from = 0;
+static int32_t filter_to   = 3000;
+static x6100_mode_t cur_mode;
+static int32_t lo_offset;
 
 typedef struct {
-    float       val;
-    uint64_t    time;
+    float    val;
+    uint64_t time;
 } peak_t;
 
-static peak_t           *spectrum_peak;
+static peak_t *spectrum_peak;
 
-static pthread_mutex_t  data_mux;
+static pthread_mutex_t data_mux;
 
-static void zoom_changed_cd(void * s, lv_msg_t * m);
+static void on_zoom_changed(subject_t subj, void *user_data);
+static void on_real_filter_from_change(subject_t subj, void *user_data);
+static void on_real_filter_to_change(subject_t subj, void *user_data);
+static void on_cur_mode_change(subject_t subj, void *user_data);
+static void on_lo_offset_change(subject_t subj, void *user_data);
 
-static void spectrum_draw_cb(lv_event_t * e) {
-    lv_obj_t            *obj = lv_event_get_target(e);
-    lv_draw_ctx_t       *draw_ctx = lv_event_get_draw_ctx(e);
-    lv_draw_line_dsc_t  main_line_dsc;
-    lv_draw_line_dsc_t  peak_line_dsc;
+static void spectrum_draw_cb(lv_event_t *e) {
+    lv_obj_t          *obj      = lv_event_get_target(e);
+    lv_draw_ctx_t     *draw_ctx = lv_event_get_draw_ctx(e);
+    lv_draw_line_dsc_t main_line_dsc;
+    lv_draw_line_dsc_t peak_line_dsc;
 
     if (!spectrum_buf) {
         return;
@@ -91,7 +100,7 @@ static void spectrum_draw_cb(lv_event_t * e) {
     lv_coord_t w = lv_obj_get_width(obj);
     lv_coord_t h = lv_obj_get_height(obj);
 
-    x1 += params_lo_offset_get() * zoom_factor * w / width_hz;
+    x1 += lo_offset * zoom_factor * w / width_hz;
 
     lv_point_t main_a, main_b;
     lv_point_t peak_a, peak_b;
@@ -105,8 +114,8 @@ static void spectrum_draw_cb(lv_event_t * e) {
     peak_b.y = y1 + h;
 
     for (uint16_t i = 0; i < spectrum_size; i++) {
-        float       v = (spectrum_buf[i] - min) / (max - min);
-        uint16_t    x = i * w / spectrum_size;
+        float    v = (spectrum_buf[i] - min) / (max - min);
+        uint16_t x = i * w / spectrum_size;
 
         /* Peak */
 
@@ -140,21 +149,18 @@ static void spectrum_draw_cb(lv_event_t * e) {
 
     /* Filter */
 
-    lv_draw_rect_dsc_t  rect_dsc;
-    lv_area_t           area;
+    lv_draw_rect_dsc_t rect_dsc;
+    lv_area_t          area;
 
     lv_draw_rect_dsc_init(&rect_dsc);
 
     rect_dsc.bg_color = bg_color;
-    rect_dsc.bg_opa = LV_OPA_50;
+    rect_dsc.bg_opa   = LV_OPA_50;
 
-    int32_t     w_hz = width_hz / zoom_factor;
-    int32_t     filter_from, filter_to;
-
-    radio_filter_get(&filter_from, &filter_to);
+    int32_t w_hz = width_hz / zoom_factor;
 
     int16_t sign_from = (filter_from > 0) ? 1 : -1;
-    int16_t sign_to = (filter_to > 0) ? 1 : -1;
+    int16_t sign_to   = (filter_to > 0) ? 1 : -1;
 
     int32_t f1 = (w * filter_from) / w_hz;
     int32_t f2 = (w * filter_to) / w_hz;
@@ -167,20 +173,21 @@ static void spectrum_draw_cb(lv_event_t * e) {
     lv_draw_rect(draw_ctx, &rect_dsc, &area);
 
     /* Notch */
-
     if (params.dnf) {
+        int32_t from, to;
+
         rect_dsc.bg_color = lv_color_white();
-        rect_dsc.bg_opa = LV_OPA_50;
+        rect_dsc.bg_opa   = LV_OPA_50;
 
-        filter_from = sign_from * (params.dnf_center - params.dnf_width);
-        filter_to = sign_to * (params.dnf_center + params.dnf_width);
+        from = sign_from * (params.dnf_center - params.dnf_width);
+        to   = sign_to * (params.dnf_center + params.dnf_width);
 
-        if (filter_from < filter_to) {
-            f1 = (w * filter_from) / w_hz;
-            f2 = (w * filter_to) / w_hz;
+        if (from < to) {
+            f1 = (w * from) / w_hz;
+            f2 = (w * to) / w_hz;
         } else {
-            f1 = (w * filter_to) / w_hz;
-            f2 = (w * filter_from) / w_hz;
+            f1 = (w * to) / w_hz;
+            f2 = (w * from) / w_hz;
         }
 
         area.x1 = x1 + w / 2 + f1;
@@ -192,11 +199,13 @@ static void spectrum_draw_cb(lv_event_t * e) {
     }
 
     if (rtty_get_state() != RTTY_OFF) {
-        filter_from = sign_from * (params.rtty_center - params.rtty_shift / 2);
-        filter_to = sign_to * (params.rtty_center + params.rtty_shift / 2);
+        int32_t from, to;
 
-        f1 = (int64_t)(w * filter_from) / w_hz;
-        f2 = (int64_t)(w * filter_to) / w_hz;
+        from = sign_from * (params.rtty_center - params.rtty_shift / 2);
+        to   = sign_to * (params.rtty_center + params.rtty_shift / 2);
+
+        f1 = (int64_t)(w * from) / w_hz;
+        f2 = (int64_t)(w * to) / w_hz;
 
         main_a.x = x1 + w / 2 + f1;
         main_a.y = y1 + h - visor_height;
@@ -218,7 +227,6 @@ static void spectrum_draw_cb(lv_event_t * e) {
     main_b.x = main_a.x;
     main_b.y = y1 + h;
 
-    x6100_mode_t cur_mode = params_band_cur_mode_get();
     if (recorder_is_on()) {
         main_line_dsc.color = lv_color_hex(0xFF0000);
     } else if (cur_mode == x6100_mode_cw || cur_mode == x6100_mode_cwr) {
@@ -229,21 +237,21 @@ static void spectrum_draw_cb(lv_event_t * e) {
     lv_draw_line(draw_ctx, &main_line_dsc, &main_a, &main_b);
 }
 
-static void tx_cb(lv_event_t * e) {
+static void tx_cb(lv_event_t *e) {
     visor_height = VISOR_HEIGHT_TX;
 }
 
-static void rx_cb(lv_event_t * e) {
+static void rx_cb(lv_event_t *e) {
     visor_height = VISOR_HEIGHT_RX;
 }
 
-static void spectrum_refresh(void * data) {
+static void spectrum_refresh(void *data) {
     lv_obj_invalidate(obj);
 }
 
-lv_obj_t * spectrum_init(lv_obj_t * parent) {
+lv_obj_t *spectrum_init(lv_obj_t *parent) {
     pthread_mutex_init(&data_mux, NULL);
-    spectrum_buf = malloc(spectrum_size * sizeof(float));
+    spectrum_buf  = malloc(spectrum_size * sizeof(float));
     spectrum_peak = malloc(spectrum_size * sizeof(peak_t));
     spectrum_min_max_reset();
 
@@ -254,7 +262,11 @@ lv_obj_t * spectrum_init(lv_obj_t * parent) {
     lv_obj_add_event_cb(obj, tx_cb, EVENT_RADIO_TX, NULL);
     lv_obj_add_event_cb(obj, rx_cb, EVENT_RADIO_RX, NULL);
 
-    lv_msg_subscribe(MSG_SPECTRUM_ZOOM_CHANGED, zoom_changed_cd, NULL);
+    subject_add_observer_and_call(cfg_cur.zoom, on_zoom_changed, NULL);
+    subject_add_observer_and_call(cfg_cur.filter.real.from, on_real_filter_from_change, NULL);
+    subject_add_observer_and_call(cfg_cur.filter.real.to, on_real_filter_to_change, NULL);
+    subject_add_observer_and_call(cfg_cur.mode, on_cur_mode_change, NULL);
+    subject_add_observer_and_call(cfg_cur.lo_offset, on_lo_offset_change, NULL);
 
     return obj;
 }
@@ -268,12 +280,12 @@ void spectrum_data(float *data_buf, uint16_t size, bool tx) {
         spectrum_buf[i] = data_buf[size - i - 1];
 
         if (params.spectrum_peak && !tx) {
-            float   v = spectrum_buf[i];
-            peak_t  *peak = &spectrum_peak[i];
+            float   v    = spectrum_buf[i];
+            peak_t *peak = &spectrum_peak[i];
 
             if (v > peak->val) {
                 peak->time = now;
-                peak->val = v;
+                peak->val  = v;
             } else {
                 if (now - peak->time > params.spectrum_peak_hold) {
                     peak->val -= params.spectrum_peak_speed;
@@ -337,19 +349,19 @@ void spectrum_clear() {
     uint64_t now = get_time();
 
     for (uint16_t i = 0; i < spectrum_size; i++) {
-        spectrum_buf[i] = S_MIN;
-        spectrum_peak[i].val = S_MIN;
+        spectrum_buf[i]       = S_MIN;
+        spectrum_peak[i].val  = S_MIN;
         spectrum_peak[i].time = now;
     }
 }
 
 void spectrum_change_freq(int16_t df) {
-    peak_t      *from, *to;
-    uint64_t    time = get_time();
+    peak_t  *from, *to;
+    uint64_t time = get_time();
 
-    uint16_t    div = width_hz / spectrum_size / zoom_factor;
-    int16_t     surplus = df % div;
-    int32_t     delta = df / div;
+    uint16_t div     = width_hz / spectrum_size / zoom_factor;
+    int16_t  surplus = df % div;
+    int32_t  delta   = df / div;
 
     if (surplus) {
         delta_surplus += surplus;
@@ -371,11 +383,11 @@ void spectrum_change_freq(int16_t df) {
             to = &spectrum_peak[i];
 
             if (i >= spectrum_size - delta) {
-                to->val = S_MIN;
+                to->val  = S_MIN;
                 to->time = time;
             } else {
                 from = &spectrum_peak[i + delta];
-                *to = *from;
+                *to  = *from;
             }
         }
     } else {
@@ -385,19 +397,33 @@ void spectrum_change_freq(int16_t df) {
             to = &spectrum_peak[i];
 
             if (i <= delta) {
-                to->val = S_MIN;
+                to->val  = S_MIN;
                 to->time = time;
             } else {
                 from = &spectrum_peak[i - delta];
-                *to = *from;
+                *to  = *from;
             }
         }
     }
 }
 
-
-static void zoom_changed_cd(void * s, lv_msg_t * m) {
-    zoom_factor = *(uint16_t *) lv_msg_get_payload(m);
-    dsp_set_spectrum_factor(zoom_factor);
+static void on_zoom_changed(subject_t subj, void *user_data) {
+    zoom_factor = subject_get_int(subj);
     spectrum_clear();
+}
+
+static void on_real_filter_from_change(subject_t subj, void *user_data) {
+    filter_from = subject_get_int(subj);
+}
+
+static void on_real_filter_to_change(subject_t subj, void *user_data) {
+    filter_to = subject_get_int(subj);
+}
+
+static void on_cur_mode_change(subject_t subj, void *user_data) {
+    cur_mode = subject_get_int(subj);
+}
+
+static void on_lo_offset_change(subject_t subj, void *user_data) {
+    lo_offset = subject_get_int(subj);
 }

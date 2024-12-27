@@ -17,7 +17,7 @@
 
 sqlite3                 *db = NULL;
 
-static sqlite3_stmt     *write_stmt;
+static sqlite3_stmt     *insert_stmt;
 
 
 static void errorLogCallback(void *pArg, int iErrCode, const char *zMsg){
@@ -40,7 +40,7 @@ bool database_init() {
         return false;
     }
 
-    rc = sqlite3_prepare_v2(db, "INSERT INTO params(name, val) VALUES(?, ?)", -1, &write_stmt, 0);
+    rc = sqlite3_prepare_v2(db, "INSERT INTO params(name, val) VALUES(?, ?)", -1, &insert_stmt, 0);
 
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Can't prepare insert statement for params");
@@ -64,41 +64,41 @@ bool sql_query_exec(const char *sql) {
 
 
 void params_write_int(const char *name, int data, bool *dirty) {
-    sqlite3_bind_text(write_stmt, 1, name, strlen(name), 0);
-    sqlite3_bind_int(write_stmt, 2, data);
-    sqlite3_step(write_stmt);
-    sqlite3_reset(write_stmt);
-    sqlite3_clear_bindings(write_stmt);
+    sqlite3_bind_text(insert_stmt, 1, name, strlen(name), 0);
+    sqlite3_bind_int(insert_stmt, 2, data);
+    sqlite3_step(insert_stmt);
+    sqlite3_reset(insert_stmt);
+    sqlite3_clear_bindings(insert_stmt);
 
     *dirty = false;
 }
 
 void params_write_int64(const char *name, uint64_t data, bool *dirty) {
-    sqlite3_bind_text(write_stmt, 1, name, strlen(name), 0);
-    sqlite3_bind_int64(write_stmt, 2, data);
-    sqlite3_step(write_stmt);
-    sqlite3_reset(write_stmt);
-    sqlite3_clear_bindings(write_stmt);
+    sqlite3_bind_text(insert_stmt, 1, name, strlen(name), 0);
+    sqlite3_bind_int64(insert_stmt, 2, data);
+    sqlite3_step(insert_stmt);
+    sqlite3_reset(insert_stmt);
+    sqlite3_clear_bindings(insert_stmt);
 
     *dirty = false;
 }
 
 void params_write_float(const char *name, float data, bool *dirty) {
-    sqlite3_bind_text(write_stmt, 1, name, strlen(name), 0);
-    sqlite3_bind_double(write_stmt, 2, (double) data);
-    sqlite3_step(write_stmt);
-    sqlite3_reset(write_stmt);
-    sqlite3_clear_bindings(write_stmt);
+    sqlite3_bind_text(insert_stmt, 1, name, strlen(name), 0);
+    sqlite3_bind_double(insert_stmt, 2, (double) data);
+    sqlite3_step(insert_stmt);
+    sqlite3_reset(insert_stmt);
+    sqlite3_clear_bindings(insert_stmt);
 
     *dirty = false;
 }
 
 void params_write_text(const char *name, const char *data, bool *dirty) {
-    sqlite3_bind_text(write_stmt, 1, name, strlen(name), 0);
-    sqlite3_bind_text(write_stmt, 2, data, strlen(data), 0);
-    sqlite3_step(write_stmt);
-    sqlite3_reset(write_stmt);
-    sqlite3_clear_bindings(write_stmt);
+    sqlite3_bind_text(insert_stmt, 1, name, strlen(name), 0);
+    sqlite3_bind_text(insert_stmt, 2, data, strlen(data), 0);
+    sqlite3_step(insert_stmt);
+    sqlite3_reset(insert_stmt);
+    sqlite3_clear_bindings(insert_stmt);
 
     *dirty = false;
 }

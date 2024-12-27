@@ -8,8 +8,8 @@
 #include "rtty.h"
 
 #include "audio.h"
-#include "params/params.h"
 #include "pannel.h"
+#include "params/params.h"
 #include "util.h"
 
 #include "lvgl/lvgl.h"
@@ -17,12 +17,12 @@
 #include <math.h>
 #include <pthread.h>
 
-#define SYMBOL_OVER         8
-#define SYMBOL_FACTOR       2
-#define SYMBOL_LEN          (SYMBOL_OVER * SYMBOL_FACTOR)
+#define SYMBOL_OVER 8
+#define SYMBOL_FACTOR 2
+#define SYMBOL_LEN (SYMBOL_OVER * SYMBOL_FACTOR)
 
-#define RTTY_SYMBOL_CODE    (0b11011)
-#define RTTY_LETTER_CODE    (0b11111)
+#define RTTY_SYMBOL_CODE (0b11011)
+#define RTTY_LETTER_CODE (0b11111)
 
 typedef enum {
     RX_STATE_IDLE,
@@ -31,62 +31,60 @@ typedef enum {
     RX_STATE_STOP
 } rx_state_t;
 
-static pthread_mutex_t  rtty_mux;
+static pthread_mutex_t rtty_mux;
 
-static fskdem           demod = NULL;
+static fskdem demod = NULL;
 
-static nco_crcf         nco = NULL;
-static float complex    *nco_buf = NULL;
+static nco_crcf       nco     = NULL;
+static float complex *nco_buf = NULL;
 
-static uint16_t         symbol_samples;
-static uint16_t         symbol_over;
+static uint16_t symbol_samples;
+static uint16_t symbol_over;
 
-static cbuffercf        rx_buf;
-static complex float    *rx_window = NULL;
-static uint8_t          rx_symbol[SYMBOL_LEN];
-static float            rx_symbol_pwr[SYMBOL_LEN];
-static uint8_t          rx_symbol_cur = 0;
-static rx_state_t       rx_state = RX_STATE_IDLE;
-static uint8_t          rx_counter = 0;
-static uint8_t          rx_bitcntr = 0;
-static uint8_t          rx_data = 0;
-static bool             rx_letter = true;
+static cbuffercf      rx_buf;
+static complex float *rx_window = NULL;
+static uint8_t        rx_symbol[SYMBOL_LEN];
+static float          rx_symbol_pwr[SYMBOL_LEN];
+static uint8_t        rx_symbol_cur = 0;
+static rx_state_t     rx_state      = RX_STATE_IDLE;
+static uint8_t        rx_counter    = 0;
+static uint8_t        rx_bitcntr    = 0;
+static uint8_t        rx_data       = 0;
+static bool           rx_letter     = true;
 
-static bool             ready = false;
-static rtty_state_t     state = RTTY_OFF;
+static bool         ready = false;
+static rtty_state_t state = RTTY_OFF;
 
-static const char rtty_letters[32] = {
-    '\0',   'E',    '\n',   'A',    ' ',    'S',    'I',    'U',
-    '\0',   'D',    'R',    'J',    'N',    'F',    'C',    'K',
-    'T',    'Z',    'L',    'W',    'H',    'Y',    'P',    'Q',
-    'O',    'B',    'G',    ' ',    'M',    'X',    'V',    ' '
-};
+static x6100_mode_t cur_mode;
 
-static const char rtty_symbols[32] = {
-    '\0',   '3',    '\n',   '-',    ' ',    '\0',   '8',    '7',
-    '\0',   '$',    '4',    '\'',   ',',    '!',    ':',    '(',
-    '5',    '"',    ')',    '2',    '#',    '6',    '0',    '1',
-    '9',    '?',    '&',    ' ',    '.',    '/',    ';',    ' '
-};
+static const char rtty_letters[32] = {'\0', 'E', '\n', 'A', ' ', 'S', 'I', 'U', '\0', 'D', 'R',
+                                      'J',  'N', 'F',  'C', 'K', 'T', 'Z', 'L', 'W',  'H', 'Y',
+                                      'P',  'Q', 'O',  'B', 'G', ' ', 'M', 'X', 'V',  ' '};
+
+static const char rtty_symbols[32] = {'\0', '3', '\n', '-', ' ', '\0', '8', '7', '\0', '$', '4',
+                                      '\'', ',', '!',  ':', '(', '5',  '"', ')', '2',  '#', '6',
+                                      '0',  '1', '9',  '?', '&', ' ',  '.', '/', ';',  ' '};
+
+static void on_cur_mode_change(subject_t subj, void *user_data);
 
 static void update_nco() {
-    float radians = 2.0f * (float) M_PI * (float) params.rtty_center / (float) AUDIO_CAPTURE_RATE;
+    float radians = 2.0f * (float)M_PI * (float)params.rtty_center / (float)AUDIO_CAPTURE_RATE;
 
     nco_crcf_set_phase(nco, 0.0f);
     nco_crcf_set_frequency(nco, radians);
 }
 
 static void init() {
-    symbol_samples = (float) AUDIO_CAPTURE_RATE / (float) (params.rtty_rate / 100.0f) / (float) SYMBOL_FACTOR + 0.5f;
-    symbol_over = symbol_samples / SYMBOL_OVER;
+    symbol_samples = (float)AUDIO_CAPTURE_RATE / (float)(params.rtty_rate / 100.0f) / (float)SYMBOL_FACTOR + 0.5f;
+    symbol_over    = symbol_samples / SYMBOL_OVER;
 
-    nco = nco_crcf_create(LIQUID_NCO);
-    nco_buf = (float complex*) malloc(symbol_samples * sizeof(float complex));
+    nco     = nco_crcf_create(LIQUID_NCO);
+    nco_buf = (float complex *)malloc(symbol_samples * sizeof(float complex));
     update_nco();
 
     /* RX */
 
-    demod = fskdem_create(1, symbol_samples, (float) params.rtty_shift / (float) AUDIO_CAPTURE_RATE / 2.0f);
+    demod  = fskdem_create(1, symbol_samples, (float)params.rtty_shift / (float)AUDIO_CAPTURE_RATE / 2.0f);
     rx_buf = cbuffercf_create(symbol_samples * 50);
 
     rx_window = malloc(symbol_samples * sizeof(complex float));
@@ -117,7 +115,7 @@ static void update() {
 
 void rtty_init() {
     pthread_mutex_init(&rtty_mux, NULL);
-
+    subject_add_observer_and_call(cfg_cur.mode, on_cur_mode_change, NULL);
     init();
 }
 
@@ -138,11 +136,11 @@ static char baudot_decoder(uint8_t c) {
 static bool is_mark_space(uint8_t *correction) {
     uint16_t res = 0;
 
-    if (rx_symbol[0] && !rx_symbol[SYMBOL_LEN-1]) {
+    if (rx_symbol[0] && !rx_symbol[SYMBOL_LEN - 1]) {
         for (int i = 0; i < SYMBOL_LEN; i++)
             res += rx_symbol[i];
 
-        if (abs(SYMBOL_LEN/2 - res) < 1) {
+        if (abs(SYMBOL_LEN / 2 - res) < 1) {
             *correction = res;
             return true;
         }
@@ -156,7 +154,7 @@ static bool is_mark() {
 
 static void add_symbol(float pwr) {
     for (uint8_t i = 1; i < SYMBOL_LEN; i++) {
-        rx_symbol[i - 1] = rx_symbol[i];
+        rx_symbol[i - 1]     = rx_symbol[i];
         rx_symbol_pwr[i - 1] = rx_symbol_pwr[i];
     }
 
@@ -168,7 +166,7 @@ static void add_symbol(float pwr) {
     for (uint8_t i = SYMBOL_LEN - p_num; i < SYMBOL_LEN; i++)
         p_avr += rx_symbol_pwr[i];
 
-    p_avr /= (float) p_num;
+    p_avr /= (float)p_num;
 
     if (rx_symbol_cur == 0) {
         if (p_avr > params.rtty_snr) {
@@ -189,7 +187,7 @@ static void add_symbol(float pwr) {
     switch (rx_state) {
         case RX_STATE_IDLE:
             if (is_mark_space(&correction)) {
-                rx_state = RX_STATE_START;
+                rx_state   = RX_STATE_START;
                 rx_counter = correction;
             }
             break;
@@ -197,10 +195,10 @@ static void add_symbol(float pwr) {
         case RX_STATE_START:
             if (--rx_counter == 0) {
                 if (!is_mark()) {
-                    rx_state = RX_STATE_DATA;
+                    rx_state   = RX_STATE_DATA;
                     rx_counter = SYMBOL_LEN;
                     rx_bitcntr = 0;
-                    rx_data = 0;
+                    rx_data    = 0;
                 } else {
                     rx_state = RX_STATE_IDLE;
                 }
@@ -223,7 +221,7 @@ static void add_symbol(float pwr) {
                     char c = baudot_decoder(rx_data);
 
                     if (c) {
-                        char str[2] = { c, 0 };
+                        char str[2] = {c, 0};
 
                         pannel_add_text(str);
                     }
@@ -244,12 +242,10 @@ void rtty_put_audio_samples(unsigned int n, float complex *samples) {
 
     cbuffercf_write(rx_buf, samples, n);
 
-    x6100_mode_t    mode = radio_current_mode();
-
     while (cbuffercf_size(rx_buf) > symbol_samples) {
-        unsigned int    symbol;
-        unsigned int    n;
-        float complex   *buf;
+        unsigned int   symbol;
+        unsigned int   n;
+        float complex *buf;
 
         cbuffercf_read(rx_buf, symbol_samples, &buf, &n);
         nco_crcf_mix_block_down(nco, buf, nco_buf, n);
@@ -261,11 +257,10 @@ void rtty_put_audio_samples(unsigned int n, float complex *samples) {
 
         float pwr0 = 10.0f * log10f(fskdem_get_symbol_energy(demod, 0, 1));
         float pwr1 = 10.0f * log10f(fskdem_get_symbol_energy(demod, 1, 1));
-        float pwr = pwr0 - pwr1;
+        float pwr  = pwr0 - pwr1;
 
-        if (((mode == x6100_mode_usb || mode == x6100_mode_usb_dig) && !params.rtty_reverse) ||
-            ((mode == x6100_mode_lsb || mode == x6100_mode_lsb_dig) && params.rtty_reverse))
-        {
+        if (((cur_mode == x6100_mode_usb || cur_mode == x6100_mode_usb_dig) && !params.rtty_reverse) ||
+            ((cur_mode == x6100_mode_lsb || cur_mode == x6100_mode_lsb_dig) && params.rtty_reverse)) {
             pwr = -pwr;
         }
 
@@ -287,7 +282,7 @@ rtty_state_t rtty_get_state() {
 
 float rtty_change_rate(int16_t df) {
     if (df == 0) {
-        return (float) params.rtty_rate / 100.0f;
+        return (float)params.rtty_rate / 100.0f;
     }
 
     params_lock();
@@ -333,7 +328,7 @@ float rtty_change_rate(int16_t df) {
     params_unlock(&params.dirty.rtty_rate);
     update();
 
-    return (float) params.rtty_rate / 100.0f;
+    return (float)params.rtty_rate / 100.0f;
 }
 
 uint16_t rtty_change_shift(int16_t df) {
@@ -397,4 +392,8 @@ bool rtty_change_reverse(int16_t df) {
     params_unlock(&params.dirty.rtty_reverse);
 
     return params.rtty_reverse;
+}
+
+static void on_cur_mode_change(subject_t subj, void *user_data) {
+    cur_mode = subject_get_int(subj);
 }

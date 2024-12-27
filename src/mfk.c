@@ -70,10 +70,10 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_SPECTRUM_FACTOR:
-            i = params_current_mode_spectrum_factor_get();
+            i = subject_get_int(cfg_cur.zoom);
             if (diff != 0) {
-                i = params_current_mode_spectrum_factor_set(i + diff);
-                lv_msg_send(MSG_SPECTRUM_ZOOM_CHANGED, &i);
+                i = limit(i + diff, 1, 8);
+                subject_set_int(cfg_cur.zoom, i);
             }
             msg_update_text_fmt("#%3X Spectrum zoom: x%i", color, i);
 
@@ -287,18 +287,18 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_ANT:
+            ;
+            int32_t ant = subject_get_int(cfg.ant_id.val);
             if (diff != 0) {
-                params_lock();
-                params.ant = limit(params.ant + diff, 1, 5);
-                params_unlock(&params.dirty.ant);
-
-                radio_load_atu();
-                info_atu_update();
+                ant = limit(ant + diff, 1, 5);
+                subject_set_int(cfg.ant_id.val, ant);
+                // radio_load_atu();
+                // info_atu_update();
             }
-            msg_update_text_fmt("#%3X Antenna : %i", color, params.ant);
+            msg_update_text_fmt("#%3X Antenna : %i", color, ant);
 
             if (diff) {
-                voice_say_int("Antenna", params.ant);
+                voice_say_int("Antenna", ant);
             } else if (voice) {
                 voice_say_text_fmt("Antenna selector");
             }

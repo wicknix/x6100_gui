@@ -630,7 +630,7 @@ static char * sql_label_getter() {
 
 static char * rfg_label_getter() {
     static char buf[16];
-    sprintf(buf, "RF gain:\n%zu", params_band_rfg_get());
+    sprintf(buf, "RF gain:\n%zu", subject_get_int(cfg_cur.band->rfg.val));
     return buf;
 }
 
@@ -642,18 +642,18 @@ static char * tx_power_label_getter() {
 
 static char * filter_low_label_getter() {
     static char buf[22];
-    sprintf(buf, "Filter low:\n%zu Hz", params_current_mode_filter_low_get());
+    sprintf(buf, "Filter low:\n%zu Hz", subject_get_int(cfg_cur.filter.low));
     return buf;
 }
 static char * filter_high_label_getter() {
     static char buf[22];
-    sprintf(buf, "Filter high:\n%zu Hz", params_current_mode_filter_high_get());
+    sprintf(buf, "Filter high:\n%zu Hz", subject_get_int(cfg_cur.filter.high));
     return buf;
 }
 
 static char * filter_bw_label_getter() {
     static char buf[22];
-    sprintf(buf, "Filter BW:\n%zu Hz", params_current_mode_filter_bw_get());
+    sprintf(buf, "Filter BW:\n%i Hz", subject_get_int(cfg_cur.filter.bw));
     return buf;
 }
 

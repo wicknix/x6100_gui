@@ -1,6 +1,7 @@
 #include "cfg.private.h"
 
 #include "band.private.h"
+#include "mode.private.h"
 
 #include <aether_radio/x6100_control/control.h>
 
@@ -61,21 +62,18 @@ static void test_load_band_by_pk() {
 }
 
 static void test_set_another_band() {
-    int32_t new_band = 7;
-    assert(cfg_band.vfo_a.freq.pk != new_band);
-    assert(cfg_band.vfo_b.freq.pk != new_band);
-    assert(cfg_band.vfo.pk != new_band);
-    uint32_t freq_a = subject_get_int(cfg_band.vfo_a.freq.val);
-    uint32_t freq_b = subject_get_int(cfg_band.vfo_b.freq.val);
-    printf("freq_a: %lu, freq_b: %lu\n", freq_a, freq_b);
-    subject_set_int(cfg.band_id.val, new_band);
+    subject_set_int(cfg.band_id.val, 6);
+    subject_set_int(cfg_band.vfo_a.freq.val, 14050000);
+    subject_set_int(cfg_band.vfo_b.freq.val, 14060000);
+
+    subject_set_int(cfg.band_id.val, 7);
     printf("freq_a: %lu, freq_b: %lu\n", subject_get_int(cfg_band.vfo_a.freq.val),
            subject_get_int(cfg_band.vfo_b.freq.val));
-    assert(subject_get_int(cfg_band.vfo_a.freq.val) != freq_a && "Freq is not changed");
-    assert(subject_get_int(cfg_band.vfo_b.freq.val) != freq_b && "Freq is not changed");
-    assert(cfg_band.vfo_a.freq.pk == new_band);
-    assert(cfg_band.vfo_b.freq.pk == new_band);
-    assert(cfg_band.vfo.pk == new_band);
+    assert(subject_get_int(cfg_band.vfo_a.freq.val) != 14050000 && "Freq is not changed");
+    assert(subject_get_int(cfg_band.vfo_b.freq.val) != 14060000 && "Freq is not changed");
+    assert(cfg_band.vfo_a.freq.pk == 7);
+    assert(cfg_band.vfo_b.freq.pk == 7);
+    assert(cfg_band.vfo.pk == 7);
 }
 
 static void test_set_another_band_using_freq() {
@@ -147,28 +145,34 @@ static void test_switch_band_down() {
     }
 }
 
-static void test_cur_freq_tracking() {
+static void test_cur_fg_bg_freq_tracking() {
     subject_set_int(cfg_band.vfo_a.freq.val, 14200000);
     subject_set_int(cfg_band.vfo_b.freq.val, 14210000);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
-    assert(subject_get_int(cfg_cur.freq) == 14200000);
+    assert(subject_get_int(cfg_cur.fg_freq) == 14200000);
+    assert(subject_get_int(cfg_cur.bg_freq) == 14210000);
     subject_set_int(cfg_band.vfo_a.freq.val, 14220000);
-    assert(subject_get_int(cfg_cur.freq) == 14220000);
+    assert(subject_get_int(cfg_cur.fg_freq) == 14220000);
+    assert(subject_get_int(cfg_cur.bg_freq) == 14210000);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_B);
-    assert(subject_get_int(cfg_cur.freq) == 14210000);
+    assert(subject_get_int(cfg_cur.fg_freq) == 14210000);
+    assert(subject_get_int(cfg_cur.bg_freq) == 14220000);
 }
 
 static void test_ab_freq_tracking_cur() {
     subject_set_int(cfg_band.vfo_a.freq.val, 14200000);
     subject_set_int(cfg_band.vfo_b.freq.val, 14210000);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_A);
-    subject_set_int(cfg_cur.freq, 14220000);
+    subject_set_int(cfg_cur.fg_freq, 14220000);
     assert(subject_get_int(cfg_band.vfo_a.freq.val) == 14220000);
     assert(subject_get_int(cfg_band.vfo_b.freq.val) == 14210000);
     subject_set_int(cfg_band.vfo.val, X6100_VFO_B);
-    subject_set_int(cfg_cur.freq, 14230000);
+    subject_set_int(cfg_cur.fg_freq, 14230000);
     assert(subject_get_int(cfg_band.vfo_b.freq.val) == 14230000);
     assert(subject_get_int(cfg_band.vfo_a.freq.val) == 14220000);
+    subject_set_int(cfg_cur.bg_freq, 14240000);
+    assert(subject_get_int(cfg_band.vfo_b.freq.val) == 14230000);
+    assert(subject_get_int(cfg_band.vfo_a.freq.val) == 14240000);
 }
 
 static void test_cur_mode_tracking() {
@@ -199,26 +203,26 @@ static void test_change_filters_am_fm() {
     x6100_mode_t modes[] = {x6100_mode_am, x6100_mode_nfm};
     for (size_t i = 0; i < 2; i++) {
         subject_set_int(cfg_cur.mode, modes[i]);
-        subject_set_int(cfg_cur.filter_low, 0);
-        subject_set_int(cfg_cur.filter_high, 4000);
-        assert(subject_get_int(cfg_cur.filter_bw) == 4000);
+        subject_set_int(cfg_cur.filter.low, 0);
+        subject_set_int(cfg_cur.filter.high, 4000);
+        assert(subject_get_int(cfg_cur.filter.bw) == 4000);
         assert(subject_get_int(cfg_mode.filter_high.val) == 4000);
-        assert(subject_get_int(cfg_cur.filter_low) == 0);
+        assert(subject_get_int(cfg_cur.filter.low) == 0);
 
-        subject_set_int(cfg_cur.filter_high, 3500);
-        assert(subject_get_int(cfg_cur.filter_bw) == 3500);
+        subject_set_int(cfg_cur.filter.high, 3500);
+        assert(subject_get_int(cfg_cur.filter.bw) == 3500);
         assert(subject_get_int(cfg_mode.filter_high.val) == 3500);
-        assert(subject_get_int(cfg_cur.filter_low) == 0);
+        assert(subject_get_int(cfg_cur.filter.low) == 0);
 
-        subject_set_int(cfg_cur.filter_bw, 4000);
-        assert(subject_get_int(cfg_cur.filter_high) == 4000);
-        assert(subject_get_int(cfg_cur.filter_low) == 0);
+        subject_set_int(cfg_cur.filter.bw, 4000);
+        assert(subject_get_int(cfg_cur.filter.high) == 4000);
+        assert(subject_get_int(cfg_cur.filter.low) == 0);
         assert(subject_get_int(cfg_mode.filter_high.val) == 4000);
 
         subject_set_int(cfg_mode.filter_high.val, 3900);
-        assert(subject_get_int(cfg_cur.filter_high) == 3900);
-        assert(subject_get_int(cfg_cur.filter_low) == 0);
-        assert(subject_get_int(cfg_cur.filter_bw) == 3900);
+        assert(subject_get_int(cfg_cur.filter.high) == 3900);
+        assert(subject_get_int(cfg_cur.filter.low) == 0);
+        assert(subject_get_int(cfg_cur.filter.bw) == 3900);
     }
 }
 
@@ -226,34 +230,34 @@ static void test_change_filters_cw() {
     x6100_mode_t modes[] = {x6100_mode_cw, x6100_mode_cwr};
     for (size_t i = 0; i < 2; i++) {
         subject_set_int(cfg_cur.mode, modes[i]);
-        subject_set_int(cfg_cur.filter_bw, 400);
+        subject_set_int(cfg_cur.filter.bw, 400);
         subject_set_int(cfg.key_tone.val, 700);
-        assert(subject_get_int(cfg_cur.filter_high) == 700+200);
-        assert(subject_get_int(cfg_cur.filter_low) == 700-200);
+        assert(subject_get_int(cfg_cur.filter.high) == 700+200);
+        assert(subject_get_int(cfg_cur.filter.low) == 700-200);
         assert(subject_get_int(cfg_mode.filter_high.val) == 400);
 
-        subject_set_int(cfg_cur.filter_bw, 200);
-        assert(subject_get_int(cfg_cur.filter_high) == 700+100);
-        assert(subject_get_int(cfg_cur.filter_low) == 700-100);
+        subject_set_int(cfg_cur.filter.bw, 200);
+        assert(subject_get_int(cfg_cur.filter.high) == 700+100);
+        assert(subject_get_int(cfg_cur.filter.low) == 700-100);
         assert(subject_get_int(cfg_mode.filter_high.val) == 200);
 
         subject_set_int(cfg.key_tone.val, 800);
-        assert(subject_get_int(cfg_cur.filter_high) == 800+100);
-        assert(subject_get_int(cfg_cur.filter_low) == 800-100);
+        assert(subject_get_int(cfg_cur.filter.high) == 800+100);
+        assert(subject_get_int(cfg_cur.filter.low) == 800-100);
         assert(subject_get_int(cfg_mode.filter_high.val) == 200);
 
-        subject_set_int(cfg_cur.filter_high, 1000);
-        assert(subject_get_int(cfg_cur.filter_bw) == 400);
-        assert(subject_get_int(cfg_cur.filter_low) == 600);
+        subject_set_int(cfg_cur.filter.high, 1000);
+        assert(subject_get_int(cfg_cur.filter.bw) == 400);
+        assert(subject_get_int(cfg_cur.filter.low) == 600);
 
-        subject_set_int(cfg_cur.filter_low, 550);
-        assert(subject_get_int(cfg_cur.filter_bw) == 500);
-        assert(subject_get_int(cfg_cur.filter_high) == 1050);
+        subject_set_int(cfg_cur.filter.low, 550);
+        assert(subject_get_int(cfg_cur.filter.bw) == 500);
+        assert(subject_get_int(cfg_cur.filter.high) == 1050);
 
         subject_set_int(cfg_mode.filter_high.val, 100);
-        assert(subject_get_int(cfg_cur.filter_bw) == 100);
-        assert(subject_get_int(cfg_cur.filter_high) == 800+50);
-        assert(subject_get_int(cfg_cur.filter_low) == 800-50);
+        assert(subject_get_int(cfg_cur.filter.bw) == 100);
+        assert(subject_get_int(cfg_cur.filter.high) == 800+50);
+        assert(subject_get_int(cfg_cur.filter.low) == 800-50);
     }
 }
 
@@ -261,33 +265,33 @@ static void test_change_filters_ssb() {
     x6100_mode_t modes[] = {x6100_mode_lsb, x6100_mode_lsb_dig, x6100_mode_usb, x6100_mode_usb_dig};
     for (size_t i = 0; i < 4; i++) {
         subject_set_int(cfg_cur.mode, modes[i]);
-        subject_set_int(cfg_cur.filter_low, 100);
-        subject_set_int(cfg_cur.filter_high, 2900);
-        assert(subject_get_int(cfg_cur.filter_bw) == 2800);
+        subject_set_int(cfg_cur.filter.low, 100);
+        subject_set_int(cfg_cur.filter.high, 2900);
+        assert(subject_get_int(cfg_cur.filter.bw) == 2800);
         assert(subject_get_int(cfg_mode.filter_low.val) == 100);
         assert(subject_get_int(cfg_mode.filter_high.val) == 2900);
 
-        subject_set_int(cfg_cur.filter_bw, 2600);
-        assert(subject_get_int(cfg_cur.filter_low) == 200);
-        assert(subject_get_int(cfg_cur.filter_high) == 2800);
+        subject_set_int(cfg_cur.filter.bw, 2600);
+        assert(subject_get_int(cfg_cur.filter.low) == 200);
+        assert(subject_get_int(cfg_cur.filter.high) == 2800);
         assert(subject_get_int(cfg_mode.filter_low.val) == 200);
         assert(subject_get_int(cfg_mode.filter_high.val) == 2800);
 
-        subject_set_int(cfg_cur.filter_low, 100);
-        assert(subject_get_int(cfg_cur.filter_bw) == 2700);
+        subject_set_int(cfg_cur.filter.low, 100);
+        assert(subject_get_int(cfg_cur.filter.bw) == 2700);
         assert(subject_get_int(cfg_mode.filter_low.val) == 100);
 
-        subject_set_int(cfg_cur.filter_high, 2900);
-        assert(subject_get_int(cfg_cur.filter_bw) == 2800);
+        subject_set_int(cfg_cur.filter.high, 2900);
+        assert(subject_get_int(cfg_cur.filter.bw) == 2800);
         assert(subject_get_int(cfg_mode.filter_high.val) == 2900);
 
         subject_set_int(cfg_mode.filter_high.val, 2800);
-        assert(subject_get_int(cfg_cur.filter_bw) == 2700);
-        assert(subject_get_int(cfg_cur.filter_high) == 2800);
+        assert(subject_get_int(cfg_cur.filter.bw) == 2700);
+        assert(subject_get_int(cfg_cur.filter.high) == 2800);
 
         subject_set_int(cfg_mode.filter_low.val, 150);
-        assert(subject_get_int(cfg_cur.filter_bw) == 2650);
-        assert(subject_get_int(cfg_cur.filter_low) == 150);
+        assert(subject_get_int(cfg_cur.filter.bw) == 2650);
+        assert(subject_get_int(cfg_cur.filter.low) == 150);
 
     }
 }
@@ -301,7 +305,7 @@ static void run_tests(void) {
     CHECK(test_set_another_band_using_freq());
     CHECK(test_switch_band_up());
     CHECK(test_switch_band_down());
-    CHECK(test_cur_freq_tracking());
+    CHECK(test_cur_fg_bg_freq_tracking());
     CHECK(test_ab_freq_tracking_cur());
     CHECK(test_cur_mode_tracking());
     CHECK(test_ab_mode_tracking_cur());

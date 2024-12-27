@@ -21,6 +21,8 @@ static char         buf[1024];
 static char         tmp_buf[1024];
 static char         *last_line;
 
+static void on_mode_change(subject_t subj, void *user_data);
+
 static void check_lines() {
     char        *second_line = NULL;
     char        *ptr = (char *) &buf;
@@ -88,11 +90,12 @@ lv_obj_t * pannel_init(lv_obj_t *parent) {
     lv_obj_add_style(obj, &pannel_style, 0);
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
 
+    subject_add_observer(cfg_cur.mode, on_mode_change, NULL);
     return obj;
 }
 
 void pannel_add_text(const char * text) {
-    scheduler_put(pannel_update_cb, text, strlen(text) + 1);
+    scheduler_put((void(*)(void*))pannel_update_cb, (char *)text, strlen(text) + 1);
 }
 
 void pannel_hide() {
@@ -100,7 +103,7 @@ void pannel_hide() {
 }
 
 void pannel_visible() {
-    x6100_mode_t    mode = radio_current_mode();
+    x6100_mode_t    mode = subject_get_int(cfg_cur.mode);
     bool            on = false;
 
     switch (mode) {
@@ -125,4 +128,8 @@ void pannel_visible() {
     } else {
         lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
     }
+}
+
+static void on_mode_change(subject_t subj, void *user_data) {
+    pannel_visible();
 }

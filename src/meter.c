@@ -152,11 +152,11 @@ lv_obj_t * meter_init(lv_obj_t * parent) {
 
 void meter_update(int16_t db, float beta) {
     noise_level = spectrum_get_min();
-    if (params_band_cur_att_get()) {
+    if (subject_get_int(cfg_cur.att)) {
         db += 14;
         noise_level+= 14.0f;
     }
-    if (params_band_cur_pre_get()){
+    if (subject_get_int(cfg_cur.pre)){
         db -= 14;
         noise_level -= 14.0f;
     }

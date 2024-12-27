@@ -57,7 +57,7 @@ static void do_init() {
     }
 
     freq_index = 0;
-    freq_center = params_band_cur_freq_get();
+    freq_center = subject_get_int(cfg_cur.fg_freq);
 
     freq_start = freq_center - params.swrscan_span / 2;
     freq_stop = freq_center + params.swrscan_span / 2;

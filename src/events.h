@@ -126,7 +126,6 @@ extern uint32_t EVENT_HKEY;
 extern uint32_t EVENT_RADIO_TX;
 extern uint32_t EVENT_RADIO_RX;
 extern uint32_t EVENT_SCREEN_UPDATE;
-extern uint32_t EVENT_ATU_UPDATE;
 extern uint32_t EVENT_MSG_UPDATE;
 extern uint32_t EVENT_FREQ_UPDATE;
 extern uint32_t EVENT_GPS;

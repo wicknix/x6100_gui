@@ -27,7 +27,8 @@ static uint8_t          zoom = 1;
 
 static lv_timer_t       *timer = NULL;
 
-static void zoom_changed_cd(void * s, lv_msg_t * m);
+static void on_zoom_changed(subject_t subj, void *user_data);
+static void on_freq_changed(subject_t subj, void *user_data);
 
 static void band_info_timer(lv_timer_t *t) {
     lv_anim_set_values(&fade, lv_obj_get_style_opa(obj, 0), LV_OPA_TRANSP);
@@ -152,12 +153,13 @@ lv_obj_t * band_info_init(lv_obj_t *parent) {
     lv_anim_set_exec_cb(&fade, fade_anim);
     lv_anim_set_ready_cb(&fade, fade_ready);
 
-    lv_msg_subscribe(MSG_SPECTRUM_ZOOM_CHANGED, zoom_changed_cd, NULL);
+    subject_add_observer_and_call(cfg_cur.zoom, on_zoom_changed, NULL);
+    subject_add_observer_and_call(cfg_cur.fg_freq, on_freq_changed, NULL);
 
     return obj;
 }
 
-void band_info_update(uint64_t f) {
+void band_info_update(int32_t f) {
     if (bands != NULL) {
         for (uint16_t i = 0; i < bands_count; i++)
             free(bands[i].name);
@@ -184,6 +186,10 @@ void band_info_update(uint64_t f) {
     }
 }
 
-static void zoom_changed_cd(void * s, lv_msg_t * m) {
-    zoom = *(uint16_t *) lv_msg_get_payload(m);
+static void on_zoom_changed(subject_t subj, void *user_data) {
+    zoom = subject_get_int(subj);
+}
+
+static void on_freq_changed(subject_t subj, void *user_data) {
+    band_info_update(subject_get_int(subj));
 }

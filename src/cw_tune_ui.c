@@ -33,8 +33,7 @@ static lv_obj_t     *obj;
 static int8_t cur_freq=-100;
 
 static void update_cb(lv_event_t * e);
-static void mode_changed_cb(void * s, lv_msg_t * m);
-static void update_visibility();
+static void update_visibility(subject_t subj, void *user_data);
 
 void cw_tune_init(lv_obj_t *parent)
 {
@@ -57,8 +56,7 @@ void cw_tune_init(lv_obj_t *parent)
     lv_obj_add_style(obj, &cw_tune_style, 0);
 
     lv_obj_add_event_cb(obj, update_cb, LV_EVENT_DRAW_MAIN, NULL);
-    lv_msg_subscribe(MSG_RADIO_MODE_CHANGED, mode_changed_cb, NULL);
-    update_visibility();
+    subject_add_observer_and_call(cfg_cur.mode, update_visibility, NULL);
 }
 
 bool cw_tune_toggle(int16_t diff) {
@@ -68,7 +66,8 @@ bool cw_tune_toggle(int16_t diff) {
         params_unlock(&params.dirty.cw_tune);
         lv_msg_send(MSG_PARAM_CHANGED, NULL);
     }
-    update_visibility();
+    // TODO: replace with observer
+    update_visibility(NULL, NULL);
     return params.cw_tune;
 }
 
@@ -118,16 +117,13 @@ static void update_cb(lv_event_t * e) {
     }
 }
 
-static void mode_changed_cb(void * s, lv_msg_t * m){
-    update_visibility();
-}
-
-static void update_visibility() {
-    x6100_mode_t mode = radio_current_mode();
+static void update_visibility(subject_t subj, void *user_data) {
+    x6100_mode_t mode = subject_get_int(cfg_cur.mode);
     bool on = params.cw_tune && ((mode == x6100_mode_cw) || (mode == x6100_mode_cwr));
     if (on) {
         lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
     } else {
         lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
     }
+
 }
