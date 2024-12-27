@@ -63,6 +63,8 @@ static void on_real_filter_from_change(subject_t subj, void *user_data);
 static void on_real_filter_to_change(subject_t subj, void *user_data);
 static void on_cur_mode_change(subject_t subj, void *user_data);
 static void on_lo_offset_change(subject_t subj, void *user_data);
+static void on_grid_min_change(subject_t subj, void *user_data);
+static void on_grid_max_change(subject_t subj, void *user_data);
 
 static void spectrum_draw_cb(lv_event_t *e) {
     lv_obj_t          *obj      = lv_event_get_target(e);
@@ -267,7 +269,8 @@ lv_obj_t *spectrum_init(lv_obj_t *parent) {
     subject_add_observer_and_call(cfg_cur.filter.real.to, on_real_filter_to_change, NULL);
     subject_add_observer_and_call(cfg_cur.mode, on_cur_mode_change, NULL);
     subject_add_observer_and_call(cfg_cur.lo_offset, on_lo_offset_change, NULL);
-
+    subject_add_observer_and_call(cfg_cur.band->grid.min.val, on_grid_min_change, NULL);
+    subject_add_observer_and_call(cfg_cur.band->grid.max.val, on_grid_max_change, NULL);
     return obj;
 }
 
@@ -302,12 +305,12 @@ void spectrum_min_max_reset() {
     if (params.spectrum_auto_min.x) {
         grid_min = DEFAULT_MIN;
     } else {
-        grid_min = params_band_grid_min_get();
+        grid_min = subject_get_int(cfg_cur.band->grid.min.val);
     }
     if (params.spectrum_auto_max.x) {
         grid_max = DEFAULT_MAX;
     } else {
-        grid_max = params_band_grid_max_get();
+        grid_max = subject_get_int(cfg_cur.band->grid.max.val);
     }
 }
 
@@ -315,24 +318,12 @@ float spectrum_get_min() {
     return grid_min;
 }
 
-void spectrum_set_max(float db) {
-    if (!params.spectrum_auto_max.x) {
-        grid_max = db;
-    }
-}
-
-void spectrum_set_min(float db) {
-    if (!params.spectrum_auto_min.x) {
-        grid_min = db;
-    }
-}
-
 void spectrum_update_max(float db) {
     if (params.spectrum_auto_max.x) {
         lpf(&grid_max, db + 10.0f, 0.55f, DEFAULT_MAX);
     } else {
         // TODO: set min/max at param change
-        grid_max = params_band_grid_max_get();
+        grid_max = subject_get_int(cfg_cur.band->grid.max.val);
     }
 }
 
@@ -340,7 +331,7 @@ void spectrum_update_min(float db) {
     if (params.spectrum_auto_min.x) {
         lpf(&grid_min, db + 3.0f, 0.75f, DEFAULT_MIN);
     } else {
-        grid_min = params_band_grid_min_get();
+        grid_min = subject_get_int(cfg_cur.band->grid.min.val);
     }
 }
 
@@ -426,4 +417,14 @@ static void on_cur_mode_change(subject_t subj, void *user_data) {
 
 static void on_lo_offset_change(subject_t subj, void *user_data) {
     lo_offset = subject_get_int(subj);
+}
+static void on_grid_min_change(subject_t subj, void *user_data) {
+    if (!params.spectrum_auto_min.x) {
+        grid_min = subject_get_int(subj);
+    }
+}
+static void on_grid_max_change(subject_t subj, void *user_data) {
+    if (!params.spectrum_auto_max.x) {
+        grid_max = subject_get_int(subj);
+    }
 }

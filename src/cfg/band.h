@@ -18,9 +18,12 @@ typedef struct {
     cfg_item_t        vfo;
     cfg_item_t        split;
     cfg_item_t        rfg;
+    struct {
+        cfg_item_t min;
+        cfg_item_t max;
+    } grid;
 } cfg_band_t;
 
-
-void cfg_band_vfo_copy();
-void cfg_band_load_next(bool up);
-const char * cfg_band_label_get();
+void        cfg_band_vfo_copy();
+void        cfg_band_load_next(bool up);
+const char *cfg_band_label_get();

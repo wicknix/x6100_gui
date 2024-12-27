@@ -22,6 +22,7 @@
 #include "cw_tune_ui.h"
 #include "band_info.h"
 #include "pubsub_ids.h"
+#include "meter.h"
 
 #include "lvgl/lvgl.h"
 
@@ -38,11 +39,10 @@ void mfk_update(int16_t diff, bool voice) {
 
     switch (mfk_mode) {
         case MFK_MIN_LEVEL:
-            i = params_band_grid_min_get();
+            i = subject_get_int(cfg_cur.band->grid.min.val);
             if (diff != 0) {
-                i = params_band_grid_min_set(i + diff);
-                spectrum_set_min(i);
-                waterfall_set_min(i);
+                i = limit(i + diff, S_MIN, S7);
+                subject_set_int(cfg_cur.band->grid.min.val, i);
             }
             msg_update_text_fmt("#%3X Min level: %i dB", color, i);
 
@@ -54,11 +54,10 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_MAX_LEVEL:
-            i = params_band_grid_max_get();
+            i = subject_get_int(cfg_cur.band->grid.max.val);
             if (diff != 0) {
-                i = params_band_grid_max_set(i + diff);
-                spectrum_set_max(i);
-                waterfall_set_max(i);
+                i = limit(i + diff, S8, S9_40);
+                subject_set_int(cfg_cur.band->grid.max.val, i);
             }
             msg_update_text_fmt("#%3X Max level: %i dB", color, i);
 

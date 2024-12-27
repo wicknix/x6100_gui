@@ -22,7 +22,7 @@
 
 typedef struct {
     // params_uint64_t freq;
-    params_bool_t shift;
+    // params_bool_t shift;
     // params_uint8_t att;
     // params_uint8_t pre;
     // params_uint8_t mode;
@@ -31,36 +31,36 @@ typedef struct {
 
 typedef struct {
     // params_uint8_t vfo;
-    params_int16_t grid_min;
-    params_int16_t grid_max;
+    // params_int16_t grid_min;
+    // params_int16_t grid_max;
     // params_uint16_t rfg;
-    struct {char x[64]; bool dirty;} label;
+    // struct {char x[64]; bool dirty;} label;
 
-    params_vfo_t    vfo_x[2];
+    // params_vfo_t    vfo_x[2];
 } params_band_t;
 
 static uint16_t band_id;
 static params_band_t params_band = {
     // .vfo                = {.x=X6100_VFO_A, .dirty=false},
 
-    .vfo_x[X6100_VFO_A] = {
+    // .vfo_x[X6100_VFO_A] = {
         // .freq           = {.x=14000000, .dirty=false},
         // .att            = {.x=x6100_att_off, .dirty=false},
         // .pre            = {.x=x6100_pre_off, .dirty=false},
         // .mode           = {.x=x6100_mode_usb, .dirty=false},
         // .agc            = {.x=x6100_agc_fast, .dirty=false}
-    },
+    // },
 
-    .vfo_x[X6100_VFO_B] = {
+    // .vfo_x[X6100_VFO_B] = {
         // .freq           = {.x=14100000, .dirty=false},
         // .att            = {.x=x6100_att_off, .dirty=false},
         // .pre            = {.x=x6100_pre_off, .dirty=false},
         // .mode           = {.x=x6100_mode_usb, .dirty=false},
         // .agc            = {.x=x6100_agc_fast, .dirty=false}
-    },
+    // },
 
-    .grid_min           = {.x=-121, .dirty=false},
-    .grid_max           = {.x=-73, .dirty=false},
+    // .grid_min           = {.x=-121, .dirty=false},
+    // .grid_max           = {.x=-73, .dirty=false},
     // .rfg                = {.x=63, .dirty=false},
 };
 
@@ -85,20 +85,20 @@ void params_memory_load(uint16_t id) {
     params_mb_load(stmt);
 }
 
-void params_band_load(uint16_t id) {
-    sqlite3_stmt *stmt;
-    band_id = id;
+// void params_band_load(uint16_t id) {
+//     sqlite3_stmt *stmt;
+//     band_id = id;
 
-    int rc = sqlite3_prepare_v2(db, "SELECT name,val FROM band_params WHERE bands_id = ?", -1, &stmt, 0);
+//     int rc = sqlite3_prepare_v2(db, "SELECT name,val FROM band_params WHERE bands_id = ?", -1, &stmt, 0);
 
-    if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Prepare");
-        return;
-    }
+//     if (rc != SQLITE_OK) {
+//         LV_LOG_ERROR("Prepare");
+//         return;
+//     }
 
-    sqlite3_bind_int(stmt, 1, id);
-    params_mb_load(stmt);
-}
+//     sqlite3_bind_int(stmt, 1, id);
+//     params_mb_load(stmt);
+// }
 
 static void params_mb_load(sqlite3_stmt *stmt) {
     bool copy_freq = true;
@@ -107,7 +107,7 @@ static void params_mb_load(sqlite3_stmt *stmt) {
     bool copy_mode = true;
     bool copy_agc = true;
 
-    memset(params_band.label.x, 0, sizeof(params_band.label.x));
+    // memset(params_band.label.x, 0, sizeof(params_band.label.x));
 
     while (sqlite3_step(stmt) != SQLITE_DONE) {
         const char *name = sqlite3_column_text(stmt, 0);
@@ -149,12 +149,12 @@ static void params_mb_load(sqlite3_stmt *stmt) {
         // } else if (strcmp(name, "vfob_agc") == 0) {
         //     params_band.vfo_x[X6100_VFO_B].agc.x = sqlite3_column_int(stmt, 1);
         //     copy_agc = false;
-        } else if (strcmp(name, "grid_min") == 0) {
-            params_band.grid_min.x = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "grid_max") == 0) {
-            params_band.grid_max.x = sqlite3_column_int(stmt, 1);
-        } else if (strcmp(name, "label") == 0) {
-            strncpy(params_band.label.x, sqlite3_column_text(stmt, 1), sizeof(params_band.label) - 1);
+        // } else if (strcmp(name, "grid_min") == 0) {
+        //     params_band.grid_min.x = sqlite3_column_int(stmt, 1);
+        // } else if (strcmp(name, "grid_max") == 0) {
+        //     params_band.grid_max.x = sqlite3_column_int(stmt, 1);
+        // } else if (strcmp(name, "label") == 0) {
+        //     strncpy(params_band.label.x, sqlite3_column_text(stmt, 1), sizeof(params_band.label) - 1);
         // } else if (strcmp(name, "rfg") == 0) {
         //     params_band.rfg.x = sqlite3_column_int64(stmt, 1);
         }
@@ -191,17 +191,17 @@ static void params_mb_write_int64(uint16_t id, const char *name, uint64_t data, 
     *dirty = false;
 }
 
-void params_band_save(uint16_t id) {
-    if (!sql_query_exec("BEGIN")) {
-        return;
-    }
+// void params_band_save(uint16_t id) {
+//     if (!sql_query_exec("BEGIN")) {
+//         return;
+//     }
 
-    sqlite3_prepare_v2(db, "INSERT INTO band_params(bands_id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
+//     sqlite3_prepare_v2(db, "INSERT INTO band_params(bands_id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
 
-    params_mb_save(id);
-    sql_query_exec("COMMIT");
-    sqlite3_finalize(write_mb_stmt);
-}
+//     params_mb_save(id);
+//     sql_query_exec("COMMIT");
+//     sqlite3_finalize(write_mb_stmt);
+// }
 
 void params_memory_save(uint16_t id) {
     if (!sql_query_exec("BEGIN")) {
@@ -220,8 +220,8 @@ void params_memory_save(uint16_t id) {
         // params_band.vfo_x[i].agc.dirty = true;
     }
 
-    params_band.grid_min.dirty = true;
-    params_band.grid_max.dirty = true;
+    // params_band.grid_min.dirty = true;
+    // params_band.grid_max.dirty = true;
     // params_band.rfg.dirty = true;
 
     params_mb_save(id);
@@ -265,11 +265,11 @@ static void params_mb_save(uint16_t id) {
     //     params_mb_write_int(id, "vfob_agc", params_band.vfo_x[X6100_VFO_B].agc.x, &params_band.vfo_x[X6100_VFO_B].agc.dirty);
 
 
-    if (params_band.grid_min.dirty)
-        params_mb_write_int(id, "grid_min", params_band.grid_min.x, &params_band.grid_min.dirty);
+    // if (params_band.grid_min.dirty)
+    //     params_mb_write_int(id, "grid_min", params_band.grid_min.x, &params_band.grid_min.dirty);
 
-    if (params_band.grid_max.dirty)
-        params_mb_write_int(id, "grid_max", params_band.grid_max.x, &params_band.grid_max.dirty);
+    // if (params_band.grid_max.dirty)
+    //     params_mb_write_int(id, "grid_max", params_band.grid_max.x, &params_band.grid_max.dirty);
 
     // if (params_band.rfg.dirty)
     //     params_mb_write_int(id, "rfg", params_band.rfg.x, &params_band.rfg.dirty);
@@ -304,18 +304,18 @@ bool params_digital_load(int8_t dir, params_digital_type_t type) {
     rc = sqlite3_step(stmt);
     if (rc == SQLITE_DONE) {
         res = false;
-    } else {
-        strcpy(params_band.label.x, sqlite3_column_text(stmt, 0));
-        // params_band.vfo_x[params_band.vfo.x].freq.x = sqlite3_column_int64(stmt, 1);
-        // params_band.vfo_x[params_band.vfo.x].mode.x = sqlite3_column_int(stmt, 2);
-        res = true;
+    // } else {
+    //     strcpy(params_band.label.x, sqlite3_column_text(stmt, 0));
+    //     // params_band.vfo_x[params_band.vfo.x].freq.x = sqlite3_column_int64(stmt, 1);
+    //     // params_band.vfo_x[params_band.vfo.x].mode.x = sqlite3_column_int(stmt, 2);
+    //     res = true;
     }
     sqlite3_finalize(stmt);
     return res;
 }
 
-void params_band_vfo_clone()
-{
+// void params_band_vfo_clone()
+// {
     // params_vfo_t *a = &params_band.vfo_x[X6100_VFO_A];
     // params_vfo_t *b = &params_band.vfo_x[X6100_VFO_B];
     // params_vfo_t *changed;
@@ -332,7 +332,7 @@ void params_band_vfo_clone()
     // changed->pre.dirty = true;
     // // changed->mode.dirty = true;
     // // changed->agc.dirty = true;
-}
+// }
 
 // static params_vfo_t * get_cur_vfo_params() {
 //     return &params_band.vfo_x[params_band.vfo.x];
@@ -385,16 +385,16 @@ void params_band_vfo_clone()
 //     return params_band.vfo_x[vfo].att.x;
 // }
 
-bool params_band_vfo_shift_set(x6100_vfo_t vfo, bool shift)
-{
-    if (params_band.vfo_x[vfo].shift.x != shift) {
-        params_lock();
-        params_band.vfo_x[vfo].shift.x = shift;
-        params_band.vfo_x[vfo].shift.dirty = true;
-        params_unlock(NULL);
-    }
-    return params_band.vfo_x[vfo].shift.x;
-}
+// bool params_band_vfo_shift_set(x6100_vfo_t vfo, bool shift)
+// {
+//     if (params_band.vfo_x[vfo].shift.x != shift) {
+//         params_lock();
+//         params_band.vfo_x[vfo].shift.x = shift;
+//         params_band.vfo_x[vfo].shift.dirty = true;
+//         params_unlock(NULL);
+//     }
+//     return params_band.vfo_x[vfo].shift.x;
+// }
 
 // x6100_vfo_t params_band_vfo_get()
 // {
@@ -539,46 +539,46 @@ bool params_band_vfo_shift_set(x6100_vfo_t vfo, bool shift)
 //     return params_band.label.x;
 // }
 
-int16_t params_band_grid_min_get()
-{
-    return params_band.grid_min.x;
-}
+// int16_t params_band_grid_min_get()
+// {
+//     return params_band.grid_min.x;
+// }
 
-int16_t params_band_grid_min_set(int16_t db)
-{
-    if (db > S7) {
-        db = S7;
-    } else if (db < S_MIN) {
-        db = S_MIN;
-    }
-    if ((params_band.grid_min.x != db) && (db < params_band.grid_max.x)) {
-        params_lock();
-        params_band.grid_min.x = db;
-        params_band.grid_min.dirty = true;
-        params_unlock(NULL);
-    }
+// int16_t params_band_grid_min_set(int16_t db)
+// {
+//     if (db > S7) {
+//         db = S7;
+//     } else if (db < S_MIN) {
+//         db = S_MIN;
+//     }
+//     if ((params_band.grid_min.x != db) && (db < params_band.grid_max.x)) {
+//         params_lock();
+//         params_band.grid_min.x = db;
+//         params_band.grid_min.dirty = true;
+//         params_unlock(NULL);
+//     }
 
-    return params_band.grid_min.x;
-}
+//     return params_band.grid_min.x;
+// }
 
-int16_t params_band_grid_max_get()
-{
-    return params_band.grid_max.x;
-}
+// int16_t params_band_grid_max_get()
+// {
+//     return params_band.grid_max.x;
+// }
 
-int16_t params_band_grid_max_set(int16_t db)
-{
-    if (db > S9_40) {
-        db = S9_40;
-    } else if (db < S8) {
-        db = S8;
-    }
-    if ((params_band.grid_max.x != db) && (db > params_band.grid_min.x)) {
-        params_lock();
-        params_band.grid_max.x = db;
-        params_band.grid_max.dirty = true;
-        params_unlock(NULL);
-    }
+// int16_t params_band_grid_max_set(int16_t db)
+// {
+//     if (db > S9_40) {
+//         db = S9_40;
+//     } else if (db < S8) {
+//         db = S8;
+//     }
+//     if ((params_band.grid_max.x != db) && (db > params_band.grid_min.x)) {
+//         params_lock();
+//         params_band.grid_max.x = db;
+//         params_band.grid_max.dirty = true;
+//         params_unlock(NULL);
+//     }
 
-    return params_band.grid_max.x;
-}
+//     return params_band.grid_max.x;
+// }

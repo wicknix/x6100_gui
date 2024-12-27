@@ -64,6 +64,8 @@ static void redraw_cb(lv_event_t * e);
 static void on_zoom_changed(subject_t subj, void *user_data);
 static void on_fg_freq_change(subject_t subj, void *user_data);
 static void on_lo_offset_change(subject_t subj, void *user_data);
+static void on_grid_min_change(subject_t subj, void *user_data);
+static void on_grid_max_change(subject_t subj, void *user_data);
 
 
 lv_obj_t * waterfall_init(lv_obj_t * parent) {
@@ -84,6 +86,8 @@ lv_obj_t * waterfall_init(lv_obj_t * parent) {
 
     subject_add_observer_and_call(cfg_cur.zoom, on_zoom_changed, NULL);
     subject_add_observer_and_call(cfg_cur.lo_offset, on_lo_offset_change, NULL);
+    subject_add_observer_and_call(cfg_cur.band->grid.min.val, on_grid_min_change, NULL);
+    subject_add_observer_and_call(cfg_cur.band->grid.max.val, on_grid_max_change, NULL);
 
     return obj;
 }
@@ -193,24 +197,12 @@ void waterfall_min_max_reset() {
     if (params.waterfall_auto_min.x) {
         grid_min = DEFAULT_MIN;
     } else {
-        grid_min = params_band_grid_min_get();
+        grid_min = subject_get_int(cfg_cur.band->grid.min.val);
     }
     if (params.waterfall_auto_max.x) {
         grid_max = DEFAULT_MAX;
     } else {
-        grid_max = params_band_grid_max_get();
-    }
-}
-
-void waterfall_set_max(float db) {
-    if (!params.waterfall_auto_max.x) {
-        grid_max = db;
-    }
-}
-
-void waterfall_set_min(float db) {
-    if (!params.waterfall_auto_min.x) {
-        grid_min = db;
+        grid_max = subject_get_int(cfg_cur.band->grid.max.val);
     }
 }
 
@@ -219,7 +211,7 @@ void waterfall_update_max(float db) {
         lpf(&grid_max, db + 3.0f, 0.85f, DEFAULT_MAX);
     } else {
         // TODO: set min/max at param change
-        grid_max = params_band_grid_max_get();
+        grid_max = subject_get_int(cfg_cur.band->grid.max.val);
     }
 }
 
@@ -227,7 +219,7 @@ void waterfall_update_min(float db) {
     if (params.waterfall_auto_min.x) {
         lpf(&grid_min, db + 3.0f, 0.95f, DEFAULT_MIN);
     } else {
-        grid_min = params_band_grid_min_get();
+        grid_min = subject_get_int(cfg_cur.band->grid.min.val);
     }
 }
 
@@ -301,4 +293,14 @@ static void on_fg_freq_change(subject_t subj, void *user_data) {
 
 static void on_lo_offset_change(subject_t subj, void *user_data) {
     lo_offset = subject_get_int(subj);
+}
+static void on_grid_min_change(subject_t subj, void *user_data) {
+    if (!params.waterfall_auto_min.x) {
+        grid_min = subject_get_int(subj);
+    }
+}
+static void on_grid_max_change(subject_t subj, void *user_data) {
+    if (!params.waterfall_auto_max.x) {
+        grid_max = subject_get_int(subj);
+    }
 }

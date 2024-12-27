@@ -224,9 +224,10 @@ static bool params_load() {
         const int64_t   l = sqlite3_column_int64(stmt, 1);
         const char      *t = sqlite3_column_text(stmt, 1);
 
-        if (strcmp(name, "band") == 0) {
-            params.band_id = i;
-            params_band_load(i);
+        if (false) {
+        // if (strcmp(name, "band") == 0) {
+        //     params.band_id = i;
+        //     // params_band_load(i);
         } else if (strcmp(name, "sql") == 0) {
             params.sql = i;
         } else if (strcmp(name, "pwr") == 0) {
@@ -572,7 +573,7 @@ static void * params_thread(void *arg) {
         pthread_mutex_lock(&params_mux);
         if (params_ready_to_save()){
             params_save();
-            params_band_save(params.band_id);
+            // params_band_save(params.band_id);
             // params_mode_save();
         }
         pthread_mutex_unlock(&params_mux);

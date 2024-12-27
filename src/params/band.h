@@ -18,8 +18,8 @@ typedef enum {
 void params_memory_load(uint16_t id);
 void params_memory_save(uint16_t id);
 
-void params_band_load(uint16_t id);
-void params_band_save(uint16_t id);
+// void params_band_load(uint16_t id);
+// void params_band_save(uint16_t id);
 
 bool params_digital_load(int8_t dir, params_digital_type_t type);
 
@@ -64,10 +64,10 @@ bool params_digital_load(int8_t dir, params_digital_type_t type);
 
 // const char * params_band_label_get();
 
-int16_t params_band_grid_min_get();
-int16_t params_band_grid_min_set(int16_t db);
-int16_t params_band_grid_max_get();
-int16_t params_band_grid_max_set(int16_t db);
+// int16_t params_band_grid_min_get();
+// int16_t params_band_grid_min_set(int16_t db);
+// int16_t params_band_grid_max_get();
+// int16_t params_band_grid_max_set(int16_t db);
 
 
 // void params_band_vfo_clone();

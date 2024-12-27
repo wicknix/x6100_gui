@@ -99,6 +99,9 @@ void cfg_band_params_init(sqlite3 *database) {
     cfg_band.vfo_b.att  = (cfg_item_t){.val = subject_create_int(x6100_att_off), .db_name = "vfob_att", .pk = band_id};
     cfg_band.vfo_b.pre  = (cfg_item_t){.val = subject_create_int(x6100_pre_off), .db_name = "vfob_pre", .pk = band_id};
 
+    cfg_band.grid.min = (cfg_item_t){.val = subject_create_int(-121), .db_name = "grid_min", .pk = band_id};
+    cfg_band.grid.max = (cfg_item_t){.val = subject_create_int(-73), .db_name = "grid_max", .pk = band_id};
+
     cfg_band.vfo   = (cfg_item_t){.val = subject_create_int(X6100_VFO_A), .db_name = "vfo", .pk = band_id};
     cfg_band.split = (cfg_item_t){.val = subject_create_int(false), .db_name = "split", .pk = band_id};
     cfg_band.rfg   = (cfg_item_t){.val = subject_create_int(100), .db_name = "rfg", .pk = band_id};
