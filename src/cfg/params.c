@@ -43,15 +43,20 @@ int cfg_params_load_item(cfg_item_t *item) {
         pthread_mutex_unlock(&read_mutex);
         return rc;
     }
-
+    int32_t int_val;
+    uint64_t uint64_val;
     rc = sqlite3_step(read_stmt);
     if (rc == SQLITE_ROW) {
         switch (item->val->dtype) {
             case DTYPE_INT:
-                subject_set_int(item->val, sqlite3_column_int(read_stmt, 0));
+                int_val = sqlite3_column_int(read_stmt, 0);
+                LV_LOG_USER("Loaded %s=%i (pk=%i)", item->db_name, int_val, item->pk);
+                subject_set_int(item->val, int_val);
                 break;
             case DTYPE_UINT64:
-                subject_set_uint64(item->val, sqlite3_column_int64(read_stmt, 0));
+                uint64_val = sqlite3_column_int64(read_stmt, 0);
+                LV_LOG_USER("Loaded %s=%llu (pk=%i)", item->db_name, uint64_val, item->pk);
+                subject_set_uint64(item->val, uint64_val);
                 break;
             default:
                 LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, item->val->dtype);
@@ -106,6 +111,11 @@ int cfg_params_save_item(cfg_item_t *item) {
         if (rc != SQLITE_DONE) {
             LV_LOG_ERROR("Failed save item %s: %s", item->db_name, sqlite3_errmsg(db));
         } else {
+            if (item->val->dtype == DTYPE_INT) {
+                LV_LOG_USER("Saved %s=%i (pk=%i)", item->db_name, item->val->int_val, item->pk);
+            } else {
+                LV_LOG_USER("Saved %s=%llu (pk=%i)", item->db_name, item->val->uint64_val, item->pk);
+            }
             rc = 0;
         }
     }

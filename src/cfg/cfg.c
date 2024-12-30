@@ -24,14 +24,13 @@ static int init_params_cfg(sqlite3 *db);
 // static int init_band_cfg(sqlite3 *db);
 // static int init_mode_cfg(sqlite3 *db);
 
-// static
-static void  save_items_to_db(cfg_item_t *cfg_arr, uint32_t cfg_size);
+
 static void *params_save_thread(void *arg);
 
 static void on_key_tone_change(subject_t subj, void *user_data);
 static void on_item_change(subject_t subj, void *user_data);
 static void on_vfo_change(subject_t subj, void *user_data);
-static void on_band_id_change(subject_t subj, void *user_data);
+// static void on_band_id_change(subject_t subj, void *user_data);
 static void on_ab_freq_change(subject_t subj, void *user_data);
 static void on_ab_mode_change(subject_t subj, void *user_data);
 static void update_cur_low_filter(subject_t subj, void *user_data);
@@ -47,14 +46,6 @@ static void on_cur_filter_bw_change(subject_t subj, void *user_data);
 static void on_cur_freq_step_change(subject_t subj, void *user_data);
 static void on_cur_zoom_change(subject_t subj, void *user_data);
 
-/*
-
-select band (on cfg->band_id change)
-* save cur band params using pk (check that freq is within range)
-* update pk from band_id
-* load band params (if band_id != -1)
-
- */
 
 // #define TEST_CFG
 #ifdef TEST_CFG
@@ -107,7 +98,7 @@ static void on_item_change(subject_t subj, void *user_data) {
     pthread_mutex_lock(&item->dirty->mux);
     if (item->dirty->val != ITEM_STATE_LOADING) {
         item->dirty->val = ITEM_STATE_CHANGED;
-        LV_LOG_USER("set %s: %i dirty", item->db_name, item->pk);
+        LV_LOG_INFO("Set dirty %s (pk=%i)", item->db_name, item->pk);
     }
     pthread_mutex_unlock(&item->dirty->mux);
 }
@@ -133,30 +124,6 @@ static void on_key_tone_change(subject_t subj, void *user_data) {
 }
 
 /**
- * Change freq/mode on changing band
- */
-static void on_band_id_change(subject_t subj, void *user_data) {
-    if (cfg_band.vfo_a.freq.dirty == NULL) {
-        LV_LOG_USER("Skip updating cfg_band, not initialized");
-        return;
-    }
-    cfg_item_t *cfg_band_arr;
-    cfg_band_arr           = (cfg_item_t *)&cfg_band;
-    uint32_t cfg_band_size = sizeof(cfg_band) / sizeof(cfg_item_t);
-
-    LV_LOG_INFO("Save band params for %u", cfg_band_arr[0].pk);
-    save_items_to_db(cfg_band_arr, cfg_band_size);
-    int32_t new_band_id = subject_get_int(subj);
-    if (new_band_id == BAND_UNDEFINED)
-        return;
-    for (size_t i = 0; i < cfg_band_size; i++) {
-        cfg_band_arr[i].pk = new_band_id;
-    }
-    LV_LOG_INFO("Load band params for %u", cfg_band_arr[0].pk);
-    load_items_from_db(cfg_band_arr, cfg_band_size);
-}
-
-/**
  * Init cfg items
  */
 void init_items(cfg_item_t *cfg_arr, uint32_t count, int (*load)(struct cfg_item_t *item),
@@ -176,11 +143,12 @@ void init_items(cfg_item_t *cfg_arr, uint32_t count, int (*load)(struct cfg_item
 int load_items_from_db(cfg_item_t *cfg_arr, uint32_t count) {
     int rc;
     for (size_t i = 0; i < count; i++) {
-        LV_LOG_INFO("Loading %s from db", cfg_arr[i].db_name);
         cfg_arr[i].dirty->val = ITEM_STATE_LOADING;
         rc = cfg_arr[i].load(&cfg_arr[i]);
         if (rc != 0) {
-            LV_LOG_USER("Can't load %s", cfg_arr[i].db_name);
+            LV_LOG_USER("Can't load %s (pk=%i)", cfg_arr[i].db_name, cfg_arr[i].pk);
+        } else {
+
         }
         cfg_arr[i].dirty->val = ITEM_STATE_CLEAN;
     }
@@ -195,17 +163,16 @@ void save_item_to_db(cfg_item_t *item, bool force) {
     int rc;
     pthread_mutex_lock(&item->dirty->mux);
     if ((item->dirty->val == ITEM_STATE_CHANGED) || force) {
-        LV_LOG_USER("Save %s to db with %i", item->db_name, item->val->int_val);
         rc = item->save(item);
         if (rc != 0) {
-            LV_LOG_USER("Can't save %s", item->db_name);
+            LV_LOG_USER("Can't save %s (pk=%i)", item->db_name, item->pk);
         }
         item->dirty->val = ITEM_STATE_CLEAN;
     }
     pthread_mutex_unlock(&item->dirty->mux);
 }
 
-static void save_items_to_db(cfg_item_t *cfg_arr, uint32_t cfg_size) {
+void save_items_to_db(cfg_item_t *cfg_arr, uint32_t cfg_size) {
     int rc;
     for (size_t i = 0; i < cfg_size; i++) {
         save_item_to_db(&cfg_arr[i], false);
@@ -256,7 +223,7 @@ static int init_params_cfg(sqlite3 *db) {
     cfg.atu_enabled = (cfg_item_t){.val = subject_create_int(false), .db_name = "atu"};
 
     /* Bind callbacks */
-    subject_add_observer(cfg.band_id.val, on_band_id_change, NULL);
+    // subject_add_observer(cfg.band_id.val, on_band_id_change, NULL);
     subject_add_observer(cfg.key_tone.val, on_key_tone_change, NULL);
 
     /* Load values from table */

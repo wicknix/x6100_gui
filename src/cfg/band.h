@@ -2,7 +2,15 @@
 
 #include "common.h"
 
-typedef struct cfg_item_t cfg_item_t;
+#include <aether_radio/x6100_control/control.h>
+
+typedef struct {
+    int32_t  id;
+    char    *name;
+    uint32_t start_freq;
+    uint32_t stop_freq;
+    int32_t  active;
+} band_info_t;
 
 struct vfo_params {
     cfg_item_t freq;
@@ -24,6 +32,9 @@ typedef struct {
     } grid;
 } cfg_band_t;
 
+void cfg_band_set_freq_for_vfo(x6100_vfo_t vfo, int32_t freq);
+
 void        cfg_band_vfo_copy();
 void        cfg_band_load_next(bool up);
 const char *cfg_band_label_get();
+uint32_t    cfg_band_read_all_bands(band_info_t **results, int32_t *cap);

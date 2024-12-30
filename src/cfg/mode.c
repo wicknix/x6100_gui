@@ -139,7 +139,7 @@ int cfg_mode_params_load_item(cfg_item_t *item) {
                 if (val < 0) {
                     LV_LOG_WARN("%s can't be negative (%i), ignore DB value", item->db_name, val);
                 } else {
-                    printf("loaded %i for %s (%u)\n", val, item->db_name, item->pk);
+                    LV_LOG_USER("Loaded %s=%i (pk=%u)", item->db_name, val, item->pk);
                     subject_set_int(item->val, val);
                 }
                 break;
@@ -199,7 +199,7 @@ int cfg_mode_params_save_item(cfg_item_t *item) {
                 pthread_mutex_unlock(&write_mutex);
                 return -1;
             } else {
-                printf("saved %i for %s (%u)\n", item->val->int_val, item->db_name, item->pk);
+                LV_LOG_USER("Saved %s=%i (pk=%u)", item->db_name, item->val->int_val, item->pk);
                 rc = sqlite3_bind_int(stmt, val_index, item->val->int_val);
             }
             break;
@@ -358,7 +358,7 @@ static void on_cur_mode_change(subject_t subj, void *user_data) {
     // Save
     for (size_t i = 0; i < cfg_mode_size; i++) {
         if (cfg_mode_arr[i].pk != db_mode) {
-            save_item_to_db(&cfg_mode_arr[i], true);
+            save_item_to_db(&cfg_mode_arr[i], false);
         }
     }
     // Load
@@ -487,7 +487,7 @@ static void update_cur_high_filter(subject_t subj, void *user_data) {
         default:
             break;
     }
-    LV_LOG_INFO("Set current high filter: %i", cur_low);
+    LV_LOG_USER("Set current high filter: %i", cur_high);
     subject_set_int(cfg_cur.filter.high, cur_high);
 }
 
@@ -533,7 +533,7 @@ static void update_real_filters(subject_t subj, void *user_data) {
             LV_LOG_WARN("Unknown modulation: %u, filters will no be updated", mode);
             return;
     }
-    printf("Set real filters: %i - %i\n", from, to);
+    LV_LOG_INFO("Set real filters: (%i, %i)", from, to);
     subject_set_int(cfg_cur.filter.real.from, from);
     subject_set_int(cfg_cur.filter.real.to, to);
 }

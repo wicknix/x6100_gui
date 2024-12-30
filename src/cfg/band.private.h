@@ -2,17 +2,9 @@
 
 #include "band.h"
 
-#define BAND_UNDEFINED -1
-
 #include <sqlite3.h>
 
-typedef struct {
-    int32_t  id;
-    char    *name;
-    uint32_t start_freq;
-    uint32_t stop_freq;
-    int32_t  active;
-} band_info_t;
+#define BAND_UNDEFINED -1
 
 extern cfg_band_t cfg_band;
 

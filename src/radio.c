@@ -254,7 +254,7 @@ static void update_agc_time(subject_t subj, void *user_data) {
             }
             break;
     }
-    LV_LOG_USER("Set agc time: %u for agc: %i\n", agc_time, agc);
+    LV_LOG_USER("Set agc time=%u for agc: %i\n", agc_time, agc);
     WITH_RADIO_LOCK(x6100_control_agc_time_set(agc_time));
 }
 

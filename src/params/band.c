@@ -20,14 +20,14 @@
 #include <lvgl/lvgl.h>
 #include <stdio.h>
 
-typedef struct {
-    // params_uint64_t freq;
-    // params_bool_t shift;
-    // params_uint8_t att;
-    // params_uint8_t pre;
-    // params_uint8_t mode;
-    // params_uint8_t agc;
-} params_vfo_t;
+// typedef struct {
+//     // params_uint64_t freq;
+//     // params_bool_t shift;
+//     // params_uint8_t att;
+//     // params_uint8_t pre;
+//     // params_uint8_t mode;
+//     // params_uint8_t agc;
+// } params_vfo_t;
 
 typedef struct {
     // params_uint8_t vfo;
