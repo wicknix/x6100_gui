@@ -208,7 +208,7 @@ static void write_int(FILE *fd, const char * key, int val) {
 }
 
 static void write_date_time(FILE *fd, time_t time) {
-    struct tm *ts = localtime(&time);
+    struct tm *ts = gmtime(&time);
     fprintf(fd, "<QSO_DATE:8>%04i%02i%02i", ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday);
     fprintf(fd, "<QSO_DATE_OFF:8>%04i%02i%02i", ts->tm_year + 1900, ts->tm_mon + 1, ts->tm_mday);
     fprintf(fd, "<TIME_ON:4>%02i%02i", ts->tm_hour, ts->tm_min);
