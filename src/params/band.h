@@ -10,10 +10,10 @@
 #include <stdbool.h>
 #include <aether_radio/x6100_control/control.h>
 
-typedef enum {
-    PARAMS_DIGI_TYPE_FT8,
-    PARAMS_DIGI_TYPE_FT4,
-} params_digital_type_t;
+// typedef enum {
+//     PARAMS_DIGI_TYPE_FT8,
+//     PARAMS_DIGI_TYPE_FT4,
+// } params_digital_type_t;
 
 // void params_memory_load(uint16_t id);
 // void params_memory_save(uint16_t id);
@@ -21,7 +21,7 @@ typedef enum {
 // void params_band_load(uint16_t id);
 // void params_band_save(uint16_t id);
 
-bool params_digital_load(int8_t dir, params_digital_type_t type);
+// bool params_digital_load(int8_t dir, params_digital_type_t type);
 
 /* Custom vfo params get/set */
 

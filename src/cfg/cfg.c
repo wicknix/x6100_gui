@@ -7,6 +7,7 @@
 #include "subjects.private.h"
 #include "transverter.private.h"
 #include "memory.private.h"
+#include "digital_modes.private.h"
 
 #include "../lvgl/lvgl.h"
 #include "../util.h"
@@ -81,6 +82,7 @@ int cfg_init(sqlite3 *db) {
 
     cfg_transverter_init(db);
     cfg_memory_init(db);
+    cfg_digital_modes_init(db);
 
     pthread_t thread;
     pthread_create(&thread, NULL, params_save_thread, NULL);

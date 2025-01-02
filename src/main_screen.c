@@ -101,14 +101,14 @@ void mem_save(uint16_t id) {
     }
 }
 
-bool digital_load(params_digital_type_t type, int8_t dir) {
-    bool res = params_digital_load(dir, type);
-    if (res) {
-        // change_band_setup();
-        msg_update_text_fmt("%s", cfg_band_label_get());
-    }
-    return res;
-}
+// bool digital_load(cfg_digital_type_t type, int8_t dir) {
+//     bool res = cfg_digital_load(dir, type);
+//     if (res) {
+//         // change_band_setup();
+//         msg_update_text_fmt("%s", cfg_digital_label_get());
+//     }
+//     return res;
+// }
 
 // static void change_band_setup() {
 //     if (params_bands_find(params_band_cur_freq_get())) {

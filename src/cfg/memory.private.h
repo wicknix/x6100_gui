@@ -1,3 +1,5 @@
+#pragma once
+
 #include "memory.h"
 
 #include <sqlite3.h>

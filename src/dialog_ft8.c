@@ -15,6 +15,7 @@
 #include "dialog.h"
 #include "styles.h"
 #include "params/params.h"
+#include "cfg/digital_modes.h"
 #include "radio.h"
 #include "audio.h"
 #include "keyboard.h"
@@ -484,19 +485,22 @@ static void destruct_cb() {
 }
 
 static void load_band(int8_t dir) {
-    params_digital_type_t type;
+    cfg_digital_type_t type;
     switch (params.ft8_protocol) {
         case FTX_PROTOCOL_FT8:
-            type = PARAMS_DIGI_TYPE_FT8;
+            type = CFG_DIG_TYPE_FT8;
             lv_finder_set_width(finder, FT8_WIDTH_HZ);
             break;
 
         case FTX_PROTOCOL_FT4:
-            type = PARAMS_DIGI_TYPE_FT4;
+            type = CFG_DIG_TYPE_FT4;
             lv_finder_set_width(finder, FT4_WIDTH_HZ);
             break;
     }
-    digital_load(type, dir);
+    bool res = cfg_digital_load(dir, type);
+    if (res) {
+        msg_update_text_fmt("%s", cfg_digital_label_get());
+    }
 }
 
 /// @brief Clean waterfall and table
@@ -1212,7 +1216,7 @@ static void * decode_thread(void *arg) {
                 state = RX_PROCESS;
                 if ((!have_tx_msg || !tx_enabled)) {
                     ts = localtime(&now.tv_sec);
-                    add_info("RX %s %02i:%02i:%02i", cfg_band_label_get(),
+                    add_info("RX %s %02i:%02i:%02i", cfg_digital_label_get(),
                         ts->tm_hour, ts->tm_min, ts->tm_sec);
                 }
             }
