@@ -15,8 +15,8 @@ typedef enum {
     PARAMS_DIGI_TYPE_FT4,
 } params_digital_type_t;
 
-void params_memory_load(uint16_t id);
-void params_memory_save(uint16_t id);
+// void params_memory_load(uint16_t id);
+// void params_memory_save(uint16_t id);
 
 // void params_band_load(uint16_t id);
 // void params_band_save(uint16_t id);

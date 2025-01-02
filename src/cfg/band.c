@@ -148,17 +148,10 @@ void cfg_band_set_freq_for_vfo(x6100_vfo_t vfo, int32_t freq) {
         cfg_band.vfo.pk = new_band_id;
         save_item_to_db(&cfg_band.vfo, true);
         // save old freq and update band_id
-        cfg_item_t *cfg_arr      = (cfg_item_t *)&cfg_band;
-        int32_t     cfg_arr_size = sizeof(cfg_band) / sizeof(*cfg_arr);
-
-        LV_LOG_USER("Save band params for %i", cfg_arr[0].pk);
-        for (size_t i = 0; i < cfg_arr_size; i++) {
-            save_item_to_db(&cfg_arr[i], false);
-            cfg_arr[i].pk = new_band_id;
-        }
+        cfg_band_params_save_all();
+        cfg_band_params_change_pk(new_band_id);
         if (new_band_id != BAND_UNDEFINED) {
-            LV_LOG_USER("Load band params for %i", cfg_arr[0].pk);
-            load_items_from_db(cfg_arr, cfg_arr_size);
+            cfg_band_params_load_all();
         }
         subject_set_int(cfg.band_id.val, new_band_id);
     }
@@ -359,6 +352,33 @@ uint32_t cfg_band_read_all_bands(band_info_t **results, int32_t *cap) {
     }
     sqlite3_reset(stmt);
     return i;
+}
+
+void cfg_band_params_save_all() {
+    cfg_item_t *cfg_arr      = (cfg_item_t *)&cfg_band;
+    int32_t     cfg_arr_size = sizeof(cfg_band) / sizeof(*cfg_arr);
+
+    LV_LOG_USER("Save band params for pk=%i", cfg_arr[0].pk);
+    for (size_t i = 0; i < cfg_arr_size; i++) {
+        save_item_to_db(&cfg_arr[i], false);
+    }
+}
+
+void cfg_band_params_change_pk(int32_t pk) {
+    cfg_item_t *cfg_arr      = (cfg_item_t *)&cfg_band;
+    int32_t     cfg_arr_size = sizeof(cfg_band) / sizeof(*cfg_arr);
+
+    LV_LOG_USER("Set pk=%i for band params", pk);
+    for (size_t i = 0; i < cfg_arr_size; i++) {
+        cfg_arr[i].pk = pk;
+    }
+}
+
+void cfg_band_params_load_all() {
+    cfg_item_t *cfg_arr      = (cfg_item_t *)&cfg_band;
+    int32_t     cfg_arr_size = sizeof(cfg_band) / sizeof(*cfg_arr);
+    LV_LOG_USER("Load band params for pk=%i", cfg_arr[0].pk);
+    load_items_from_db(cfg_arr, cfg_arr_size);
 }
 
 int cfg_band_params_load_item(cfg_item_t *item) {
@@ -660,21 +680,10 @@ static void on_ab_pre_change(subject_t subj, void *user_data) {
 static void on_band_id_change(subject_t subj, void *user_data) {
     int32_t new_band_id = subject_get_int(subj);
     if (new_band_id != cfg_band.vfo.pk) {
-        cfg_item_t *cfg_band_arr;
-        cfg_band_arr           = (cfg_item_t *)&cfg_band;
-        uint32_t cfg_band_size = sizeof(cfg_band) / sizeof(cfg_item_t);
-
-        LV_LOG_INFO("Save band params before changing band for %u", cfg_band_arr[0].pk);
-        save_items_to_db(cfg_band_arr, cfg_band_size);
-        // if (new_band_id == BAND_UNDEFINED)
-        //     return;
-        for (size_t i = 0; i < cfg_band_size; i++) {
-            cfg_band_arr[i].pk = new_band_id;
-        }
-        LV_LOG_INFO("Load band params after changing band for %u", cfg_band_arr[0].pk);
-        load_items_from_db(cfg_band_arr, cfg_band_size);
+        cfg_band_params_save_all();
+        cfg_band_params_change_pk(new_band_id);
+        cfg_band_params_load_all();
     }
-
 }
 
 static void on_vfo_change(subject_t subj, void *user_data) {

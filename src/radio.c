@@ -178,40 +178,50 @@ static void * radio_thread(void *arg) {
 
 
 static void on_vol_change(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_rxvol_set(subject_get_int(subj));
+    x6100_control_rxvol_set(new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set vol=%i", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_key_tone_change(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_key_tone_set(subject_get_int(subj));
+    x6100_control_key_tone_set(new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set key tone=%i", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_freq_change(subject_t subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_vfo_freq_set(vfo, subject_get_int(subj));
+    x6100_control_vfo_freq_set(vfo, new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set vfo %i freq=%i", vfo, new_val);;
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_mode_change(subject_t subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_vfo_mode_set(vfo, subject_get_int(subj));
+    x6100_control_vfo_mode_set(vfo, new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set vfo %i mode=%i", vfo, new_val);;
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_agc_change(subject_t subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_vfo_agc_set(vfo, subject_get_int(subj));
+    x6100_control_vfo_agc_set(vfo, new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set vfo %i agc=%i", vfo, new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
@@ -254,60 +264,75 @@ static void update_agc_time(subject_t subj, void *user_data) {
             }
             break;
     }
-    LV_LOG_USER("Set agc time=%u for agc: %i\n", agc_time, agc);
     WITH_RADIO_LOCK(x6100_control_agc_time_set(agc_time));
+    LV_LOG_USER("Radio set agc time=%u for agc: %i\n", agc_time, agc);
 }
 
 static void on_vfo_att_change(subject_t subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_vfo_att_set(vfo, subject_get_int(subj));
+    x6100_control_vfo_att_set(vfo, new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set vfo %i att=%i", vfo, new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_pre_change(subject_t subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_vfo_pre_set(vfo, subject_get_int(subj));
+    x6100_control_vfo_pre_set(vfo, new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set vfo %i pre=%i", vfo, new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_change(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_vfo_set(subject_get_int(subj));
+    x6100_control_vfo_set(new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set vfo=%i", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_split_change(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_split_set(subject_get_int(subj));
+    x6100_control_split_set(new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set split=%i", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_rfg_change(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_rfg_set(subject_get_int(subj));
+    x6100_control_rfg_set(new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set rfg=%i", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_atu_enabled_change(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_atu_set(subject_get_int(subj));
+    x6100_control_atu_set(new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set atu enabled=%i", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_atu_network_change(subject_t subj, void *user_data) {
+    uint32_t new_val = subject_get_int(subj);
     radio_lock();
-    x6100_control_cmd(x6100_atu_network, subject_get_int(subj));
+    x6100_control_cmd(x6100_atu_network, new_val);
     radio_unlock();
+    LV_LOG_USER("Radio set atu network=%u", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
+
 static void on_low_filter_change(subject_t subj, void *user_data) {
     int32_t low = subject_get_int(subj);
     switch (subject_get_int(cfg_cur.mode)) {
@@ -317,6 +342,7 @@ static void on_low_filter_change(subject_t subj, void *user_data) {
 
         default:
             radio_lock();
+            LV_LOG_USER("Radio set filter_low=%i", low);
             x6100_control_cmd(x6100_filter1_low, low);
             x6100_control_cmd(x6100_filter2_low, low);
             radio_unlock();
@@ -330,6 +356,8 @@ static void on_high_filter_change(subject_t subj, void *user_data) {
     switch (subject_get_int(cfg_cur.mode)) {
         case x6100_mode_am:
         case x6100_mode_nfm:
+            LV_LOG_USER("Radio set filter_low=%i", -high);
+            LV_LOG_USER("Radio set filter_high=%i", high);
             x6100_control_cmd(x6100_filter1_low, -high);
             x6100_control_cmd(x6100_filter2_low, -high);
             x6100_control_cmd(x6100_filter1_high, high);
@@ -337,6 +365,7 @@ static void on_high_filter_change(subject_t subj, void *user_data) {
             break;
 
         default:
+            LV_LOG_USER("Radio set filter_high=%i", high);
             x6100_control_cmd(x6100_filter1_high, high);
             x6100_control_cmd(x6100_filter2_high, high);
             break;

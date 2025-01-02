@@ -49,6 +49,7 @@
 #include "voice.h"
 #include "pubsub_ids.h"
 #include "cfg/mode.h"
+#include "cfg/memory.h"
 
 #include <unistd.h>
 #include <stdint.h>
@@ -83,7 +84,9 @@ static void update_freq_boundaries(subject_t subj, void *user_data);
 
 
 void mem_load(uint16_t id) {
-    params_memory_load(id);
+    if (!cfg_memory_load(id)) {
+        msg_update_text_fmt("Nothing to load for memory %i", id);
+    }
     // change_band_setup();
     if (id != MEM_BACKUP_ID) {
         msg_update_text_fmt("Loaded from memory %i", id);
@@ -91,7 +94,7 @@ void mem_load(uint16_t id) {
 }
 
 void mem_save(uint16_t id) {
-    params_memory_save(id);
+    cfg_memory_save(id);
 
     if (id <= MEM_HKEY_MAX_ID) {
         msg_update_text_fmt("Saved in memory %i", id);

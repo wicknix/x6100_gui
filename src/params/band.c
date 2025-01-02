@@ -71,19 +71,19 @@ static void params_mb_load(sqlite3_stmt *stmt);
 
 /* Memory/Bands params */
 
-void params_memory_load(uint16_t id) {
-    sqlite3_stmt *stmt;
+// void params_memory_load(uint16_t id) {
+//     sqlite3_stmt *stmt;
 
-    int rc = sqlite3_prepare_v2(db, "SELECT name,val FROM memory WHERE id = ?", -1, &stmt, 0);
+//     int rc = sqlite3_prepare_v2(db, "SELECT name,val FROM memory WHERE id = ?", -1, &stmt, 0);
 
-    if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Prepare");
-        return;
-    }
+//     if (rc != SQLITE_OK) {
+//         LV_LOG_ERROR("Prepare");
+//         return;
+//     }
 
-    sqlite3_bind_int(stmt, 1, id);
-    params_mb_load(stmt);
-}
+//     sqlite3_bind_int(stmt, 1, id);
+//     params_mb_load(stmt);
+// }
 
 // void params_band_load(uint16_t id) {
 //     sqlite3_stmt *stmt;
@@ -203,31 +203,31 @@ static void params_mb_write_int64(uint16_t id, const char *name, uint64_t data, 
 //     sqlite3_finalize(write_mb_stmt);
 // }
 
-void params_memory_save(uint16_t id) {
-    if (!sql_query_exec("BEGIN")) {
-        return;
-    }
+// void params_memory_save(uint16_t id) {
+//     if (!sql_query_exec("BEGIN")) {
+//         return;
+//     }
 
-    sqlite3_prepare_v2(db, "INSERT INTO memory(id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
+//     sqlite3_prepare_v2(db, "INSERT INTO memory(id, name, val) VALUES(?, ?, ?)", -1, &write_mb_stmt, 0);
 
-    // params_band.vfo.dirty = true;
+//     // params_band.vfo.dirty = true;
 
-    for (uint8_t i = X6100_VFO_A; i <= X6100_VFO_B; i++) {
-        // params_band.vfo_x[i].freq.dirty = true;
-        // params_band.vfo_x[i].att.dirty = true;
-        // params_band.vfo_x[i].pre.dirty = true;
-        // params_band.vfo_x[i].mode.dirty = true;
-        // params_band.vfo_x[i].agc.dirty = true;
-    }
+//     for (uint8_t i = X6100_VFO_A; i <= X6100_VFO_B; i++) {
+//         // params_band.vfo_x[i].freq.dirty = true;
+//         // params_band.vfo_x[i].att.dirty = true;
+//         // params_band.vfo_x[i].pre.dirty = true;
+//         // params_band.vfo_x[i].mode.dirty = true;
+//         // params_band.vfo_x[i].agc.dirty = true;
+//     }
 
-    // params_band.grid_min.dirty = true;
-    // params_band.grid_max.dirty = true;
-    // params_band.rfg.dirty = true;
+//     // params_band.grid_min.dirty = true;
+//     // params_band.grid_max.dirty = true;
+//     // params_band.rfg.dirty = true;
 
-    params_mb_save(id);
-    sql_query_exec("COMMIT");
-    sqlite3_finalize(write_mb_stmt);
-}
+//     params_mb_save(id);
+//     sql_query_exec("COMMIT");
+//     sqlite3_finalize(write_mb_stmt);
+// }
 
 static void params_mb_save(uint16_t id) {
     // TODO: add saving shift
