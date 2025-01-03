@@ -474,8 +474,7 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
             break;
         }
     }
-
-    main_screen_set_mode(&next_mode);
+    // main_screen_set_mode(&next_mode);
 }
 
 static void main_screen_keypad_cb(lv_event_t * e) {
@@ -1256,21 +1255,21 @@ void main_screen_band_set()
 }
 
 
-void main_screen_set_mode(void * arg) {
-    if (!arg) {
-        LV_LOG_WARN("arg is NULL");
-    }
-    x6100_mode_t next_mode = * (x6100_mode_t *) arg;
-    subject_set_int(cfg_cur.mode, next_mode);
-    // radio_set_mode(params_band_vfo_get(), next_mode);
-    radio_filters_setup();
+// void main_screen_set_mode(void * arg) {
+//     if (!arg) {
+//         LV_LOG_WARN("arg is NULL");
+//     }
+//     x6100_mode_t next_mode = * (x6100_mode_t *) arg;
+//     subject_set_int(cfg_cur.mode, next_mode);
+//     // radio_set_mode(params_band_vfo_get(), next_mode);
+//     radio_filters_setup();
 
-    pannel_visible();
+//     pannel_visible();
 
-    if (params.mag_info.x) {
-        msg_tiny_set_text_fmt("%s", info_params_mode_label_get());
-    }
-}
+//     if (params.mag_info.x) {
+//         msg_tiny_set_text_fmt("%s", info_params_mode_label_get());
+//     }
+// }
 
 
 static void on_fg_freq_change(subject_t subj, void *user_data) {

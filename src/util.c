@@ -106,6 +106,25 @@ void to_bcd(uint8_t bcd_data[], uint64_t data, uint8_t len) {
     }
 }
 
+void to_bcd_be(uint8_t bcd_data[], uint64_t data, uint8_t len) {
+    int16_t i;
+
+    for (i = (len / 2); i >= 0; i--) {
+        uint8_t a = data % 10;
+
+        data /= 10;
+        a |= (data % 10) << 4;
+        data /= 10;
+        bcd_data[i] = a;
+    }
+
+    if (len & 1) {
+        bcd_data[i] &= 0x0f;
+        bcd_data[i] |= data % 10;
+    }
+
+}
+
 uint64_t from_bcd(const uint8_t bcd_data[], uint8_t len) {
     int16_t     i;
     uint64_t    data = 0;

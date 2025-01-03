@@ -21,11 +21,15 @@ static int16_t          min_db = S1;
 static int16_t          max_db = S9_40;
 
 static int16_t          meter_db = S1;
+static int16_t          meter_db_raw = S1;
 static float            noise_level = S_MIN;
 
 static int16_t          meter_peak = S1;
 static int64_t          meter_peak_time;
 static int64_t          now;
+
+static bool             pre=false;
+static bool             att=false;
 
 static lv_obj_t         *obj;
 
@@ -43,6 +47,10 @@ static s_item_t s_items[NUM_ITEMS] = {
     { .label = "+20",   .db = S9_20 },
     { .label = "+40",   .db = S9_40 }
 };
+
+static void on_bool_value_change(subject_t subj, void *user_data) {
+    *(bool*)user_data = subject_get_int(subj);
+}
 
 static void meter_draw_cb(lv_event_t * e) {
     lv_obj_t            *obj = lv_event_get_target(e);
@@ -138,6 +146,7 @@ static void rx_cb(lv_event_t * e) {
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
 }
 
+
 lv_obj_t * meter_init(lv_obj_t * parent) {
     obj = lv_obj_create(parent);
 
@@ -147,16 +156,19 @@ lv_obj_t * meter_init(lv_obj_t * parent) {
     lv_obj_add_event_cb(obj, rx_cb, EVENT_RADIO_RX, NULL);
     lv_obj_add_event_cb(obj, meter_draw_cb, LV_EVENT_DRAW_MAIN_END, NULL);
 
+    subject_add_observer_and_call(cfg_cur.pre, on_bool_value_change, &pre);
+    subject_add_observer_and_call(cfg_cur.att, on_bool_value_change, &att);
+
     return obj;
 }
 
 void meter_update(int16_t db, float beta) {
     noise_level = spectrum_get_min();
-    if (subject_get_int(cfg_cur.att)) {
+    if (att) {
         db += 14;
         noise_level+= 14.0f;
     }
-    if (subject_get_int(cfg_cur.pre)){
+    if (pre){
         db -= 14;
         noise_level -= 14.0f;
     }
@@ -165,6 +177,7 @@ void meter_update(int16_t db, float beta) {
     } else if (db > max_db) {
         db = max_db;
     }
+    meter_db_raw = db;
     now = get_time();
     if (db > meter_peak) {
         meter_peak = db;
@@ -174,4 +187,8 @@ void meter_update(int16_t db, float beta) {
     }
     meter_db = meter_db * beta + db * (1.0f - beta);
     event_send(obj, LV_EVENT_REFRESH, NULL);
+}
+
+int16_t meter_get_raw_db() {
+    return meter_db_raw;
 }
