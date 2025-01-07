@@ -5,22 +5,11 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
-
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <math.h>
-#include <sndfile.h>
-#include <dirent.h>
-#include <pthread.h>
-
-#include <aether_radio/x6100_control/control.h>
+#include "dialog_recorder.h"
 
 #include "audio.h"
 #include "recorder.h"
 #include "dialog.h"
-#include "dialog_recorder.h"
 #include "styles.h"
 #include "params/params.h"
 #include "events.h"
@@ -30,6 +19,18 @@
 #include "textarea_window.h"
 #include "msg.h"
 #include "buttons.h"
+#include "scheduler.h"
+
+#include <aether_radio/x6100_control/control.h>
+
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <math.h>
+#include <sndfile.h>
+#include <dirent.h>
+#include <pthread.h>
 
 #define BUF_SIZE 1024
 #define LEVEL_HEIGHT 25
@@ -52,19 +53,63 @@ static lv_timer_t           *level_timer;
 static void construct_cb(lv_obj_t *parent);
 static void destruct_cb();
 static void key_cb(lv_event_t * e);
-static void rec_stop_cb(lv_event_t * e);
-static void play_stop_cb(lv_event_t * e);
+static void load_btn_page();
 
 static void update_level_cb(lv_timer_t * timer);
 
-static button_item_t button_rec_stop = { .label = "Rec\nStop", .press = rec_stop_cb };
-static button_item_t button_play_stop = { .label = "Play\nStop", .press = play_stop_cb };
+static void rec_stop_cb(button_item_t *item);
+static void play_stop_cb(button_item_t *item);
+static void dialog_recorder_rec_cb(button_item_t *item);
+static void dialog_recorder_play_cb(button_item_t *item);
+static void dialog_recorder_rename_cb(button_item_t *item);
+static void dialog_recorder_delete_cb(button_item_t *item);
+
+static button_item_t btn_rec = {
+    .type  = BTN_TEXT,
+    .label = "Rec",
+    .press = dialog_recorder_rec_cb,
+};
+static button_item_t btn_rec_stop = {
+    .type  = BTN_TEXT,
+    .label = "Rec\nStop",
+    .press = rec_stop_cb,
+};
+static button_item_t btn_rename = {
+    .type  = BTN_TEXT,
+    .label = "Rename",
+    .press = dialog_recorder_rename_cb,
+};
+static button_item_t btn_delete = {
+    .type  = BTN_TEXT,
+    .label = "Delete",
+    .press = dialog_recorder_delete_cb,
+};
+static button_item_t btn_play = {
+    .type  = BTN_TEXT,
+    .label = "Play",
+    .press = dialog_recorder_play_cb,
+};
+static button_item_t btn_play_stop = {
+    .type  = BTN_TEXT,
+    .label = "Play\nStop",
+    .press = play_stop_cb,
+};
+
+static buttons_page_t btn_page = {
+    {
+     &btn_rec,
+     &btn_rename,
+     &btn_delete,
+     &btn_play,
+     }
+};
 
 static dialog_t             dialog = {
     .run = false,
     .construct_cb = construct_cb,
     .destruct_cb = destruct_cb,
     .audio_cb = NULL,
+    .btn_page = &btn_page,
     .key_cb = NULL
 };
 
@@ -170,8 +215,8 @@ static void * play_thread(void *arg) {
     audio_play_en(false);
 
     if (dialog.run) {
-        buttons_unload_page();
-        buttons_load_page(PAGE_RECORDER);
+        scheduler_put_noargs(load_btn_page);
+
     }
 }
 
@@ -210,12 +255,15 @@ static void tx_cb(lv_event_t * e) {
         play_state = false;
 
         buttons_unload_page();
-        buttons_load_page(PAGE_RECORDER);
+        buttons_load_page(&btn_page);
     }
 }
 
 static void construct_cb(lv_obj_t *parent) {
     dialog.obj = dialog_init(parent);
+
+    buttons_unload_page();
+    buttons_load_page(&btn_page);
 
     lv_obj_add_event_cb(dialog.obj, tx_cb, EVENT_RADIO_TX, NULL);
 
@@ -293,7 +341,7 @@ static void construct_cb(lv_obj_t *parent) {
 
     if (recorder_is_on()) {
         buttons_unload_page();
-        buttons_load(1, &button_rec_stop);
+        buttons_load(1, &btn_rec_stop);
     }
 }
 
@@ -324,27 +372,27 @@ static void key_cb(lv_event_t * e) {
     }
 }
 
-void dialog_recorder_rec_cb(lv_event_t * e) {
+static void dialog_recorder_rec_cb(button_item_t *item) {
     recorder_set_on(true);
 }
 
-static void rec_stop_cb(lv_event_t * e) {
+static void rec_stop_cb(button_item_t *item) {
     recorder_set_on(false);
     load_table();
 }
 
-void dialog_recorder_play_cb(lv_event_t * e) {
+static void dialog_recorder_play_cb(button_item_t *item) {
     pthread_create(&thread, NULL, play_thread, NULL);
 
     buttons_unload_page();
-    buttons_load(4, &button_play_stop);
+    buttons_load(4, &btn_play_stop);
 }
 
-void play_stop_cb(lv_event_t * e) {
+static void play_stop_cb(button_item_t *item) {
     play_state = false;
 }
 
-void dialog_recorder_rename_cb(lv_event_t * e) {
+static void dialog_recorder_rename_cb(button_item_t *item) {
     prev_filename = strdup(get_item());
 
     if (prev_filename) {
@@ -354,15 +402,15 @@ void dialog_recorder_rename_cb(lv_event_t * e) {
     }
 }
 
-void dialog_recorder_delete_cb(lv_event_t * e) {
-    const char *item = get_item();
+static void dialog_recorder_delete_cb(button_item_t *item) {
+    const char *name = get_item();
 
-    if (item) {
+    if (name) {
         char filename[64];
 
         strcpy(filename, recorder_path);
         strcat(filename, "/");
-        strcat(filename, item);
+        strcat(filename, name);
 
         unlink(filename);
         load_table();
@@ -377,13 +425,18 @@ void dialog_recorder_set_on(bool on) {
     buttons_unload_page();
 
     if (on) {
-        buttons_load(1, &button_rec_stop);
+        buttons_load(1, &btn_rec_stop);
     } else {
-        buttons_load_page(PAGE_RECORDER);
+        buttons_load_page(&btn_page);
         load_table();
     }
 }
 
 static void update_level_cb(lv_timer_t * timer) {
     lv_bar_set_value(level, audio_get_peak_db(), LV_ANIM_OFF);
+}
+
+
+static void load_btn_page() {
+    buttons_load_page(&btn_page);
 }

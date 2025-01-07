@@ -173,16 +173,17 @@ static void make_cq_msg(const char *callsign, const char *qth, const char *cq_mo
 static bool get_time_slot(struct timespec now);
 
 // button label is current state, press action and name - next state
-static button_item_t button_page_1 = { .label = "(Page: 1:2)", .press = load_page};
-static button_item_t button_show_cq_all = { .label = "Show:\nAll", .press = show_cq_all_cb };
-static button_item_t button_mode_ft4_ft8 = { .label = "Mode:\nFT8", .press = mode_ft4_ft8_cb };
-static button_item_t button_tx_cq_en_dis = { .label = "TX CQ:\nDisabled", .press = tx_cq_en_dis_cb };
-static button_item_t button_tx_call_en_dis = { .label = "TX Call:\nDisabled", .press = tx_call_en_dis_cb};
 
-static button_item_t button_page_2 = { .label = "(Page: 2:2)", .press = load_page};
-static button_item_t button_auto_en_dis = { .label = "Auto:\nDisabled", .press = mode_auto_cb };
-static button_item_t button_cq_mod = { .label = "CQ\nModifier", .press = cq_modifier_cb };
-static button_item_t button_time_sync = { .label = "Time\nSync", .press = time_sync };
+static button_item_t button_page_1 = { .type=BTN_TEXT, .label = "(Page: 1:2)", .press = load_page};
+static button_item_t button_show_cq_all = { .type=BTN_TEXT, .label = "Show:\nAll", .press = show_cq_all_cb };
+static button_item_t button_mode_ft4_ft8 = { .type=BTN_TEXT, .label = "Mode:\nFT8", .press = mode_ft4_ft8_cb };
+static button_item_t button_tx_cq_en_dis = { .type=BTN_TEXT, .label = "TX CQ:\nDisabled", .press = tx_cq_en_dis_cb };
+static button_item_t button_tx_call_en_dis = { .type=BTN_TEXT, .label = "TX Call:\nDisabled", .press = tx_call_en_dis_cb};
+
+static button_item_t button_page_2 = { .type=BTN_TEXT, .label = "(Page: 2:2)", .press = load_page};
+static button_item_t button_auto_en_dis = { .type=BTN_TEXT, .label = "Auto:\nDisabled", .press = mode_auto_cb };
+static button_item_t button_cq_mod = { .type=BTN_TEXT, .label = "CQ\nModifier", .press = cq_modifier_cb };
+static button_item_t button_time_sync = { .type=BTN_TEXT, .label = "Time\nSync", .press = time_sync };
 
 static dialog_t dialog = {
     .run = false,
@@ -702,6 +703,7 @@ static void construct_cb(lv_obj_t *parent) {
 
 static void reload_buttons() {
     buttons_unload_page();
+    printf("loading ft8 keys\n");
     switch (button_page)
     {
     case 0:

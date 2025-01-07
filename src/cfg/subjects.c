@@ -127,7 +127,7 @@ void subject_notify(subject_t subj) {
     call_observers(subj);
 }
 
-void observer_remove(observer_t observer) {
+void observer_del(observer_t observer) {
     if (observer) {
         observer->subj->observers[observer->cb_id] = NULL;
         observer->subj->user_data[observer->cb_id] = NULL;

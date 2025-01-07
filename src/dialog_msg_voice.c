@@ -31,7 +31,6 @@
 #include "textarea_window.h"
 #include "msg.h"
 #include "meter.h"
-#include "buttons.h"
 
 #define BUF_SIZE 1024
 
@@ -56,20 +55,114 @@ static int16_t              samples_buf[BUF_SIZE];
 static void construct_cb(lv_obj_t *parent);
 static void destruct_cb();
 static void key_cb(lv_event_t * e);
-static void rec_stop_cb(lv_event_t * e);
-static void play_stop_cb(lv_event_t * e);
-static void send_stop_cb(lv_event_t * e);
-static void beacon_stop_cb(lv_event_t * e);
+static void rec_stop_cb(button_item_t *item);
+static void play_stop_cb(button_item_t *item);
+static void send_stop_cb(button_item_t *item);
+static void beacon_stop_cb(button_item_t *item);
 
-static button_item_t button_rec_stop = { .label = "Rec\nStop", .press = rec_stop_cb };
-static button_item_t button_play_stop = { .label = "Play\nStop", .press = play_stop_cb };
-static button_item_t button_send_stop = { .label = "Send\nStop", .press = send_stop_cb };
-static button_item_t button_beacon_stop = { .label = "Beacon\nStop", .press = beacon_stop_cb };
+static void dialog_msg_voice_send_cb(button_item_t *item);
+static void dialog_msg_voice_beacon_cb(button_item_t *item);
+static void dialog_msg_voice_period_cb(button_item_t *item);
+
+static void dialog_msg_voice_rec_cb(button_item_t *item);
+static void dialog_msg_voice_play_cb(button_item_t *item);
+static void dialog_msg_voice_rename_cb(button_item_t *item);
+static void dialog_msg_voice_delete_cb(button_item_t *item);
+
+static button_item_t btn_rec_stop = {
+    .label = "Rec\nStop",
+    .press = rec_stop_cb,
+};
+static button_item_t btn_play_stop = {
+    .label = "Play\nStop",
+    .press = play_stop_cb,
+};
+static button_item_t btn_send_stop = {
+    .label = "Send\nStop",
+    .press = send_stop_cb,
+};
+static button_item_t btn_beacon_stop = {
+    .label = "Beacon\nStop",
+    .press = beacon_stop_cb,
+};
+
+/* Msg Voice */
+
+static button_item_t btn_msg_p1 = {
+    .type  = BTN_TEXT,
+    .label = "(MSG 1:2)",
+    .press = button_next_page_cb,
+};
+static button_item_t btn_send = {
+    .type  = BTN_TEXT,
+    .label = "Send",
+    .press = dialog_msg_voice_send_cb,
+};
+static button_item_t btn_beacon = {
+    .type  = BTN_TEXT,
+    .label = "Beacon",
+    .press = dialog_msg_voice_beacon_cb,
+};
+static button_item_t btn_beacon_period = {
+    .type  = BTN_TEXT,
+    .label = "Beacon\nPeriod",
+    .press = dialog_msg_voice_period_cb,
+};
+
+static buttons_page_t page_msg_voice_1 = {
+    {
+     &btn_msg_p1,
+     &btn_send,
+     &btn_beacon,
+     &btn_beacon_period,
+     }
+};
+static button_item_t btn_msg_p2 = {
+    .type  = BTN_TEXT,
+    .label = "(MSG 2:2)",
+    .press = button_next_page_cb,
+};
+static button_item_t btn_rec = {
+    .type  = BTN_TEXT,
+    .label = "Rec",
+    .press = dialog_msg_voice_rec_cb,
+};
+static button_item_t btn_rename = {
+    .type  = BTN_TEXT,
+    .label = "Rename",
+    .press = dialog_msg_voice_rename_cb,
+};
+static button_item_t btn_delete = {
+    .type  = BTN_TEXT,
+    .label = "Delete",
+    .press = dialog_msg_voice_delete_cb,
+};
+static button_item_t btn_play = {
+    .type  = BTN_TEXT,
+    .label = "Play",
+    .press = dialog_msg_voice_play_cb,
+};
+
+static buttons_page_t page_msg_voice_2 = {
+    {
+     &btn_msg_p2,
+     &btn_rec,
+     &btn_rename,
+     &btn_delete,
+     &btn_play,
+     }
+};
+
+static buttons_group_t group_msg_voice = {
+    &page_msg_voice_1,
+    &page_msg_voice_2,
+};
 
 static dialog_t             dialog = {
     .run = false,
     .construct_cb = construct_cb,
     .destruct_cb = destruct_cb,
+    .btn_page = &page_msg_voice_1,
     .audio_cb = NULL,
     .key_cb = NULL
 };
@@ -201,7 +294,7 @@ static void * play_thread(void *arg) {
 
     if (dialog.run) {
         buttons_unload_page();
-        buttons_load_page(PAGE_MSG_VOICE_2);
+        buttons_load_page(&page_msg_voice_2);
     }
 }
 
@@ -217,7 +310,7 @@ static void * send_thread(void *arg) {
 
     if (dialog.run) {
         buttons_unload_page();
-        buttons_load_page(PAGE_MSG_VOICE_1);
+        buttons_load_page(&page_msg_voice_1);
     }
 }
 
@@ -229,7 +322,7 @@ static void * beacon_thread(void *arg) {
         switch (beacon) {
             case VOICE_BEACON_OFF:
                 buttons_unload_page();
-                buttons_load_page(PAGE_MSG_VOICE_1);
+                buttons_load_page(&page_msg_voice_1);
                 return NULL;
 
             case VOICE_BEACON_PLAY:
@@ -295,12 +388,17 @@ static void tx_cb(lv_event_t * e) {
         beacon = VOICE_BEACON_OFF;
 
         buttons_unload_page();
-        buttons_load_page(PAGE_MSG_VOICE_1);
+        buttons_load_page(&page_msg_voice_1);
     }
 }
 
 static void construct_cb(lv_obj_t *parent) {
     dialog.obj = dialog_init(parent);
+
+    page_msg_voice_1.items[0]->next = &page_msg_voice_2;
+    page_msg_voice_1.items[0]->prev = &page_msg_voice_2;
+    page_msg_voice_2.items[0]->next = &page_msg_voice_1;
+    page_msg_voice_2.items[0]->prev = &page_msg_voice_1;
 
     lv_obj_add_event_cb(dialog.obj, tx_cb, EVENT_RADIO_TX, NULL);
 
@@ -369,32 +467,32 @@ static void key_cb(lv_event_t * e) {
     }
 }
 
-void dialog_msg_voice_send_cb(lv_event_t * e) {
+void dialog_msg_voice_send_cb(button_item_t *item) {
     if (state == MSG_VOICE_OFF) {
         pthread_create(&thread, NULL, send_thread, NULL);
 
         buttons_unload_page();
-        buttons_load(1, &button_send_stop);
+        buttons_load(1, &btn_send_stop);
     }
 }
 
-static void send_stop_cb(lv_event_t * e) {
+static void send_stop_cb(button_item_t *iteme) {
     state = MSG_VOICE_OFF;
 }
 
-void dialog_msg_voice_beacon_cb(lv_event_t * e) {
+void dialog_msg_voice_beacon_cb(button_item_t *item) {
     if (state == MSG_VOICE_OFF) {
         if (get_item()) {
             beacon = VOICE_BEACON_PLAY;
             pthread_create(&thread, NULL, beacon_thread, NULL);
 
             buttons_unload_page();
-            buttons_load(2, &button_beacon_stop);
+            buttons_load(2, &btn_beacon_stop);
         }
     }
 }
 
-static void beacon_stop_cb(lv_event_t * e) {
+static void beacon_stop_cb(button_item_t *item) {
     switch (state) {
         case MSG_VOICE_OFF:
             pthread_cancel(thread);
@@ -402,7 +500,7 @@ static void beacon_stop_cb(lv_event_t * e) {
             beacon = VOICE_BEACON_OFF;
 
             buttons_unload_page();
-            buttons_load_page(PAGE_MSG_VOICE_1);
+            buttons_load_page(&page_msg_voice_1);
             break;
 
         case MSG_VOICE_PLAY:
@@ -415,7 +513,7 @@ static void beacon_stop_cb(lv_event_t * e) {
     }
 }
 
-void dialog_msg_voice_period_cb(lv_event_t * e) {
+void dialog_msg_voice_period_cb(button_item_t *item) {
     params_lock();
 
     switch (params.voice_msg_period) {
@@ -440,21 +538,21 @@ void dialog_msg_voice_period_cb(lv_event_t * e) {
     msg_update_text_fmt("Beacon period: %i s", params.voice_msg_period);
 }
 
-void dialog_msg_voice_rec_cb(lv_event_t * e) {
+void dialog_msg_voice_rec_cb(button_item_t *item) {
     if (state == MSG_VOICE_OFF) {
         if (create_file()) {
             audio_play_en(true);
             state = MSG_VOICE_RECORD;
 
             buttons_unload_page();
-            buttons_load(1, &button_rec_stop);
+            buttons_load(1, &btn_rec_stop);
         }
     }
 }
 
-static void rec_stop_cb(lv_event_t * e) {
+static void rec_stop_cb(button_item_t *item) {
     buttons_unload_page();
-    buttons_load_page(PAGE_MSG_VOICE_2);
+    buttons_load_page(&page_msg_voice_2);
 
     audio_play_en(false);
     state = MSG_VOICE_OFF;
@@ -462,20 +560,20 @@ static void rec_stop_cb(lv_event_t * e) {
     load_table();
 }
 
-void dialog_msg_voice_play_cb(lv_event_t * e) {
+void dialog_msg_voice_play_cb(button_item_t *item) {
     if (state == MSG_VOICE_OFF) {
         pthread_create(&thread, NULL, play_thread, NULL);
 
         buttons_unload_page();
-        buttons_load(4, &button_play_stop);
+        buttons_load(4, &btn_play_stop);
     }
 }
 
-void play_stop_cb(lv_event_t * e) {
+void play_stop_cb(button_item_t *item) {
     state = MSG_VOICE_OFF;
 }
 
-void dialog_msg_voice_rename_cb(lv_event_t * e) {
+void dialog_msg_voice_rename_cb(button_item_t *item) {
     prev_filename = strdup(get_item());
 
     if (prev_filename) {
@@ -485,15 +583,15 @@ void dialog_msg_voice_rename_cb(lv_event_t * e) {
     }
 }
 
-void dialog_msg_voice_delete_cb(lv_event_t * e) {
-    const char *item = get_item();
+void dialog_msg_voice_delete_cb(button_item_t *item) {
+    const char *name = get_item();
 
-    if (item) {
+    if (name) {
         char filename[64];
 
         strcpy(filename, path);
         strcat(filename, "/");
-        strcat(filename, item);
+        strcat(filename, name);
 
         unlink(filename);
         load_table();

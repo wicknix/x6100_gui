@@ -6,13 +6,9 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <math.h>
+#include "dialog_swrscan.h"
 
 #include "dialog.h"
-#include "dialog_swrscan.h"
 #include "styles.h"
 #include "params/params.h"
 #include "radio.h"
@@ -20,6 +16,12 @@
 #include "util.h"
 #include "keyboard.h"
 #include "main_screen.h"
+#include "buttons.h"
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <math.h>
 
 #define STEPS   50
 
@@ -37,14 +39,44 @@ static uint64_t             freq_start;
 static uint64_t             freq_center;
 static uint64_t             freq_stop;
 
+
 static void construct_cb(lv_obj_t *parent);
 static void key_cb(lv_event_t * e);
+
+static void dialog_swrscan_run_cb(button_item_t *item);
+static void dialog_swrscan_scale_cb(button_item_t *item);
+static void dialog_swrscan_span_cb(button_item_t *item);
+
+static button_item_t btn_run = {
+    .type  = BTN_TEXT,
+    .label = "Run",
+    .press = dialog_swrscan_run_cb,
+};
+static button_item_t btn_scale = {
+    .type  = BTN_TEXT,
+    .label = "Scale",
+    .press = dialog_swrscan_scale_cb,
+};
+static button_item_t btn_span = {
+    .type  = BTN_TEXT,
+    .label = "Span",
+    .press = dialog_swrscan_span_cb,
+};
+
+static buttons_page_t btn_page = {
+    {
+     &btn_run,
+     &btn_scale,
+     &btn_span,
+     }
+};
 
 static dialog_t             dialog = {
     .run = false,
     .construct_cb = construct_cb,
     .destruct_cb = NULL,
     .audio_cb = NULL,
+    .btn_page = &btn_page,
     .key_cb = key_cb
 };
 
@@ -208,6 +240,9 @@ static void freq_update_cb(lv_event_t * e) {
 static void construct_cb(lv_obj_t *parent) {
     dialog.obj = dialog_init(parent);
 
+    buttons_unload_page();
+    buttons_load_page(&btn_page);
+
     lv_obj_add_event_cb(dialog.obj, freq_update_cb, EVENT_FREQ_UPDATE, NULL);
 
     chart  = lv_obj_create(dialog.obj);
@@ -248,7 +283,7 @@ static void key_cb(lv_event_t * e) {
     }
 }
 
-void dialog_swrscan_run_cb(lv_event_t * e) {
+void dialog_swrscan_run_cb(button_item_t *item) {
     if (run) {
         radio_stop_swrscan();
         run = false;
@@ -261,7 +296,7 @@ void dialog_swrscan_run_cb(lv_event_t * e) {
     }
 }
 
-void dialog_swrscan_scale_cb(lv_event_t * e) {
+void dialog_swrscan_scale_cb(button_item_t *item) {
     params_lock();
     params.swrscan_linear = !params.swrscan_linear;
     params_unlock(&params.dirty.swrscan_linear);
@@ -269,7 +304,7 @@ void dialog_swrscan_scale_cb(lv_event_t * e) {
     event_send(chart, LV_EVENT_REFRESH, NULL);
 }
 
-void dialog_swrscan_span_cb(lv_event_t * e) {
+void dialog_swrscan_span_cb(button_item_t *item) {
     if (run) {
         return;
     }

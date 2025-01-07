@@ -48,7 +48,8 @@ typedef enum {
     ACTION_APP_SETTINGS,
     ACTION_APP_RECORDER,
     ACTION_APP_QTH,
-    ACTION_APP_CALLSIGN
+    ACTION_APP_CALLSIGN,
+    ACTION_APP_WIFI,
 } press_action_t;
 
 typedef enum {

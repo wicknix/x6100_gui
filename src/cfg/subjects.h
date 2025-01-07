@@ -30,4 +30,4 @@ observer_t subject_add_observer_and_call(subject_t subj, void (*fn)(subject_t, v
 void subject_set_int(subject_t subj, int32_t val);
 void subject_set_uint64(subject_t subj, uint64_t val);
 
-void observer_remove(observer_t observer);
+void observer_del(observer_t observer);

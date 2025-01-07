@@ -224,49 +224,43 @@ static void apps_disable() {
     pannel_visible();
 }
 
-void main_screen_dialog_deleted_cb() {
-    buttons_unload_page();
-    buttons_load_page(PAGE_VOL_1);
-}
-
-void main_screen_app(uint8_t page_app) {
+void main_screen_start_app(press_action_t app_action) {
     apps_disable();
-    buttons_unload_page();
-    buttons_load_page(page_app);
 
-    switch (page_app) {
-        case PAGE_RTTY:
+    switch (app_action) {
+        case ACTION_APP_RTTY:
+            buttons_load_page(&buttons_page_rtty);
             rtty_set_state(RTTY_RX);
             pannel_visible();
             voice_say_text_fmt("Teletype window");
             break;
 
-        case PAGE_SETTINGS:
+        case ACTION_APP_SETTINGS:
             dialog_construct(dialog_settings, obj);
             voice_say_text_fmt("Settings window");
             break;
 
-        case PAGE_SWRSCAN:
+        case ACTION_APP_SWRSCAN:
             dialog_construct(dialog_swrscan, obj);
             voice_say_text_fmt("SWR scan window");
             break;
 
-        case PAGE_FT8:
+        case ACTION_APP_FT8:
             dialog_construct(dialog_ft8, obj);
             voice_say_text_fmt("FT8 window");
             break;
 
-        case PAGE_GPS:
+        case ACTION_APP_GPS:
             dialog_construct(dialog_gps, obj);
             voice_say_text_fmt("GPS window");
             break;
 
-        case PAGE_RECORDER:
+        case ACTION_APP_RECORDER:
             dialog_construct(dialog_recorder, obj);
             voice_say_text_fmt("Audio recorder window");
             break;
 
-        case PAGE_WIFI:
+        case ACTION_APP_WIFI:
             dialog_construct(dialog_wifi, obj);
             voice_say_text_fmt("Wi-Fi window");
             break;
@@ -327,27 +321,12 @@ void main_screen_action(press_action_t action) {
             break;
 
         case ACTION_APP_RTTY:
-            main_screen_app(PAGE_RTTY);
-            break;
-
         case ACTION_APP_FT8:
-            main_screen_app(PAGE_FT8);
-            break;
-
         case ACTION_APP_SWRSCAN:
-            main_screen_app(PAGE_SWRSCAN);
-            break;
-
         case ACTION_APP_GPS:
-            main_screen_app(PAGE_GPS);
-            break;
-
         case ACTION_APP_SETTINGS:
-            main_screen_app(PAGE_SETTINGS);
-            break;
-
         case ACTION_APP_RECORDER:
-            main_screen_app(PAGE_RECORDER);
+            main_screen_start_app(action);
             break;
 
         case ACTION_APP_QTH:
@@ -474,6 +453,7 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
             break;
         }
     }
+    subject_set_int(cfg_cur.mode, next_mode);
     // main_screen_set_mode(&next_mode);
 }
 
@@ -650,7 +630,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_GEN:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_load_page_group(GROUP_GEN);
+                buttons_load_page_group(buttons_group_gen);
                 voice_say_text_fmt("General menu keys");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_gen);
@@ -660,7 +640,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_APP:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_load_page_group(GROUP_APP);
+                buttons_load_page_group(buttons_group_app);
                 voice_say_text_fmt("Application menu keys");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_app);
@@ -670,7 +650,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_KEY:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_load_page_group(GROUP_KEY);
+                buttons_load_page_group(buttons_group_key);
                 voice_say_text_fmt("CW parameters");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_key);
@@ -688,7 +668,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
                         pannel_hide();
                         dialog_construct(dialog_msg_cw, obj);
-                        buttons_load_page_group(GROUP_MSG_CW);
                         voice_say_text_fmt("CW messages window");
                         break;
 
@@ -702,7 +681,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
                         pannel_hide();
                         dialog_construct(dialog_msg_voice, obj);
-                        buttons_load_page_group(GROUP_MSG_VOICE);
                         voice_say_text_fmt("Voice messages window");
                         break;
 
@@ -718,7 +696,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
         case KEYPAD_DFN:
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
-                buttons_load_page_group(GROUP_DFN);
+                buttons_load_page_group(buttons_group_dfn);
                 voice_say_text_fmt("DNF parameters");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_dfn);
@@ -726,7 +704,11 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             break;
 
         case KEYPAD_DFL:
-            if (keypad->state == KEYPAD_LONG) {
+            if (keypad->state == KEYPAD_RELEASE) {
+                apps_disable();
+                buttons_load_page_group(buttons_group_dfl);
+                voice_say_text_fmt("DNL parameters");
+            } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_dfl);
             }
             break;
@@ -799,8 +781,15 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             }
             break;
 
+        case KEYPAD_VM:
+            if ((keypad->state == KEYPAD_RELEASE) && !dialog_is_run()) {
+                buttons_load_page_group(buttons_group_vm);
+                voice_say_text_fmt("VM parameters");
+            }
+            break;
+
         default:
-            LV_LOG_WARN("Unsuported key");
+            LV_LOG_WARN("Unsuported key: %u", keypad->key);
             break;
     }
 }
@@ -896,6 +885,7 @@ static void main_screen_hkey_cb(lv_event_t * e) {
             break;
 
         default:
+            LV_LOG_WARN("Unsuported key: %u", hkey->key);
             break;
     }
 }
@@ -1000,9 +990,6 @@ static void spectrum_key_cb(lv_event_t * e) {
             break;
 
         case KEYBOARD_F9:
-            buttons_unload_page();
-            buttons_load_page(PAGE_SETTINGS);
-
             dialog_construct(dialog_settings, obj);
             break;
 
@@ -1208,7 +1195,7 @@ lv_obj_t * main_screen() {
     waterfall_set_height(480 - y);
 
     buttons_init(obj);
-    buttons_load_page(PAGE_VOL_1);
+    buttons_load_page(&buttons_page_vol_1);
 
     pannel_init(obj);
     msg = msg_init(obj);

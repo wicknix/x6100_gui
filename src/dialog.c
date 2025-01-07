@@ -21,6 +21,11 @@ void dialog_construct(dialog_t *dialog, lv_obj_t *parent) {
     if (dialog && !dialog->run) {
         waterfall_refresh_period_set(2);
         main_screen_keys_enable(false);
+        dialog->prev_page = buttons_get_cur_page();
+        buttons_unload_page();
+        if (dialog->btn_page) {
+            buttons_load_page(dialog->btn_page);
+        }
         dialog->construct_cb(parent);
 
         dialog->run = true;
@@ -41,7 +46,10 @@ void dialog_destruct() {
         if (current_dialog->obj) {
             lv_obj_del(current_dialog->obj);
         }
-        main_screen_dialog_deleted_cb();
+        buttons_unload_page();
+        if (current_dialog->prev_page) {
+            buttons_load_page(current_dialog->prev_page);
+        }
         main_screen_keys_enable(true);
         current_dialog = NULL;
     }

@@ -41,11 +41,11 @@ static void cell_selected_cb(lv_event_t *e);
 static void ap_table_draw_event_cb(lv_event_t *e);
 
 // button callbacks
-static void wifi_bt_toggle_cb(lv_event_t *e);
-static void start_scan_cb(lv_event_t *e);
-static void connect_cb(lv_event_t *e);
-static void con_change_passwd_cb(lv_event_t *e);
-static void con_delete_cb(lv_event_t *e);
+static void wifi_bt_toggle_cb(button_item_t *item);
+static void start_scan_cb(button_item_t *item);
+static void connect_cb(button_item_t *item);
+static void con_change_passwd_cb(button_item_t *item);
+static void con_delete_cb(button_item_t *item);
 
 // button label getters
 static char *wifi_on_off_label_getter();
@@ -68,15 +68,40 @@ static void keyboard_close();
 static void update_status_cb(lv_timer_t *);
 static void wifi_state_changed_cb(void *s, lv_msg_t *m);
 
-static button_item_t buttons[] = {
-    {.label_type = LABEL_FN, .label_fn = wifi_on_off_label_getter,            .press = wifi_bt_toggle_cb   },
-    {.label_type = LABEL_FN, .label_fn = wifi_scan_label_getter,              .press = start_scan_cb       },
-    {.label_type = LABEL_FN, .label_fn = wifi_connected_label_getter,         .press = connect_cb          },
-    {.label_type = LABEL_FN, .label_fn = wifi_con_change_passwd_label_getter, .press = con_change_passwd_cb},
-    {.label_type = LABEL_FN, .label_fn = wifi_con_delete_label_getter,        .press = con_delete_cb       },
+static button_item_t btn_on_off = {
+    .type     = BTN_TEXT_FN,
+    .label_fn = wifi_on_off_label_getter,
+    .press    = wifi_bt_toggle_cb,
 };
-
-static lv_obj_t *button_objs[SIZE_OF_ARRAY(buttons)];
+static button_item_t btn_scan = {
+    .type     = BTN_TEXT_FN,
+    .label_fn = wifi_scan_label_getter,
+    .press    = start_scan_cb,
+};
+static button_item_t btn_connect = {
+    .type     = BTN_TEXT_FN,
+    .label_fn = wifi_connected_label_getter,
+    .press    = connect_cb,
+};
+static button_item_t btn_change_passwd = {
+    .type     = BTN_TEXT_FN,
+    .label_fn = wifi_con_change_passwd_label_getter,
+    .press    = con_change_passwd_cb,
+};
+static button_item_t btn_con_delete = {
+    .type     = BTN_TEXT_FN,
+    .label_fn = wifi_con_delete_label_getter,
+    .press    = con_delete_cb,
+};
+static buttons_page_t btn_page = {
+    {
+     &btn_on_off,
+     &btn_scan,
+     &btn_connect,
+     &btn_change_passwd,
+     &btn_con_delete,
+     }
+};
 
 static lv_timer_t *timer_refresh_ap = NULL;
 static lv_timer_t *timer_status = NULL;
@@ -98,6 +123,7 @@ static dialog_t dialog = {
     .run = false,
     .construct_cb = construct_cb,
     .destruct_cb = destruct_cb,
+    .btn_page = &btn_page,
     .audio_cb = NULL,
     .key_cb = key_cb,
 };
@@ -106,10 +132,6 @@ dialog_t *dialog_wifi = &dialog;
 
 static void construct_cb(lv_obj_t *parent) {
     dialog.obj = dialog_init(parent);
-
-    for (size_t i = 0; i < SIZE_OF_ARRAY(buttons); i++) {
-        button_objs[i] = buttons_load(i, &buttons[i]);
-    }
 
     if (params.wifi_enabled.x) {
         start_refresh_ap_list();
@@ -249,7 +271,7 @@ static void cell_selected_cb(lv_event_t *e) {
 
 /* Buttons callbacks */
 
-static void wifi_bt_toggle_cb(lv_event_t *e) {
+static void wifi_bt_toggle_cb(button_item_t *item) {
     if (disable_buttons)
         return;
     if (params.wifi_enabled.x) {
@@ -267,7 +289,7 @@ static void wifi_bt_toggle_cb(lv_event_t *e) {
     }
 }
 
-static void start_scan_cb(lv_event_t *e) {
+static void start_scan_cb(button_item_t *item) {
     wifi_status_t status;
     if (disable_buttons)
         return;
@@ -282,7 +304,7 @@ static void start_scan_cb(lv_event_t *e) {
     }
 }
 
-static void connect_cb(lv_event_t *e) {
+static void connect_cb(button_item_t *item) {
     uint16_t row, col;
 
     if (disable_buttons)
@@ -313,7 +335,7 @@ static void connect_cb(lv_event_t *e) {
     }
 }
 
-static void con_change_passwd_cb(lv_event_t *e) {
+static void con_change_passwd_cb(button_item_t *item) {
     uint16_t    row, col;
     const char *con_id;
 
@@ -336,7 +358,7 @@ static void con_change_passwd_cb(lv_event_t *e) {
     }
 }
 
-static void con_delete_cb(lv_event_t *e) {
+static void con_delete_cb(button_item_t *item) {
     uint16_t    row, col;
     const char *con_id;
 
@@ -543,12 +565,11 @@ static void update_status_cb(lv_timer_t *t) {
 
 static void wifi_state_changed_cb(void *s, lv_msg_t *m) {
     const char *status_text;
-
-    for (size_t i = 0; i < SIZE_OF_ARRAY(buttons); i++) {
-        lv_obj_t *label = lv_obj_get_user_data(button_objs[i]);
+    for (size_t i = 0; i < SIZE_OF_ARRAY(btn_page.items); i++) {
+        lv_obj_t *label = btn_page.items[i]->label_obj;
         if (!label)
             continue;
-        label_cb_fn label_getter = lv_obj_get_user_data(label);
+        char *(*label_getter)() = lv_obj_get_user_data(label);
         if (!label_getter)
             continue;
         lv_label_set_text(label, label_getter());

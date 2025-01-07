@@ -30,20 +30,100 @@ static uint32_t         *ids = NULL;
 static lv_obj_t         *table;
 static int16_t          table_rows = 0;
 
+
 static void init();
 static void construct_cb(lv_obj_t *parent);
 static void destruct_cb();
 static void key_cb(lv_event_t * e);
-static void send_stop_cb(lv_event_t * e);
-static void beacon_stop_cb(lv_event_t * e);
+static void send_stop_cb(button_item_t *item);
+static void beacon_stop_cb(button_item_t *item);
 
-static button_item_t button_send_stop = { .label = "Send\nStop", .press = send_stop_cb };
-static button_item_t button_beacon_stop = { .label = "Beacon\nStop", .press = beacon_stop_cb };
+static void dialog_msg_cw_send_cb(button_item_t *item);
+static void dialog_msg_cw_beacon_cb(button_item_t *item);
+static void dialog_msg_cw_period_cb(button_item_t *item);
+
+static void dialog_msg_cw_new_cb(button_item_t *item);
+static void dialog_msg_cw_edit_cb(button_item_t *item);
+static void dialog_msg_cw_delete_cb(button_item_t *item);
+
+static button_item_t btn_send_stop = {
+    .label = "Send\nStop",
+    .press = send_stop_cb,
+};
+static button_item_t btn_beacon_stop = {
+    .label = "Beacon\nStop",
+    .press = beacon_stop_cb,
+};
+
+static button_item_t btn_msg_p1 = {
+    .type  = BTN_TEXT,
+    .label = "(MSG 1:2)",
+    .press = button_next_page_cb,
+};
+static button_item_t btn_send = {
+    .type  = BTN_TEXT,
+    .label = "Send",
+    .press = dialog_msg_cw_send_cb,
+};
+static button_item_t btn_beacon = {
+    .type  = BTN_TEXT,
+    .label = "Beacon",
+    .press = dialog_msg_cw_beacon_cb,
+};
+static button_item_t btn_beacon_period = {
+    .type  = BTN_TEXT,
+    .label = "Beacon\nPeriod",
+    .press = dialog_msg_cw_period_cb,
+};
+buttons_page_t buttons_page_msg_cw_1 = {
+    {
+     &btn_msg_p1,
+     &btn_send,
+     &btn_beacon,
+     &btn_beacon_period,
+     }
+};
+
+static button_item_t btn_msg_p2 = {
+    .type  = BTN_TEXT,
+    .label = "(MSG 2:2)",
+    .press = button_next_page_cb,
+};
+static button_item_t btn_new = {
+    .type  = BTN_TEXT,
+    .label = "New",
+    .press = dialog_msg_cw_new_cb,
+};
+static button_item_t btn_edit = {
+    .type  = BTN_TEXT,
+    .label = "Edit",
+    .press = dialog_msg_cw_edit_cb,
+};
+static button_item_t btn_delete = {
+    .type  = BTN_TEXT,
+    .label = "Delete",
+    .press = dialog_msg_cw_delete_cb,
+};
+
+buttons_page_t buttons_page_msg_cw_2 = {
+    {
+     &btn_msg_p2,
+     &btn_new,
+     &btn_edit,
+     &btn_delete,
+     }
+};
+
+buttons_group_t group_msg_cw = {
+    &buttons_page_msg_cw_1,
+    &buttons_page_msg_cw_2,
+};
 
 static dialog_t             dialog = {
     .run = false,
     .construct_cb = construct_cb,
     .destruct_cb = destruct_cb,
+    .btn_page = &buttons_page_msg_cw_1,
     .audio_cb = NULL,
     .key_cb = NULL
 };
@@ -62,12 +142,17 @@ static void tx_cb(lv_event_t * e) {
     if (cw_encoder_state() == CW_ENCODER_BEACON_IDLE) {
         cw_encoder_stop();
         buttons_unload_page();
-        buttons_load_page(PAGE_MSG_CW_1);
+        buttons_load_page(&buttons_page_msg_cw_1);
     }
 }
 
 static void construct_cb(lv_obj_t *parent) {
     dialog.obj = dialog_init(parent);
+
+    buttons_page_msg_cw_1.items[0]->next = &buttons_page_msg_cw_2;
+    buttons_page_msg_cw_1.items[0]->prev = &buttons_page_msg_cw_2;
+    buttons_page_msg_cw_2.items[0]->next = &buttons_page_msg_cw_1;
+    buttons_page_msg_cw_2.items[0]->prev = &buttons_page_msg_cw_1;
 
     lv_obj_add_event_cb(dialog.obj, tx_cb, EVENT_RADIO_TX, NULL);
 
@@ -125,7 +210,7 @@ static void key_cb(lv_event_t * e) {
             break;
 
         case KEYBOARD_F4:
-            dialog_msg_cw_edit_cb(e);
+            dialog_msg_cw_edit_cb(NULL);
             break;
 
         case KEY_VOL_LEFT_EDIT:
@@ -188,35 +273,35 @@ void dialog_msg_cw_append(uint32_t id, const char *val) {
     table_rows++;
 }
 
-void dialog_msg_cw_send_cb(lv_event_t * e) {
+void dialog_msg_cw_send_cb(button_item_t *item) {
     const char *msg = get_msg();
 
     cw_encoder_send(msg, false);
     buttons_unload_page();
-    buttons_load(1, &button_send_stop);
+    buttons_load(1, &btn_send_stop);
 }
 
-static void send_stop_cb(lv_event_t * e) {
+static void send_stop_cb(button_item_t *item) {
     cw_encoder_stop();
     buttons_unload_page();
-    buttons_load_page(PAGE_MSG_CW_1);
+    buttons_load_page(&buttons_page_msg_cw_1);
 }
 
-void dialog_msg_cw_beacon_cb(lv_event_t * e) {
+void dialog_msg_cw_beacon_cb(button_item_t *item) {
     const char *msg = get_msg();
 
     cw_encoder_send(msg, true);
     buttons_unload_page();
-    buttons_load(2, &button_beacon_stop);
+    buttons_load(2, &btn_beacon_stop);
 }
 
-static void beacon_stop_cb(lv_event_t * e) {
+static void beacon_stop_cb(button_item_t *item) {
     cw_encoder_stop();
     buttons_unload_page();
-    buttons_load_page(PAGE_MSG_CW_1);
+    buttons_load_page(&buttons_page_msg_cw_1);
 }
 
-void dialog_msg_cw_period_cb(lv_event_t * e) {
+void dialog_msg_cw_period_cb(button_item_t *item) {
     params_lock();
 
     switch (params.cw_encoder_period) {
@@ -241,12 +326,12 @@ void dialog_msg_cw_period_cb(lv_event_t * e) {
     msg_update_text_fmt("Beacon period: %i s", params.cw_encoder_period);
 }
 
-void dialog_msg_cw_new_cb(lv_event_t * e) {
+void dialog_msg_cw_new_cb(button_item_t *item) {
     lv_group_remove_obj(table);
     textarea_window_open(textarea_window_new_ok_cb, textarea_window_close_cb);
 }
 
-void dialog_msg_cw_edit_cb(lv_event_t * e) {
+void dialog_msg_cw_edit_cb(button_item_t *item) {
     const char *msg = get_msg();
 
     if (msg) {
@@ -256,7 +341,7 @@ void dialog_msg_cw_edit_cb(lv_event_t * e) {
     }
 }
 
-void dialog_msg_cw_delete_cb(lv_event_t * e) {
+void dialog_msg_cw_delete_cb(button_item_t *item) {
     if (table_rows == 0) {
         return;
     }

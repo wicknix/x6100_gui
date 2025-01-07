@@ -13,8 +13,4 @@
 
 extern dialog_t *dialog_swrscan;
 
-void dialog_swrscan_run_cb(lv_event_t * e);
-void dialog_swrscan_scale_cb(lv_event_t * e);
-void dialog_swrscan_span_cb(lv_event_t * e);
-
 void dialog_swrscan_update(float vswr);

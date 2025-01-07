@@ -100,7 +100,7 @@ static void * endecode_thread(void *arg) {
                 state = CW_ENCODER_IDLE;
 
                 buttons_unload_page();
-                buttons_load_page(PAGE_MSG_CW_1);
+                buttons_load_page(&buttons_page_msg_cw_1);
                 break;
             } else {
                 state = CW_ENCODER_BEACON_IDLE;

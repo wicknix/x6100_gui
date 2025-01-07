@@ -8,8 +8,11 @@
 
 #pragma once
 
-#include <liquid/liquid.h>
+#include "buttons.h"
+
 #include "lvgl/lvgl.h"
+
+#include <liquid/liquid.h>
 
 typedef void (*dialog_construct_cb_t)(lv_obj_t *);
 typedef void (*dialog_destruct_cb_t)(void);
@@ -22,6 +25,8 @@ typedef struct {
     dialog_destruct_cb_t    destruct_cb;
     dialog_audio_cb_t       audio_cb;
     dialog_rotary_cb_t      rotary_cb;
+    buttons_page_t          *btn_page;
+    buttons_page_t          *prev_page;
     lv_event_cb_t           key_cb;
     bool                    run;
 } dialog_t;
