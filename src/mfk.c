@@ -326,7 +326,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_DNF:
-            b = radio_change_dnf(diff);
+            // b = radio_change_dnf(diff);
+            b = subject_get_int(cfg.dnf.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.dnf.val, b);
+            }
             msg_update_text_fmt("#%3X DNF: %s", color, b ? "On" : "Off");
 
             if (diff) {
@@ -337,7 +342,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_DNF_CENTER:
-            i = radio_change_dnf_center(diff);
+            // i = radio_change_dnf_center(diff);
+            i = subject_get_int(cfg.dnf_center.val);
+            if (diff) {
+                i = limit(i + diff * 50, 100, 3000);
+                subject_set_int(cfg.dnf_center.val, i);
+            }
             msg_update_text_fmt("#%3X DNF center: %i Hz", color, i);
 
             if (diff) {
@@ -348,7 +358,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_DNF_WIDTH:
-            i = radio_change_dnf_width(diff);
+            // i = radio_change_dnf_width(diff);
+            i = subject_get_int(cfg.dnf_width.val);
+            if (diff) {
+                i = limit(i + diff * 5, 10, 100);
+                subject_set_int(cfg.dnf_width.val, i);
+            }
             msg_update_text_fmt("#%3X DNF width: %i Hz", color, i);
 
             if (diff) {
@@ -359,7 +374,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NB:
-            b = radio_change_nb(diff);
+            // b = radio_change_nb(diff);
+            b = subject_get_int(cfg.nb.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.nb.val, b);
+            }
             msg_update_text_fmt("#%3X NB: %s", color, b ? "On" : "Off");
 
             if (diff) {
@@ -370,7 +390,13 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NB_LEVEL:
-            i = radio_change_nb_level(diff);
+            // i = radio_change_nb_level(diff);
+            // limit(params.nb_level + d * 5, 0, 100);
+            i = subject_get_int(cfg.nb_level.val);
+            if (diff) {
+                i = limit(i + diff * 5, 0, 100);
+                subject_set_int(cfg.nb_level.val, i);
+            }
             msg_update_text_fmt("#%3X NB level: %i", color, i);
 
             if (diff) {
@@ -381,7 +407,13 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NB_WIDTH:
-            i = radio_change_nb_width(diff);
+            // i = radio_change_nb_width(diff);
+            // limit(params.nb_width + d * 5, 0, 100);
+            i = subject_get_int(cfg.nb_width.val);
+            if (diff) {
+                i = limit(i + diff * 5, 0, 100);
+                subject_set_int(cfg.nb_width.val, i);
+            }
             msg_update_text_fmt("#%3X NB width: %i Hz", color, i);
 
             if (diff) {
@@ -392,7 +424,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NR:
-            b = radio_change_nr(diff);
+            // b = radio_change_nr(diff);
+            b = subject_get_int(cfg.nr.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.nr.val, b);
+            }
             msg_update_text_fmt("#%3X NR: %s", color, b ? "On" : "Off");
 
             if (diff) {
@@ -403,7 +440,13 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NR_LEVEL:
-            i = radio_change_nr_level(diff);
+            // i = radio_change_nr_level(diff);
+            // limit(params.nr_level + d * 5, 0, 60);
+            i = subject_get_int(cfg.nr_level.val);
+            if (diff) {
+                i = limit(i + diff * 5, 0, 60);
+                subject_set_int(cfg.nr_level.val, i);
+            }
             msg_update_text_fmt("#%3X NR level: %i", color, i);
 
             if (diff) {

@@ -311,12 +311,16 @@ void main_screen_action(press_action_t action) {
             break;
 
         case ACTION_NR_TOGGLE:
-            b = radio_change_nr(1);
+            b = subject_get_int(cfg.nr.val);
+            b != b;
+            subject_set_int(cfg.nr.val, b);
             msg_update_text_fmt("#FFFFFF NR: %s", b ? "On" : "Off");
             break;
 
         case ACTION_NB_TOGGLE:
-            b = radio_change_nb(1);
+            b = subject_get_int(cfg.nb.val);
+            b != b;
+            subject_set_int(cfg.nb.val, b);
             msg_update_text_fmt("#FFFFFF NB: %s", b ? "On" : "Off");
             break;
 

@@ -71,14 +71,14 @@ params_t params = {
     .spmode                 = { .x = false,             .name = "spmode",           .voice = "Speaker mode" },
     .freq_accel             = { .x = FREQ_ACCEL_LITE,   .name = "freq_accel",       .voice = "Frequency acceleration" },
 
-    .dnf                    = false,
-    .dnf_center             = 1000,
-    .dnf_width              = 50,
-    .nb                     = false,
-    .nb_level               = 10,
-    .nb_width               = 10,
-    .nr                     = false,
-    .nr_level               = 0,
+    // .dnf                    = false,
+    // .dnf_center             = 1000,
+    // .dnf_width              = 50,
+    // .nb                     = false,
+    // .nb_level               = 10,
+    // .nb_width               = 10,
+    // .nr                     = false,
+    // .nr_level               = 0,
 
     .agc_hang               = false,
     .agc_knee               = -60,
@@ -264,22 +264,22 @@ static bool params_load() {
             params.imic = i;
         } else if (strcmp(name, "charger") == 0) {
             params.charger = i;
-        } else if (strcmp(name, "dnf") == 0) {
-            params.dnf = i;
-        } else if (strcmp(name, "dnf_center") == 0) {
-            params.dnf_center = i;
-        } else if (strcmp(name, "dnf_width") == 0) {
-            params.dnf_width = i;
-        } else if (strcmp(name, "nb") == 0) {
-            params.nb = i;
-        } else if (strcmp(name, "nb_level") == 0) {
-            params.nb_level = i;
-        } else if (strcmp(name, "nb_width") == 0) {
-            params.nb_width = i;
-        } else if (strcmp(name, "nr") == 0) {
-            params.nr = i;
-        } else if (strcmp(name, "nr_level") == 0) {
-            params.nr_level = i;
+        // } else if (strcmp(name, "dnf") == 0) {
+        //     params.dnf = i;
+        // } else if (strcmp(name, "dnf_center") == 0) {
+        //     params.dnf_center = i;
+        // } else if (strcmp(name, "dnf_width") == 0) {
+        //     params.dnf_width = i;
+        // } else if (strcmp(name, "nb") == 0) {
+        //     params.nb = i;
+        // } else if (strcmp(name, "nb_level") == 0) {
+        //     params.nb_level = i;
+        // } else if (strcmp(name, "nb_width") == 0) {
+        //     params.nb_width = i;
+        // } else if (strcmp(name, "nr") == 0) {
+        //     params.nr = i;
+        // } else if (strcmp(name, "nr_level") == 0) {
+        //     params.nr_level = i;
         } else if (strcmp(name, "agc_hang") == 0) {
             params.agc_hang = i;
         } else if (strcmp(name, "agc_knee") == 0) {
@@ -465,14 +465,14 @@ static void params_save() {
 
     if (params.dirty.charger)               params_write_int("charger", params.charger, &params.dirty.charger);
 
-    if (params.dirty.dnf)                   params_write_int("dnf", params.dnf, &params.dirty.dnf);
-    if (params.dirty.dnf_center)            params_write_int("dnf_center", params.dnf_center, &params.dirty.dnf_center);
-    if (params.dirty.dnf_width)             params_write_int("dnf_width", params.dnf_width, &params.dirty.dnf_width);
-    if (params.dirty.nb)                    params_write_int("nb", params.nb, &params.dirty.nb);
-    if (params.dirty.nb_level)              params_write_int("nb_level", params.nb_level, &params.dirty.nb_level);
-    if (params.dirty.nb_width)              params_write_int("nb_width", params.nb_width, &params.dirty.nb_width);
-    if (params.dirty.nr)                    params_write_int("nr", params.nr, &params.dirty.nr);
-    if (params.dirty.nr_level)              params_write_int("nr_level", params.nr_level, &params.dirty.nr_level);
+    // if (params.dirty.dnf)                   params_write_int("dnf", params.dnf, &params.dirty.dnf);
+    // if (params.dirty.dnf_center)            params_write_int("dnf_center", params.dnf_center, &params.dirty.dnf_center);
+    // if (params.dirty.dnf_width)             params_write_int("dnf_width", params.dnf_width, &params.dirty.dnf_width);
+    // if (params.dirty.nb)                    params_write_int("nb", params.nb, &params.dirty.nb);
+    // if (params.dirty.nb_level)              params_write_int("nb_level", params.nb_level, &params.dirty.nb_level);
+    // if (params.dirty.nb_width)              params_write_int("nb_width", params.nb_width, &params.dirty.nb_width);
+    // if (params.dirty.nr)                    params_write_int("nr", params.nr, &params.dirty.nr);
+    // if (params.dirty.nr_level)              params_write_int("nr_level", params.nr_level, &params.dirty.nr_level);
 
     if (params.dirty.agc_hang)              params_write_int("agc_hang", params.agc_hang, &params.dirty.agc_hang);
     if (params.dirty.agc_knee)              params_write_int("agc_knee", params.agc_knee, &params.dirty.agc_knee);

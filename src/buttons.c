@@ -890,14 +890,14 @@ buttons_group_t buttons_group_vm = {
 
 static struct {
     buttons_page_t **group;
-    size_t          size;
+    size_t           size;
 } groups[] = {
-    {buttons_group_gen,       ARRAY_SIZE(buttons_group_gen)      },
-    {buttons_group_app,       ARRAY_SIZE(buttons_group_app)      },
-    {buttons_group_key,       ARRAY_SIZE(buttons_group_key)      },
-    {buttons_group_dfn,       ARRAY_SIZE(buttons_group_dfn)      },
-    {buttons_group_dfl,       ARRAY_SIZE(buttons_group_dfl)      },
-    {buttons_group_vm,       ARRAY_SIZE(buttons_group_vm)      },
+    {buttons_group_gen, ARRAY_SIZE(buttons_group_gen)},
+    {buttons_group_app, ARRAY_SIZE(buttons_group_app)},
+    {buttons_group_key, ARRAY_SIZE(buttons_group_key)},
+    {buttons_group_dfn, ARRAY_SIZE(buttons_group_dfn)},
+    {buttons_group_dfl, ARRAY_SIZE(buttons_group_dfl)},
+    {buttons_group_vm,  ARRAY_SIZE(buttons_group_vm) },
 };
 
 void buttons_init(lv_obj_t *parent) {
@@ -961,7 +961,7 @@ void buttons_load(uint8_t n, button_item_t *item) {
         }
     }
 
-    lv_obj_t        *label = btn[n].label;
+    lv_obj_t *label = btn[n].label;
     if (item) {
         if (item->type == BTN_TEXT) {
             lv_label_set_text(label, item->label);
@@ -979,7 +979,6 @@ void buttons_load(uint8_t n, button_item_t *item) {
         lv_label_set_text(label, "");
     }
     btn[n].item = item;
-
 }
 
 void buttons_load_page(buttons_page_t *page) {
@@ -1330,49 +1329,49 @@ static char * cw_noise_beta_label_getter() {
 
 static char * dnf_label_getter() {
     static char buf[22];
-    sprintf(buf, "DNF:\n%s", params.dnf ? "On": "Off");
+    sprintf(buf, "DNF:\n%s", subject_get_int(cfg.dnf.val) ? "On": "Off");
     return buf;
 }
 
 static char * dnf_center_label_getter() {
     static char buf[22];
-    sprintf(buf, "DNF freq:\n%zu Hz", params.dnf_center);
+    sprintf(buf, "DNF freq:\n%zu Hz", subject_get_int(cfg.dnf_center.val));
     return buf;
 }
 
 static char * dnf_width_label_getter() {
     static char buf[22];
-    sprintf(buf, "DNF width:\n%zu Hz", params.dnf_width);
+    sprintf(buf, "DNF width:\n%zu Hz", subject_get_int(cfg.dnf_width.val));
     return buf;
 }
 
 static char * nb_label_getter() {
     static char buf[22];
-    sprintf(buf, "NB:\n%s", params.nb ? "On": "Off");
+    sprintf(buf, "NB:\n%s", subject_get_int(cfg.nb.val) ? "On": "Off");
     return buf;
 }
 
 static char * nb_level_label_getter() {
     static char buf[22];
-    sprintf(buf, "NB level:\n%zu", params.nb_level);
+    sprintf(buf, "NB level:\n%zu", subject_get_int(cfg.nb_level.val));
     return buf;
 }
 
 static char * nb_width_label_getter() {
     static char buf[22];
-    sprintf(buf, "NB width:\n%zu Hz", params.nb_width);
+    sprintf(buf, "NB width:\n%zu Hz", subject_get_int(cfg.nb_width.val));
     return buf;
 }
 
 static char * nr_label_getter() {
     static char buf[22];
-    sprintf(buf, "NR:\n%s", params.nr ? "On": "Off");
+    sprintf(buf, "NR:\n%s", subject_get_int(cfg.nr.val) ? "On": "Off");
     return buf;
 }
 
 static char * nr_level_label_getter() {
     static char buf[22];
-    sprintf(buf, "NR level:\n%zu", params.nr_level);
+    sprintf(buf, "NR level:\n%zu", subject_get_int(cfg.nr_level.val));
     return buf;
 }
 

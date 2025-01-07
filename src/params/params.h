@@ -103,16 +103,16 @@ typedef struct {
 
     /* DSP */
 
-    bool                dnf;
-    uint16_t            dnf_center;
-    uint16_t            dnf_width;
+    // bool                dnf;
+    // uint16_t            dnf_center;
+    // uint16_t            dnf_width;
 
-    bool                nb;
-    uint8_t             nb_level;
-    uint8_t             nb_width;
+    // bool                nb;
+    // uint8_t             nb_level;
+    // uint8_t             nb_width;
 
-    bool                nr;
-    uint8_t             nr_level;
+    // bool                nr;
+    // uint8_t             nr_level;
 
     /* AGC */
 
@@ -262,14 +262,14 @@ typedef struct {
         bool    line_out;
         bool    moni;
 
-        bool    dnf;
-        bool    dnf_center;
-        bool    dnf_width;
-        bool    nb;
-        bool    nb_level;
-        bool    nb_width;
-        bool    nr;
-        bool    nr_level;
+        // bool    dnf;
+        // bool    dnf_center;
+        // bool    dnf_width;
+        // bool    nb;
+        // bool    nb_level;
+        // bool    nb_width;
+        // bool    nr;
+        // bool    nr_level;
 
         bool    agc_hang;
         bool    agc_knee;

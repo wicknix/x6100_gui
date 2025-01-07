@@ -16,8 +16,18 @@ typedef struct {
     cfg_item_t band_id;
     cfg_item_t ant_id;
     cfg_item_t atu_enabled;
-} cfg_t;
+    // DSP
+    cfg_item_t dnf;
+    cfg_item_t dnf_center;
+    cfg_item_t dnf_width;
 
+    cfg_item_t nb;
+    cfg_item_t nb_level;
+    cfg_item_t nb_width;
+
+    cfg_item_t nr;
+    cfg_item_t nr_level;
+} cfg_t;
 extern cfg_t cfg;
 
 /* Current band/mode params */
