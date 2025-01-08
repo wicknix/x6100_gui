@@ -12,6 +12,10 @@
 
 typedef void (* scheduler_fn_t)(void *);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Schedule execution function in main thread
  */
@@ -27,3 +31,7 @@ void scheduler_put_noargs(scheduler_fn_t fn);
  * Execute scheduled functions
  */
 void scheduler_work();
+
+#ifdef __cplusplus
+}
+#endif
