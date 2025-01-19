@@ -25,6 +25,7 @@ extern "C" {
 #include <string>
 #include <map>
 #include <vector>
+#include <array>
 
 #define WLAN_IFACE "wlan0"
 #define EMPTY_SSID_STR "--"
@@ -173,9 +174,7 @@ wifi_ap_arr_t wifi_get_available_access_points() {
             if ((search != ssid_strength_map.end()) && (ssid.compare(EMPTY_SSID_STR) !=0 )) {
                 if (search->second[0] < ap_info.strength) {
                     ap_info_vec[ssid_strength_map[ssid][1]] = ap_info;
-                    ssid_strength_map[ssid] = {
-                        {ap_info.strength, i}
-                    };
+                    ssid_strength_map[ssid] = {ap_info.strength, i};
                 }
 
             } else {

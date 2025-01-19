@@ -7,14 +7,14 @@ target_sources(${PROJECT_NAME} PUBLIC
     events.c msg.c msg_tiny.c keypad.c
     bands.c hkey.c clock.c info.c
     meter.c band_info.c tx_info.c
-    audio.c mfk.c cw.c cw_decoder.c pannel.c
+    audio.c mfk.c cw.cpp cw_decoder.c pannel.c
     rtty.c screenshot.c backlight.c gps.c cat.c
     dialog.c dialog_settings.c dialog_swrscan.c
     dialog_ft8.c dialog_freq.c dialog_gps.c dialog_msg_cw.c
     dialog_msg_voice.c dialog_recorder.c dialog_qth.c dialog_callsign.c
-    textarea_window.c cw_encoder.c buttons.c vol.c recorder.c
+    textarea_window.c cw_encoder.c buttons.cpp vol.c recorder.c
     voice.cpp cw_tune_ui.c adif.c qso_log.c scheduler.cpp
-    dialog_wifi.c wifi.cpp
+    dialog_wifi.c wifi.cpp controls.cpp
 )
 
 add_subdirectory(fonts)

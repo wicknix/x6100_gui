@@ -8,61 +8,18 @@
 
 #pragma once
 
-#include "cfg/subjects.h"
-#include "lvgl/lvgl.h"
-
 #define BUTTONS 5
 
-// typedef enum {
-//     PAGE_VOL_1 = 0,
-//     PAGE_VOL_2,
-//     PAGE_VOL_3,
-//     PAGE_VOL_4,
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-//     PAGE_MFK_1,
-//     PAGE_MFK_2,
-//     PAGE_MFK_3,
-//     PAGE_MFK_4,
-
-//     PAGE_MEM_1,
-//     PAGE_MEM_2,
-
-//     PAGE_KEY_1,
-//     PAGE_KEY_2,
-
-//     PAGE_CW_DECODER_1,
-//     PAGE_CW_DECODER_2,
-
-//     PAGE_DFN_1,
-//     PAGE_DFN_2,
-//     PAGE_DFN_3,
-
-//     PAGE_APP_1,
-//     PAGE_APP_2,
-//     PAGE_APP_3,
-
-//     PAGE_RTTY,
-//     PAGE_SETTINGS,
-//     PAGE_SWRSCAN,
-//     PAGE_FT8,
-//     PAGE_GPS,
-//     PAGE_MSG_CW_1,
-//     PAGE_MSG_CW_2,
-//     PAGE_MSG_VOICE_1,
-//     PAGE_MSG_VOICE_2,
-//     PAGE_RECORDER,
-//     PAGE_WIFI,
-// } button_page_id_t;
-
-// typedef enum {
-//     GROUP_GEN,
-//     GROUP_APP,
-//     GROUP_KEY,
-//     GROUP_MSG_CW,
-//     GROUP_MSG_VOICE,
-//     GROUP_DFN
-
-// } buttons_group_t;
+#include "cfg/subjects.h"
+#include "lvgl/lvgl.h"
+#include "params/params.h"
+#include "main_screen.h"
+#include "mfk.h"
+#include "vol.h"
 
 typedef enum {
     BTN_EMPTY,
@@ -73,12 +30,12 @@ typedef enum {
 typedef struct button_item_t {
     btn_type_t type;
     union {
-        char *label;
+        const char *label;
         char *(*label_fn)();
     };
-    char *voice;
     void (*press)(struct button_item_t *);
     void (*hold)(struct button_item_t *);
+    const char *voice;
     // next/prev page
     struct buttons_page_t *next;
     struct buttons_page_t *prev;
@@ -121,3 +78,7 @@ void            button_prev_page_cb(button_item_t *item);
 void            buttons_press(uint8_t n, bool hold);
 void            buttons_load_page_group(buttons_group_t group);
 buttons_page_t *buttons_get_cur_page();
+
+#ifdef __cplusplus
+}
+#endif

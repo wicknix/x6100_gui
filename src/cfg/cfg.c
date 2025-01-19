@@ -60,7 +60,7 @@ int cfg_init(sqlite3 *db) {
     rc = init_params_cfg(db);
     if (rc != 0) {
         LV_LOG_ERROR("Error during loading params");
-        return rc;
+        // return rc;
     }
     // rc = init_band_cfg(db);
     // if (rc != 0) {

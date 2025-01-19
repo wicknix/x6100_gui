@@ -7,19 +7,23 @@
  */
 #include "cw.h"
 
-#include "audio.h"
-#include "util.h"
-#include "params/params.h"
-#include "cw_decoder.h"
-#include "pannel.h"
-#include "meter.h"
-#include "util.h"
-#include "cw_tune_ui.h"
-#include "pubsub_ids.h"
 
 #include <math.h>
-#include "lvgl/lvgl.h"
-#include <pthread.h>
+
+extern "C" {
+    #include "lvgl/lvgl.h"
+    #include <pthread.h>
+    #include "audio.h"
+    #include "util.h"
+    #include "params/params.h"
+    #include "cw_decoder.h"
+    #include "pannel.h"
+    #include "meter.h"
+    #include "util.h"
+    #include "cw_tune_ui.h"
+    #include "pubsub_ids.h"
+    #include "cfg/subjects.h"
+}
 
 typedef struct {
     uint16_t    n;
@@ -40,11 +44,11 @@ static cbuffercf        input_cbuf;
 static cbuffercf        rms_cbuf;
 static wdelayf          rms_delay;
 
-static cbuffercf        fft_cbuf;
-static fftplan          fft_plan;
-static float complex    *fft_time;
-static float complex    *fft_freq;
-static float            audio_psd_squared[FFT];
+static cbuffercf fft_cbuf;
+static fftplan   fft_plan;
+static cfloat   *fft_time;
+static cfloat   *fft_freq;
+static float     audio_psd_squared[FFT];
 
 static float            peak_filtered;
 static float            noise_filtered;
@@ -69,8 +73,8 @@ void cw_init() {
     wrms = wrms_create(16, 4);
     rms_cbuf = cbuffercf_create(4000 / 8 * 2);
     fft_cbuf = cbuffercf_create(4000 / 8 * 2);
-    fft_time = malloc(FFT*(sizeof(float complex)));
-    fft_freq = malloc(FFT*(sizeof(float complex)));
+    fft_time = (cfloat *)malloc(FFT*(sizeof(cfloat)));
+    fft_freq = (cfloat *)malloc(FFT*(sizeof(cfloat)));
 
     fft_plan = fft_create_plan(FFT, fft_time, fft_freq, LIQUID_FFT_FORWARD, 0);
 
@@ -174,14 +178,14 @@ static bool decode(float rms_db) {
 }
 
 
-void cw_put_audio_samples(unsigned int n, float complex *samples) {
+void cw_put_audio_samples(unsigned int n, cfloat *samples) {
     if (!ready) {
         return;
     }
     if ((!params.cw_decoder) && (!params.cw_tune)) {
         return;
     }
-    float complex sample;
+    cfloat sample;
     float rms_db, peak_freq;
     size_t max_pos;
 
@@ -192,7 +196,7 @@ void cw_put_audio_samples(unsigned int n, float complex *samples) {
     const size_t desired_num = (1<<NUM_STAGES);
     while (cbuffercf_size(input_cbuf) >= desired_num) {
         unsigned int n;
-        float complex *buf;
+        cfloat *buf;
         cbuffercf_read(input_cbuf, desired_num, &buf, &n);
         pthread_mutex_lock(&cw_mutex);
         dds_cccf_decim_execute(ds_dec, buf, &sample);
@@ -209,7 +213,7 @@ void cw_put_audio_samples(unsigned int n, float complex *samples) {
             fft_execute(fft_plan);
 
             for (size_t i = 0; i < FFT; i++) {
-                audio_psd_squared[i] = crealf(fft_freq[i] * conjf(fft_freq[i]));
+                audio_psd_squared[i] = std::real(fft_freq[i] * std::conj(fft_freq[i]));
             }
             update_thresholds();
 

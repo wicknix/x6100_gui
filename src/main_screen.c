@@ -330,6 +330,7 @@ void main_screen_action(press_action_t action) {
         case ACTION_APP_GPS:
         case ACTION_APP_SETTINGS:
         case ACTION_APP_RECORDER:
+        case ACTION_APP_WIFI:
             main_screen_start_app(action);
             break;
 
