@@ -10,16 +10,16 @@
 
 #include <math.h>
 
+#include "util.h"
+
 extern "C" {
     #include "lvgl/lvgl.h"
     #include <pthread.h>
     #include "audio.h"
-    #include "util.h"
     #include "params/params.h"
     #include "cw_decoder.h"
     #include "pannel.h"
     #include "meter.h"
-    #include "util.h"
     #include "cw_tune_ui.h"
     #include "pubsub_ids.h"
     #include "cfg/subjects.h"
@@ -30,19 +30,19 @@ typedef struct {
     float       val;
 } fft_item_t;
 
-#define NUM_STAGES      6
-#define DECIM_FACTOR    (1LL << NUM_STAGES)
-#define FFT             128
+#define NUM_STAGES 6
+#define DECIM_FACTOR (1LL << NUM_STAGES)
+#define FFT 128
 
-static bool             ready = false;
+static bool ready = false;
 
-static fft_item_t       fft_items[FFT];
+static fft_item_t fft_items[FFT];
 
-static dds_cccf         ds_dec;
-static wrms_t           wrms;
-static cbuffercf        input_cbuf;
-static cbuffercf        rms_cbuf;
-static wdelayf          rms_delay;
+static dds_cccf  ds_dec;
+static wrms_t    wrms;
+static cbuffercf input_cbuf;
+static cbuffercf rms_cbuf;
+static wdelayf   rms_delay;
 
 static cbuffercf fft_cbuf;
 static fftplan   fft_plan;
@@ -50,24 +50,38 @@ static cfloat   *fft_time;
 static cfloat   *fft_freq;
 static float     audio_psd_squared[FFT];
 
-static float            peak_filtered;
-static float            noise_filtered;
-static float            threshold_pulse;
-static float            threshold_silence;
-static float            rms_db_max;
-static float            rms_db_min;
-static bool             peak_on = false;
+static float peak_filtered;
+static float noise_filtered;
+static float threshold_pulse;
+static float threshold_silence;
+static float rms_db_max;
+static float rms_db_min;
+static bool  peak_on = false;
 
-static int32_t          key_tone = 0;
+static int32_t key_tone = 0;
+static float   cw_decoder_peak_beta;
+static float   cw_decoder_noise_beta;
+static float   cw_decoder_snr;
+static float   cw_decoder_snr_gist;
+static bool    cw_decoder;
+static bool    cw_tune;
 
 static pthread_mutex_t  cw_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void dds_dec_init();
 
 static void on_key_tone_change(subject_t subj, void *user_data);
+static void on_val_float_change(subject_t subj, void *user_data);
+static void on_val_bool_change(subject_t subj, void *user_data);
 
 void cw_init() {
     subject_add_observer_and_call(cfg.key_tone.val, on_key_tone_change, NULL);
+    subject_add_observer_and_call(cfg.cw_decoder_peak_beta.val, on_val_float_change, (void*)&cw_decoder_peak_beta);
+    subject_add_observer_and_call(cfg.cw_decoder_noise_beta.val, on_val_float_change, (void*)&cw_decoder_noise_beta);
+    subject_add_observer_and_call(cfg.cw_decoder_snr.val, on_val_float_change, (void*)&cw_decoder_snr);
+    subject_add_observer_and_call(cfg.cw_decoder_snr_gist.val, on_val_float_change, (void*)&cw_decoder_snr_gist);
+    subject_add_observer_and_call(cfg.cw_decoder.val, on_val_bool_change, (void*)&cw_decoder);
+    subject_add_observer_and_call(cfg.cw_tune.val, on_val_bool_change, (void*)&cw_tune);
 
     input_cbuf = cbuffercf_create(10000);
     wrms = wrms_create(16, 4);
@@ -139,20 +153,20 @@ static void update_thresholds() {
     noise = sum_all - sum_signal;
 
     if (sum_signal/noise > 1) {
-        lpf(&peak_filtered, LV_MAX(noise_filtered + params.cw_decoder_snr, rms_db_max), params.cw_decoder_peak_beta, S_MIN);
+        lpf(&peak_filtered, LV_MAX(noise_filtered + cw_decoder_snr, rms_db_max), cw_decoder_peak_beta, S_MIN);
         threshold_pulse = 0;
     } else {
-        lpf(&noise_filtered, LV_MIN(-3.0f, rms_db_min), params.cw_decoder_noise_beta, S_MIN);
+        lpf(&noise_filtered, LV_MIN(-3.0f, rms_db_min), cw_decoder_noise_beta, S_MIN);
         peak_filtered -= 0.3f;
-        if (noise_filtered + params.cw_decoder_snr > peak_filtered) {
-            peak_filtered = noise_filtered + params.cw_decoder_snr;
+        if (noise_filtered + cw_decoder_snr > peak_filtered) {
+            peak_filtered = noise_filtered + cw_decoder_snr;
         }
         // Increase threshold for no signal
         threshold_pulse = 1;
     }
-    float low = noise_filtered + params.cw_decoder_snr;
+    float low = noise_filtered + cw_decoder_snr;
     threshold_pulse += LV_MAX(low, peak_filtered  - 3.0f);
-    threshold_silence = threshold_pulse - params.cw_decoder_snr_gist;
+    threshold_silence = threshold_pulse - cw_decoder_snr_gist;
     rms_db_min = 0.0f;
     rms_db_max = S1;
 }
@@ -182,7 +196,7 @@ void cw_put_audio_samples(unsigned int n, cfloat *samples) {
     if (!ready) {
         return;
     }
-    if ((!params.cw_decoder) && (!params.cw_tune)) {
+    if ((!cw_decoder) && (!cw_tune)) {
         return;
     }
     cfloat sample;
@@ -239,86 +253,72 @@ void cw_put_audio_samples(unsigned int n, cfloat *samples) {
     }
 }
 
-bool cw_change_decoder(int16_t df) {
-    if (df == 0) {
-        return params.cw_decoder;
-    }
+// bool cw_change_decoder(int16_t df) {
+//     if (df == 0) {
+//         return params.cw_decoder;
+//     }
 
-    params_lock();
-    params.cw_decoder = !params.cw_decoder;
-    params_unlock(&params.dirty.cw_decoder);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     params_lock();
+//     params.cw_decoder = !params.cw_decoder;
+//     params_unlock(&params.dirty.cw_decoder);
+//     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    pannel_visible();
+//     pannel_visible();
 
-    return params.cw_decoder;
-}
+//     return params.cw_decoder;
+// }
 
-float cw_change_snr(int16_t df) {
-    if (df == 0) {
-        return params.cw_decoder_snr;
-    }
+// float cw_change_snr(int16_t df) {
+//     if (df == 0) {
+//         return params.cw_decoder_snr;
+//     }
 
-    float x = params.cw_decoder_snr + df * 0.1f;
+//     float x = params.cw_decoder_snr + df * 0.1f;
 
-    if (x < 3.0f) {
-        x = 3.0f;
-    } else if (x > 30.0f) {
-        x = 30.0f;
-    }
+//     if (x < 3.0f) {
+//         x = 3.0f;
+//     } else if (x > 30.0f) {
+//         x = 30.0f;
+//     }
 
-    params_lock();
-    params.cw_decoder_snr = x;
-    params_unlock(&params.dirty.cw_decoder_snr);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     params_lock();
+//     params.cw_decoder_snr = x;
+//     params_unlock(&params.dirty.cw_decoder_snr);
+//     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    return params.cw_decoder_snr;
-}
+//     return params.cw_decoder_snr;
+// }
 
-float cw_change_peak_beta(int16_t df) {
-    if (df == 0) {
-        return params.cw_decoder_peak_beta;
-    }
+// float cw_change_peak_beta(int16_t df) {
+//     if (df == 0) {
+//         return params.cw_decoder_peak_beta;
+//     }
 
-    float x = params.cw_decoder_peak_beta + df * 0.01f;
+//     float x = params.cw_decoder_peak_beta + df * 0.01f;
 
-    if (x < 0.1f) {
-        x = 0.1f;
-    } else if (x > 0.95f) {
-        x = 0.95f;
-    }
+//     if (x < 0.1f) {
+//         x = 0.1f;
+//     } else if (x > 0.95f) {
+//         x = 0.95f;
+//     }
 
-    params_lock();
-    params.cw_decoder_peak_beta = x;
-    params_unlock(&params.dirty.cw_decoder_peak_beta);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     params_lock();
+//     params.cw_decoder_peak_beta = x;
+//     params_unlock(&params.dirty.cw_decoder_peak_beta);
+//     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    return params.cw_decoder_peak_beta;
-}
-
-float cw_change_noise_beta(int16_t df) {
-    if (df == 0) {
-        return params.cw_decoder_noise_beta;
-    }
-
-    float x = params.cw_decoder_noise_beta + df * 0.01f;
-
-    if (x < 0.1f) {
-        x = 0.1f;
-    } else if (x > 0.95f) {
-        x = 0.95f;
-    }
-
-    params_lock();
-    params.cw_decoder_noise_beta = x;
-    params_unlock(&params.dirty.cw_decoder_noise_beta);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
-
-    return params.cw_decoder_noise_beta;
-}
-
+//     return params.cw_decoder_peak_beta;
+// }
 
 static void on_key_tone_change(subject_t subj, void *user_data) {
     key_tone = subject_get_int(subj);
     dds_dec_init();
+}
+
+static void on_val_float_change(subject_t subj, void *user_data) {
+    *(float*)user_data = subject_get_float(subj);
+}
+
+static void on_val_bool_change(subject_t subj, void *user_data) {
+    *(bool*)user_data = subject_get_int(subj);
 }

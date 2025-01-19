@@ -8,6 +8,8 @@
 
 #include "voice.h"
 
+#include "util.h"
+
 extern "C" {
 #include <unistd.h>
 #include <pthread.h>
@@ -15,7 +17,6 @@ extern "C" {
 
 #include "audio.h"
 #include "params/params.h"
-#include "util.h"
 #include "backlight.h"
 #include "recorder.h"
 #include "msg.h"

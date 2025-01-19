@@ -8,11 +8,12 @@
 
 #pragma once
 
-#include <stdint.h>
-
 #ifdef __cplusplus
-extern "C" {
+
 #include <cstdarg>
+
+extern "C" {
+#include <stdint.h>
 #endif
 
 #define VOICES_NUM 4

@@ -176,6 +176,13 @@ static void * radio_thread(void *arg) {
     }
 }
 
+static void on_change_int8(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
+    void (*fn)(int8_t) = (void (*)(int8_t))user_data;
+    WITH_RADIO_LOCK(fn(new_val));
+    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+}
+
 static void on_change_uint8(subject_t subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint8_t) = (void (*)(uint8_t))user_data;
@@ -193,6 +200,13 @@ static void on_change_uint16(subject_t subj, void *user_data) {
 static void on_change_uint32(subject_t subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint32_t) = (void (*)(uint32_t))user_data;
+    WITH_RADIO_LOCK(fn(new_val));
+    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+}
+
+static void on_change_float(subject_t subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
+    void (*fn)(float) = (void (*)(float))user_data;
     WITH_RADIO_LOCK(fn(new_val));
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
@@ -441,12 +455,22 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
     subject_add_observer_and_call(cfg_cur.filter.low, on_low_filter_change, NULL);
     subject_add_observer_and_call(cfg_cur.filter.high, on_high_filter_change, NULL);
 
-
-
     subject_add_observer_and_call(cfg.vol.val, on_change_uint8, x6100_control_rxvol_set);
     subject_add_observer_and_call(cfg.key_tone.val, on_change_uint16, x6100_control_key_tone_set);
     subject_add_observer_and_call(cfg.atu_enabled.val, on_change_uint8, x6100_control_atu_set);
     subject_add_observer_and_call(cfg_cur.atu->network, on_atu_network_change, NULL);
+
+    subject_add_observer_and_call(cfg.key_speed.val, on_change_uint8, x6100_control_key_speed_set);
+    subject_add_observer_and_call(cfg.key_mode.val, on_change_uint8, x6100_control_key_mode_set);
+    subject_add_observer_and_call(cfg.iambic_mode.val, on_change_uint8, x6100_control_iambic_mode_set);
+    subject_add_observer_and_call(cfg.key_vol.val, on_change_uint16, x6100_control_key_vol_set);
+    subject_add_observer_and_call(cfg.key_train.val, on_change_uint8, x6100_control_key_train_set);
+    subject_add_observer_and_call(cfg.qsk_time.val, on_change_uint16, x6100_control_qsk_time_set);
+    subject_add_observer_and_call(cfg.key_ratio.val, on_change_float, x6100_control_key_ratio_set);
+
+    subject_add_observer_and_call(cfg.agc_hang.val, on_change_uint8, x6100_control_agc_hang_set);
+    subject_add_observer_and_call(cfg.agc_knee.val, on_change_int8, x6100_control_agc_knee_set);
+    subject_add_observer_and_call(cfg.agc_slope.val, on_change_uint8, x6100_control_agc_slope_set);
 
     subject_add_observer_and_call(cfg.dnf.val, on_change_uint8, x6100_control_dnf_set);
     subject_add_observer_and_call(cfg.dnf_center.val, on_change_uint16, x6100_control_dnf_center_set);
@@ -468,23 +492,10 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
     x6100_control_bias_drive_set(params.bias_drive);
     x6100_control_bias_final_set(params.bias_final);
 
-    x6100_control_key_speed_set(params.key_speed);
-    x6100_control_key_mode_set(params.key_mode);
-    x6100_control_iambic_mode_set(params.iambic_mode);
-    x6100_control_key_vol_set(params.key_vol);
-    x6100_control_key_train_set(params.key_train);
-    x6100_control_qsk_time_set(params.qsk_time);
-    x6100_control_key_ratio_set(params.key_ratio * 0.1f);
-
     x6100_control_mic_set(params.mic);
     x6100_control_hmic_set(params.hmic);
     x6100_control_imic_set(params.imic);
     x6100_control_spmode_set(params.spmode.x);
-
-
-    x6100_control_agc_hang_set(params.agc_hang);
-    x6100_control_agc_knee_set(params.agc_knee);
-    x6100_control_agc_slope_set(params.agc_slope);
 
     x6100_control_vox_set(params.vox);
     x6100_control_vox_ag_set(params.vox_ag);
@@ -898,129 +909,129 @@ float radio_change_pwr(int16_t d) {
     return params.pwr;
 }
 
-uint16_t radio_change_key_speed(int16_t d) {
-    if (d == 0) {
-        return params.key_speed;
-    }
+// uint16_t radio_change_key_speed(int16_t d) {
+//     if (d == 0) {
+//         return params.key_speed;
+//     }
 
-    int32_t new_val = limit(params.key_speed + d, 5, 50);
-    CHANGE_PARAM(new_val, params.key_speed, params.dirty.key_speed, x6100_control_key_speed_set);
+//     int32_t new_val = limit(params.key_speed + d, 5, 50);
+//     CHANGE_PARAM(new_val, params.key_speed, params.dirty.key_speed, x6100_control_key_speed_set);
 
-    return params.key_speed;
-}
+//     return params.key_speed;
+// }
 
-x6100_key_mode_t radio_change_key_mode(int16_t d) {
-    if (d == 0) {
-        return params.key_mode;
-    }
+// x6100_key_mode_t radio_change_key_mode(int16_t d) {
+//     if (d == 0) {
+//         return params.key_mode;
+//     }
 
-    params_lock();
+//     params_lock();
 
-    switch (params.key_mode) {
-        case x6100_key_manual:
-            params.key_mode = d > 0 ? x6100_key_auto_left : x6100_key_auto_right;
-            break;
+//     switch (params.key_mode) {
+//         case x6100_key_manual:
+//             params.key_mode = d > 0 ? x6100_key_auto_left : x6100_key_auto_right;
+//             break;
 
-        case x6100_key_auto_left:
-            params.key_mode = d > 0 ? x6100_key_auto_right : x6100_key_manual;
-            break;
+//         case x6100_key_auto_left:
+//             params.key_mode = d > 0 ? x6100_key_auto_right : x6100_key_manual;
+//             break;
 
-        case x6100_key_auto_right:
-            params.key_mode = d > 0 ? x6100_key_manual : x6100_key_auto_left;
-            break;
-    }
+//         case x6100_key_auto_right:
+//             params.key_mode = d > 0 ? x6100_key_manual : x6100_key_auto_left;
+//             break;
+//     }
 
-    params_unlock(&params.dirty.key_mode);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     params_unlock(&params.dirty.key_mode);
+//     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    WITH_RADIO_LOCK(x6100_control_key_mode_set(params.key_mode));
+//     WITH_RADIO_LOCK(x6100_control_key_mode_set(params.key_mode));
 
-    return params.key_mode;
-}
+//     return params.key_mode;
+// }
 
-x6100_iambic_mode_t radio_change_iambic_mode(int16_t d) {
-    if (d == 0) {
-        return params.iambic_mode;
-    }
+// x6100_iambic_mode_t radio_change_iambic_mode(int16_t d) {
+//     if (d == 0) {
+//         return params.iambic_mode;
+//     }
 
-    params_lock();
+//     params_lock();
 
-    params.iambic_mode = (params.iambic_mode == x6100_iambic_a) ? x6100_iambic_b : x6100_iambic_a;
+//     params.iambic_mode = (params.iambic_mode == x6100_iambic_a) ? x6100_iambic_b : x6100_iambic_a;
 
-    params_unlock(&params.dirty.iambic_mode);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     params_unlock(&params.dirty.iambic_mode);
+//     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    WITH_RADIO_LOCK(x6100_control_iambic_mode_set(params.iambic_mode));
+//     WITH_RADIO_LOCK(x6100_control_iambic_mode_set(params.iambic_mode));
 
-    return params.iambic_mode;
-}
+//     return params.iambic_mode;
+// }
 
-uint16_t radio_change_key_tone(int16_t d) {
-    int32_t key_tone = subject_get_int(cfg.key_tone.val);
-    if (d == 0) {
-        return key_tone;
-    }
+// uint16_t radio_change_key_tone(int16_t d) {
+//     int32_t key_tone = subject_get_int(cfg.key_tone.val);
+//     if (d == 0) {
+//         return key_tone;
+//     }
 
-    int32_t new_val = limit(key_tone + ((d > 0) ? 10 : -10), 400, 1200);
-    if (new_val != key_tone) {
-        subject_set_int(cfg.key_tone.val, new_val);
-    };
+//     int32_t new_val = limit(key_tone + ((d > 0) ? 10 : -10), 400, 1200);
+//     if (new_val != key_tone) {
+//         subject_set_int(cfg.key_tone.val, new_val);
+//     };
 
-    return new_val;
-}
+//     return new_val;
+// }
 
-uint16_t radio_change_key_vol(int16_t d) {
-    if (d == 0) {
-        return params.key_vol;
-    }
+// uint16_t radio_change_key_vol(int16_t d) {
+//     if (d == 0) {
+//         return params.key_vol;
+//     }
 
-    int32_t new_val = limit(params.key_vol + d, 0, 32);
-    CHANGE_PARAM(new_val, params.key_vol, params.dirty.key_vol, x6100_control_key_vol_set);
+//     int32_t new_val = limit(params.key_vol + d, 0, 32);
+//     CHANGE_PARAM(new_val, params.key_vol, params.dirty.key_vol, x6100_control_key_vol_set);
 
-    return params.key_vol;
-}
+//     return params.key_vol;
+// }
 
-bool radio_change_key_train(int16_t d) {
-    if (d == 0) {
-        return params.key_train;
-    }
+// bool radio_change_key_train(int16_t d) {
+//     if (d == 0) {
+//         return params.key_train;
+//     }
 
-    params_lock();
-    params.key_train = !params.key_train;
-    params_unlock(&params.dirty.key_train);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     params_lock();
+//     params.key_train = !params.key_train;
+//     params_unlock(&params.dirty.key_train);
+//     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    WITH_RADIO_LOCK(x6100_control_key_train_set(params.key_train));
+//     WITH_RADIO_LOCK(x6100_control_key_train_set(params.key_train));
 
-    return params.key_train;
-}
+//     return params.key_train;
+// }
 
-uint16_t radio_change_qsk_time(int16_t d) {
-    if (d == 0) {
-        return params.qsk_time;
-    }
+// uint16_t radio_change_qsk_time(int16_t d) {
+//     if (d == 0) {
+//         return params.qsk_time;
+//     }
 
-    int32_t new_val = limit(params.qsk_time + ((d > 0) ? 10 : -10), 0, 1000);
-    CHANGE_PARAM(new_val, params.qsk_time, params.dirty.qsk_time, x6100_control_qsk_time_set);
+//     int32_t new_val = limit(params.qsk_time + ((d > 0) ? 10 : -10), 0, 1000);
+//     CHANGE_PARAM(new_val, params.qsk_time, params.dirty.qsk_time, x6100_control_qsk_time_set);
 
-    return params.qsk_time;
-}
+//     return params.qsk_time;
+// }
 
-uint8_t radio_change_key_ratio(int16_t d) {
-    if (d == 0) {
-        return params.key_ratio;
-    }
+// uint8_t radio_change_key_ratio(int16_t d) {
+//     if (d == 0) {
+//         return params.key_ratio;
+//     }
 
-    uint8_t new_val = limit(params.key_ratio + ((d > 0) ? 5 : -5), 25, 45);
-    if (new_val != params.key_ratio) {
-        params_lock();
-        params.key_ratio = new_val;
-        params_unlock(&params.dirty.key_ratio);
-        WITH_RADIO_LOCK(x6100_control_key_ratio_set(params.key_ratio * 0.1f));
-    }
+//     uint8_t new_val = limit(params.key_ratio + ((d > 0) ? 5 : -5), 25, 45);
+//     if (new_val != params.key_ratio) {
+//         params_lock();
+//         params.key_ratio = new_val;
+//         params_unlock(&params.dirty.key_ratio);
+//         WITH_RADIO_LOCK(x6100_control_key_ratio_set(params.key_ratio * 0.1f));
+//     }
 
-    return params.key_ratio;
-}
+//     return params.key_ratio;
+// }
 
 x6100_mic_sel_t radio_change_mic(int16_t d) {
     if (d == 0) {
@@ -1225,42 +1236,42 @@ radio_charger_t radio_change_charger(int16_t d) {
 //     return params.nr_level;
 // }
 
-bool radio_change_agc_hang(int16_t d) {
-    if (d == 0) {
-        return params.agc_hang;
-    }
+// bool radio_change_agc_hang(int16_t d) {
+//     if (d == 0) {
+//         return params.agc_hang;
+//     }
 
-    params_lock();
-    params.agc_hang = !params.agc_hang;
-    params_unlock(&params.dirty.agc_hang);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     params_lock();
+//     params.agc_hang = !params.agc_hang;
+//     params_unlock(&params.dirty.agc_hang);
+//     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-    WITH_RADIO_LOCK(x6100_control_agc_hang_set(params.agc_hang));
+//     WITH_RADIO_LOCK(x6100_control_agc_hang_set(params.agc_hang));
 
-    return params.agc_hang;
-}
+//     return params.agc_hang;
+// }
 
-int8_t radio_change_agc_knee(int16_t d) {
-    if (d == 0) {
-        return params.agc_knee;
-    }
+// int8_t radio_change_agc_knee(int16_t d) {
+//     if (d == 0) {
+//         return params.agc_knee;
+//     }
 
-    int8_t new_val = limit(params.agc_knee + d, -100, 0);
-    CHANGE_PARAM(new_val, params.agc_knee, params.dirty.agc_knee, x6100_control_agc_knee_set);
+//     int8_t new_val = limit(params.agc_knee + d, -100, 0);
+//     CHANGE_PARAM(new_val, params.agc_knee, params.dirty.agc_knee, x6100_control_agc_knee_set);
 
-    return params.agc_knee;
-}
+//     return params.agc_knee;
+// }
 
-uint8_t radio_change_agc_slope(int16_t d) {
-    if (d == 0) {
-        return params.agc_slope;
-    }
+// uint8_t radio_change_agc_slope(int16_t d) {
+//     if (d == 0) {
+//         return params.agc_slope;
+//     }
 
-    uint8_t new_val = limit(params.agc_slope + d, 0, 10);
-    CHANGE_PARAM(new_val, params.agc_slope, params.dirty.agc_slope, x6100_control_agc_slope_set);
+//     uint8_t new_val = limit(params.agc_slope + d, 0, 10);
+//     CHANGE_PARAM(new_val, params.agc_slope, params.dirty.agc_slope, x6100_control_agc_slope_set);
 
-    return params.agc_slope;
-}
+//     return params.agc_slope;
+// }
 
 void radio_set_ptt(bool tx) {
     WITH_RADIO_LOCK(x6100_control_ptt_set(tx));

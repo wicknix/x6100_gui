@@ -11,6 +11,7 @@
 #define BUTTONS 5
 
 #ifdef __cplusplus
+
 extern "C" {
 #endif
 
@@ -32,6 +33,7 @@ typedef struct button_item_t {
     union {
         const char *label;
         char *(*label_fn)();
+
     };
     void (*press)(struct button_item_t *);
     void (*hold)(struct button_item_t *);

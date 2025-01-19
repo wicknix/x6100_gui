@@ -8,7 +8,6 @@
 #include <sqlite3.h>
 
 
-
 /* configuration structs. Should contain same types (for correct initialization) */
 typedef struct {
     cfg_item_t key_tone;
@@ -16,6 +15,28 @@ typedef struct {
     cfg_item_t band_id;
     cfg_item_t ant_id;
     cfg_item_t atu_enabled;
+
+    /* key */
+    cfg_item_t key_speed;
+    cfg_item_t key_mode;
+    cfg_item_t iambic_mode;
+    cfg_item_t key_vol;
+    cfg_item_t key_train;
+    cfg_item_t qsk_time;
+    cfg_item_t key_ratio;
+
+    /* CW decoder */
+    cfg_item_t cw_decoder;
+    cfg_item_t cw_tune;
+    cfg_item_t cw_decoder_snr;
+    cfg_item_t cw_decoder_snr_gist;
+    cfg_item_t cw_decoder_peak_beta;
+    cfg_item_t cw_decoder_noise_beta;
+
+    cfg_item_t agc_hang;
+    cfg_item_t agc_knee;
+    cfg_item_t agc_slope;
+
     // DSP
     cfg_item_t dnf;
     cfg_item_t dnf_center;

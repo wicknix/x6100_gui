@@ -21,7 +21,7 @@ static char         buf[1024];
 static char         tmp_buf[1024];
 static char         *last_line;
 
-static void on_mode_change(subject_t subj, void *user_data);
+static void update_visibility(subject_t subj, void *user_data);
 
 static void check_lines() {
     char        *second_line = NULL;
@@ -90,12 +90,13 @@ lv_obj_t * pannel_init(lv_obj_t *parent) {
     lv_obj_add_style(obj, &pannel_style, 0);
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
 
-    subject_add_observer(cfg_cur.mode, on_mode_change, NULL);
+    subject_add_observer(cfg_cur.mode, update_visibility, NULL);
+    subject_add_observer(cfg.cw_decoder.val, update_visibility, NULL);
     return obj;
 }
 
 void pannel_add_text(const char * text) {
-    scheduler_put((void(*)(void*))pannel_update_cb, (char *)text, strlen(text) + 1);
+    scheduler_put((void(*)(void*))pannel_update_cb, strdup(text), strlen(text) + 1);
 }
 
 void pannel_hide() {
@@ -109,7 +110,7 @@ void pannel_visible() {
     switch (mode) {
         case x6100_mode_cw:
         case x6100_mode_cwr:
-            on = params.cw_decoder;
+            on = subject_get_int(cfg.cw_decoder.val);
             break;
 
         case x6100_mode_usb:
@@ -130,6 +131,6 @@ void pannel_visible() {
     }
 }
 
-static void on_mode_change(subject_t subj, void *user_data) {
+static void update_visibility(subject_t subj, void *user_data) {
     pannel_visible();
 }

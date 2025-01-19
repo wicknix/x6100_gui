@@ -232,7 +232,7 @@ static void add_symbol(float pwr) {
     }
 }
 
-void rtty_put_audio_samples(unsigned int n, float complex *samples) {
+void rtty_put_audio_samples(unsigned int n, cfloat *samples) {
     pthread_mutex_lock(&rtty_mux);
 
     if (!ready) {
@@ -245,7 +245,7 @@ void rtty_put_audio_samples(unsigned int n, float complex *samples) {
     while (cbuffercf_size(rx_buf) > symbol_samples) {
         unsigned int   symbol;
         unsigned int   n;
-        float complex *buf;
+        cfloat *buf;
 
         cbuffercf_read(rx_buf, symbol_samples, &buf, &n);
         nco_crcf_mix_block_down(nco, buf, nco_buf, n);

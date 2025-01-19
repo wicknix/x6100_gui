@@ -8,6 +8,23 @@
 
 #pragma once
 
+#include "helpers.h"
+
+#ifdef __cplusplus
+
+template <typename T> inline T clip(T x, T min, T max) {
+    if (x < min) {
+        return min;
+    } else if (x > max) {
+        return max;
+    }
+
+    return x;
+}
+
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
@@ -46,3 +63,7 @@ size_t argmax(float *x, size_t n);
 char *util_canonize_callsign(const char *callsign, bool strip_slashes);
 
 void sleep_usec(uint32_t msec);
+
+#ifdef __cplusplus
+}
+#endif

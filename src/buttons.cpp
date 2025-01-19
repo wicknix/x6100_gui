@@ -7,6 +7,7 @@
  */
 #include "buttons.h"
 
+#include "controls.h"
 
 #include <stdio.h>
 #include <string>
@@ -151,7 +152,7 @@ static button_item_t btn_vol = {
     .type     = BTN_TEXT_FN,
     .label_fn = vol_label_getter,
     .press    = button_vol_update_cb,
-    .data     = VOL_VOL,
+    .data     = VOL_VOL
 };
 
 static button_item_t btn_sql = make_btn(sql_label_getter, VOL_SQL);
@@ -201,7 +202,11 @@ static button_item_t btn_xit     = make_btn(xit_label_getter, MFK_XIT);
 
 /* MFK page 4 */
 
-static button_item_t btn_agc_hang  = make_btn(agc_hang_label_getter, MFK_AGC_HANG);
+static button_item_t btn_agc_hang  = {.type     = BTN_TEXT_FN,
+                                      .label_fn = agc_hang_label_getter,
+                                      .press    = controls_toggle_agc_hang,
+                                      .hold     = button_mfk_hold_cb,
+                                      .data     = MFK_AGC_HANG};
 static button_item_t btn_agc_knee  = make_btn(agc_knee_label_getter, MFK_AGC_KNEE);
 static button_item_t btn_agc_slope = make_btn(agc_slope_label_getter, MFK_AGC_SLOPE);
 
@@ -223,31 +228,62 @@ static button_item_t btn_mem_8 = make_mem_btn("Set 8", 8);
 
 static button_item_t btn_key_speed  = make_btn(key_speed_label_getter, MFK_KEY_SPEED);
 static button_item_t btn_key_volume = make_btn(key_volume_label_getter, MFK_KEY_VOL);
-static button_item_t btn_key_train  = make_btn(key_train_label_getter, MFK_KEY_TRAIN);
+static button_item_t btn_key_train  = {.type     = BTN_TEXT_FN,
+                                       .label_fn = key_train_label_getter,
+                                       .press    = controls_toggle_key_train,
+                                       .hold     = button_mfk_hold_cb,
+                                       .data     = MFK_KEY_TRAIN};
 static button_item_t btn_key_tone   = make_btn(key_tone_label_getter, MFK_KEY_TONE);
 
 static button_item_t btn_key_mode        = make_btn(key_mode_label_getter, MFK_KEY_MODE);
-static button_item_t btn_key_iambic_mode = make_btn(iambic_mode_label_getter, MFK_IAMBIC_MODE);
+static button_item_t btn_key_iambic_mode = {.type     = BTN_TEXT_FN,
+                                            .label_fn = iambic_mode_label_getter,
+                                            .press    = controls_toggle_key_iambic_mode,
+                                            .hold     = button_mfk_hold_cb,
+                                            .data     = MFK_IAMBIC_MODE};
 static button_item_t btn_key_qsk_time    = make_btn(qsk_time_label_getter, MFK_QSK_TIME);
 static button_item_t btn_key_ratio       = make_btn(key_ratio_label_getter, MFK_KEY_RATIO);
 
-static button_item_t btn_cw_decoder    = make_btn(cw_decoder_label_getter, MFK_CW_DECODER);
-static button_item_t btn_cw_tuner      = make_btn(cw_tuner_label_getter, MFK_CW_TUNE);
-static button_item_t btn_cw_snr        = make_btn(cw_snr_label_getter, MFK_CW_DECODER_SNR);
-static button_item_t btn_cw_peak_beta  = make_btn(cw_peak_beta_label_getter, MFK_CW_DECODER_PEAK_BETA);
-static button_item_t btn_cw_noise_beta = make_btn(cw_noise_beta_label_getter, MFK_CW_DECODER_NOISE_BETA);
+static button_item_t btn_cw_decoder = {.type     = BTN_TEXT_FN,
+                                       .label_fn = cw_decoder_label_getter,
+                                       .press    = controls_toggle_cw_decoder,
+                                       .hold     = button_mfk_hold_cb,
+                                       .data     = MFK_CW_DECODER};
+static button_item_t btn_cw_tuner   = {.type     = BTN_TEXT_FN,
+                                       .label_fn = cw_tuner_label_getter,
+                                       .press    = controls_toggle_cw_tuner,
+                                       .hold     = button_mfk_hold_cb,
+                                       .data     = MFK_CW_TUNE};
+static button_item_t btn_cw_snr     = make_btn(cw_snr_label_getter, MFK_CW_DECODER_SNR);
+static button_item_t btn_cw_peak_beta =
+    make_btn(cw_peak_beta_label_getter, MFK_CW_DECODER_PEAK_BETA);
+static button_item_t btn_cw_noise_beta =
+    make_btn(cw_noise_beta_label_getter, MFK_CW_DECODER_NOISE_BETA);
 
 /* DSP */
 
-static button_item_t btn_dnf        = make_btn(dnf_label_getter, MFK_DNF);
+static button_item_t btn_dnf        = {.type     = BTN_TEXT_FN,
+                                       .label_fn = dnf_label_getter,
+                                       .press    = controls_toggle_dnf,
+                                       .hold     = button_mfk_hold_cb,
+                                       .data     = MFK_DNF,
+                                       .subj     = cfg.dnf.val};
 static button_item_t btn_dnf_center = make_btn(dnf_center_label_getter, MFK_DNF_CENTER);
 static button_item_t btn_dnf_width  = make_btn(dnf_width_label_getter, MFK_DNF_WIDTH);
 
-static button_item_t btn_nb       = make_btn(nb_label_getter, MFK_NB);
+static button_item_t btn_nb       = {.type     = BTN_TEXT_FN,
+                                     .label_fn = nb_label_getter,
+                                     .press    = controls_toggle_nb,
+                                     .hold     = button_mfk_hold_cb,
+                                     .data     = MFK_NB};
 static button_item_t btn_nb_level = make_btn(nb_level_label_getter, MFK_NB_LEVEL);
 static button_item_t btn_nb_width = make_btn(nb_width_label_getter, MFK_NB_WIDTH);
 
-static button_item_t btn_nr       = make_btn(nr_label_getter, MFK_NR);
+static button_item_t btn_nr       = {.type     = BTN_TEXT_FN,
+                                     .label_fn = nr_label_getter,
+                                     .press    = controls_toggle_nr,
+                                     .hold     = button_mfk_hold_cb,
+                                     .data     = MFK_NR};
 static button_item_t btn_nr_level = make_btn(nr_level_label_getter, MFK_NR_LEVEL);
 
 /* APP */
@@ -459,6 +495,39 @@ static struct {
 
 void buttons_init(lv_obj_t *parent) {
 
+    btn_vol.subj = cfg.vol.val;
+    btn_rfg.subj = cfg_cur.band->rfg.val;
+
+    btn_flt_low.subj  = cfg_cur.filter.low;
+    btn_flt_high.subj = cfg_cur.filter.high;
+    btn_flt_bw.subj   = cfg_cur.filter.bw;
+
+    btn_agc_hang.subj  = cfg.agc_hang.val;
+    btn_agc_knee.subj  = cfg.agc_knee.val;
+    btn_agc_slope.subj = cfg.agc_slope.val;
+
+    btn_key_speed.subj       = cfg.key_speed.val;
+    btn_key_volume.subj      = cfg.key_vol.val;
+    btn_key_train.subj       = cfg.key_train.val;
+    btn_key_tone.subj        = cfg.key_tone.val;
+    btn_key_mode.subj        = cfg.key_mode.val;
+    btn_key_iambic_mode.subj = cfg.iambic_mode.val;
+    btn_key_qsk_time.subj    = cfg.qsk_time.val;
+    btn_key_ratio.subj       = cfg.key_ratio.val;
+    btn_cw_decoder.subj      = cfg.cw_decoder.val;
+    btn_cw_tuner.subj        = cfg.cw_tune.val;
+    btn_cw_snr.subj          = cfg.cw_decoder_snr.val;
+    btn_cw_peak_beta.subj    = cfg.cw_decoder_peak_beta.val;
+    btn_cw_noise_beta.subj   = cfg.cw_decoder_noise_beta.val;
+
+    btn_dnf_center.subj = cfg.dnf_center.val;
+    btn_dnf_width.subj  = cfg.dnf_width.val;
+    btn_nb.subj         = cfg.nb.val;
+    btn_nb_level.subj   = cfg.nb_level.val;
+    btn_nb_width.subj   = cfg.nb_width.val;
+    btn_nr.subj         = cfg.nr.val;
+    btn_nr_level.subj   = cfg.nr_level.val;
+
     /* Fill prev/next pointers */
     for (size_t i = 0; i < ARRAY_SIZE(groups); i++) {
         buttons_page_t **group = groups[i].group;
@@ -477,10 +546,6 @@ void buttons_init(lv_obj_t *parent) {
             }
         }
     }
-
-    btn_flt_low.subj = cfg_cur.filter.low;
-    btn_flt_high.subj = cfg_cur.filter.high;
-    btn_flt_bw.subj = cfg_cur.filter.bw;
 
     uint16_t y = 480 - btn_height;
     uint16_t x = 0;
@@ -524,9 +589,10 @@ void buttons_load(uint8_t n, button_item_t *item) {
             lv_label_set_text(label, item->label);
         } else if (item->type == BTN_TEXT_FN) {
             lv_label_set_text(label, item->label_fn());
-            lv_obj_set_user_data(label, (void *)item->label_fn);
             if (item->subj) {
                 item->observer = subject_add_observer(item->subj, label_update_cb, item);
+            } else {
+                lv_obj_set_user_data(label, (void *)item->label_fn);
             }
         } else {
             lv_label_set_text(label, "");
@@ -790,37 +856,37 @@ static char * xit_label_getter() {
 
 static char * agc_hang_label_getter() {
     static char buf[22];
-    sprintf(buf, "AGC hang:\n%s", params.agc_hang ? "On": "Off");
+    sprintf(buf, "AGC hang:\n%s", subject_get_int(cfg.agc_hang.val) ? "On": "Off");
     return buf;
 }
 
 static char * agc_knee_label_getter() {
     static char buf[22];
-    sprintf(buf, "AGC knee:\n%zi dB", params.agc_knee);
+    sprintf(buf, "AGC knee:\n%zi dB", subject_get_int(cfg.agc_knee.val));
     return buf;
 }
 
 static char * agc_slope_label_getter() {
     static char buf[22];
-    sprintf(buf, "AGC slope:\n%zu dB", params.agc_slope);
+    sprintf(buf, "AGC slope:\n%zu dB", subject_get_int(cfg.agc_slope.val));
     return buf;
 }
 
 static char * key_speed_label_getter() {
     static char buf[22];
-    sprintf(buf, "Speed:\n%zu wpm", params.key_speed);
+    sprintf(buf, "Speed:\n%zu wpm", subject_get_int(cfg.key_speed.val));
     return buf;
 }
 
 static char * key_volume_label_getter() {
     static char buf[22];
-    sprintf(buf, "Volume:\n%zu", params.key_vol);
+    sprintf(buf, "Volume:\n%zu", subject_get_int(cfg.key_vol.val));
     return buf;
 }
 
 static char * key_train_label_getter() {
     static char buf[22];
-    sprintf(buf, "Train:\n%s", params.key_train ? "On": "Off");
+    sprintf(buf, "Train:\n%s", subject_get_int(cfg.key_train.val) ? "On": "Off");
     return buf;
 }
 
@@ -832,55 +898,55 @@ static char * key_tone_label_getter() {
 
 static char * key_mode_label_getter() {
     static char buf[22];
-    sprintf(buf, "Mode:\n%s", params_key_mode_str_get(params.key_mode));
+    sprintf(buf, "Mode:\n%s", params_key_mode_str_get((x6100_key_mode_t)subject_get_int(cfg.key_mode.val)));
     return buf;
 }
 
 static char * iambic_mode_label_getter() {
     static char buf[22];
-    sprintf(buf, "Iambic:\n%s mode", params_iambic_mode_str_ger(params.iambic_mode));
+    sprintf(buf, "Iambic:\n%s mode", params_iambic_mode_str_ger((x6100_iambic_mode_t)subject_get_int(cfg.iambic_mode.val)));
     return buf;
 }
 
 static char * qsk_time_label_getter() {
     static char buf[22];
-    sprintf(buf, "QSK time:\n%zu ms", params.qsk_time);
+    sprintf(buf, "QSK time:\n%zu ms", subject_get_int(cfg.qsk_time.val));
     return buf;
 }
 
 static char * key_ratio_label_getter() {
     static char buf[22];
-    sprintf(buf, "Ratio:\n%0.1f", (float)params.key_ratio / 10.0f);
+    sprintf(buf, "Ratio:\n%0.1f", subject_get_float(cfg.key_ratio.val));
     return buf;
 }
 
 static char * cw_decoder_label_getter() {
     static char buf[22];
-    sprintf(buf, "Decoder:\n%s", params.cw_decoder ? "On": "Off");
+    sprintf(buf, "Decoder:\n%s", subject_get_int(cfg.cw_decoder.val) ? "On": "Off");
     return buf;
 }
 
 static char * cw_tuner_label_getter() {
     static char buf[22];
-    sprintf(buf, "Tuner:\n%s", params.cw_tune ? "On": "Off");
+    sprintf(buf, "Tuner:\n%s", subject_get_int(cfg.cw_tune.val) ? "On": "Off");
     return buf;
 }
 
 static char * cw_snr_label_getter() {
     static char buf[22];
-    sprintf(buf, "Dec SNR:\n%0.1f dB", params.cw_decoder_snr);
+    sprintf(buf, "Dec SNR:\n%0.1f dB", subject_get_float(cfg.cw_decoder_snr.val));
     return buf;
 }
 
 static char * cw_peak_beta_label_getter() {
     static char buf[22];
-    sprintf(buf, "Peak beta:\n%0.2f", params.cw_decoder_peak_beta);
+    sprintf(buf, "Peak beta:\n%0.2f", subject_get_float(cfg.cw_decoder_peak_beta.val));
     return buf;
 }
 
 static char * cw_noise_beta_label_getter() {
     static char buf[22];
-    sprintf(buf, "Noise beta:\n%0.2f", params.cw_decoder_noise_beta);
+    sprintf(buf, "Noise beta:\n%0.2f", subject_get_float(cfg.cw_decoder_noise_beta.val));
     return buf;
 }
 

@@ -7,15 +7,17 @@
  */
 #include "util.h"
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <math.h>
-#include <sys/time.h>
-#include <time.h>
-#include <string.h>
-#include <string.h>
-#include <errno.h>
-
+extern "C" {
+    #include <complex.h>
+    #include <stdlib.h>
+    #include <stdio.h>
+    #include <math.h>
+    #include <sys/time.h>
+    #include <time.h>
+    #include <string.h>
+    #include <string.h>
+    #include <errno.h>
+}
 
 /**
  * Return time in ms from unix epoch
@@ -60,13 +62,7 @@ uint64_t align_long(uint64_t x, uint16_t step) {
 }
 
 int32_t limit(int32_t x, int32_t min, int32_t max) {
-    if (x < min) {
-        return min;
-    } else if (x > max) {
-        return max;
-    }
-
-    return x;
+    return clip(x, min, max);
 }
 
 float sqr(float x) {
@@ -214,12 +210,12 @@ size_t wrms_delay(wrms_t wr) {
     return wr->delay;
 }
 
-void wrms_pushcf(wrms_t wr, liquid_float_complex x) {
+void wrms_pushcf(wrms_t wr, cfloat x) {
     if (wr->remain == 0) {
         wr->remain = wr->delay;
     }
     wr->remain--;
-    float x_db = 10.0f * log10f(sqrt(crealf(x * conjf(x))));
+    float x_db = 10.0f * log10f(std::abs(x));
     if (x_db < -121.0f) {
         x_db = -121.0f;
     }

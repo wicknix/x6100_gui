@@ -116,9 +116,9 @@ typedef struct {
 
     /* AGC */
 
-    bool                agc_hang;
-    int8_t              agc_knee;
-    uint8_t             agc_slope;
+    // bool                agc_hang;
+    // int8_t              agc_knee;
+    // uint8_t             agc_slope;
 
     /* VOX */
 
@@ -151,22 +151,22 @@ typedef struct {
 
     /* key */
 
-    uint8_t             key_speed;
-    x6100_key_mode_t    key_mode;
-    x6100_iambic_mode_t iambic_mode;
-    uint16_t            key_vol;
-    bool                key_train;
-    uint16_t            qsk_time;
-    uint8_t             key_ratio;
+    // uint8_t             key_speed;
+    // x6100_key_mode_t    key_mode;
+    // x6100_iambic_mode_t iambic_mode;
+    // uint16_t            key_vol;
+    // bool                key_train;
+    // uint16_t            qsk_time;
+    // uint8_t             key_ratio;
 
-    /* CW decoder */
+    // /* CW decoder */
 
-    bool                cw_decoder;
-    bool                cw_tune;
-    float               cw_decoder_snr;
-    float               cw_decoder_snr_gist;
-    float               cw_decoder_peak_beta;
-    float               cw_decoder_noise_beta;
+    // bool                cw_decoder;
+    // bool                cw_tune;
+    // float               cw_decoder_snr;
+    // float               cw_decoder_snr_gist;
+    // float               cw_decoder_peak_beta;
+    // float               cw_decoder_noise_beta;
 
     /* Msg */
 
@@ -271,9 +271,9 @@ typedef struct {
         // bool    nr;
         // bool    nr_level;
 
-        bool    agc_hang;
-        bool    agc_knee;
-        bool    agc_slope;
+        // bool    agc_hang;
+        // bool    agc_knee;
+        // bool    agc_slope;
 
         bool    vox;
         bool    vox_ag;
@@ -290,19 +290,19 @@ typedef struct {
         bool    clock_power_timeout;
         bool    clock_tx_timeout;
 
-        bool    key_speed;
-        bool    key_mode;
-        bool    iambic_mode;
-        bool    key_vol;
-        bool    key_train;
-        bool    qsk_time;
-        bool    key_ratio;
+        // bool    key_speed;
+        // bool    key_mode;
+        // bool    iambic_mode;
+        // bool    key_vol;
+        // bool    key_train;
+        // bool    qsk_time;
+        // bool    key_ratio;
 
-        bool    cw_decoder;
-        bool    cw_tune;
-        bool    cw_decoder_snr;
-        bool    cw_decoder_peak_beta;
-        bool    cw_decoder_noise_beta;
+        // bool    cw_decoder;
+        // bool    cw_tune;
+        // bool    cw_decoder_snr;
+        // bool    cw_decoder_peak_beta;
+        // bool    cw_decoder_noise_beta;
 
         bool    cw_encoder_period;
         bool    voice_msg_period;

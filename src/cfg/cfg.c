@@ -226,6 +226,26 @@ static int init_params_cfg(sqlite3 *db) {
     cfg.ant_id      = (cfg_item_t){.val = subject_create_int(1), .db_name = "ant"};
     cfg.atu_enabled = (cfg_item_t){.val = subject_create_int(false), .db_name = "atu"};
 
+    cfg.key_speed = (cfg_item_t){.val = subject_create_int(15), .db_name="key_speed"};
+    cfg.key_mode = (cfg_item_t){.val = subject_create_int(x6100_key_manual), .db_name="key_mode"};
+    cfg.iambic_mode = (cfg_item_t){.val = subject_create_int(x6100_iambic_a), .db_name="iambic_mode"};
+    cfg.key_vol = (cfg_item_t){.val = subject_create_int(10), .db_name="key_vol"};
+    cfg.key_train = (cfg_item_t){.val = subject_create_int(false), .db_name="key_train"};
+    cfg.qsk_time = (cfg_item_t){.val = subject_create_int(100), .db_name="qsk_time"};
+    cfg.key_ratio = (cfg_item_t){.val = subject_create_float(3.0f), .db_scale=0.1f, .db_name="key_ratio"};
+
+    /* CW decoder */
+    cfg.cw_decoder = (cfg_item_t){.val = subject_create_int(true), .db_name="cw_decoder"};
+    cfg.cw_tune = (cfg_item_t){.val = subject_create_int(false), .db_name="cw_tune"};
+    cfg.cw_decoder_snr = (cfg_item_t){.val = subject_create_float(5.0f), .db_scale=0.1f, .db_name="cw_decoder_snr_2"};
+    cfg.cw_decoder_snr_gist = (cfg_item_t){.val = subject_create_float(1.0f), .db_scale=0.1f, .db_name="cw_decoder_snr_gist"};
+    cfg.cw_decoder_peak_beta = (cfg_item_t){.val = subject_create_float(0.10f), .db_scale=0.01f, .db_name="cw_decoder_peak_beta"};
+    cfg.cw_decoder_noise_beta = (cfg_item_t){.val = subject_create_float(0.80f), .db_scale=0.01f, .db_name="cw_decoder_noise_beta"};
+
+    cfg.agc_hang = (cfg_item_t){.val=subject_create_int(false), .db_name="agc_hang"};
+    cfg.agc_knee = (cfg_item_t){.val=subject_create_int(-60), .db_name="agc_knee"};
+    cfg.agc_slope = (cfg_item_t){.val=subject_create_int(6), .db_name="agc_slope"};
+
     // DSP
     cfg.dnf = (cfg_item_t){.val = subject_create_int(false), .db_name = "dnf"};
     cfg.dnf_center = (cfg_item_t){.val = subject_create_int(1000), .db_name = "dnf_center"};

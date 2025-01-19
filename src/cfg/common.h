@@ -7,6 +7,7 @@ typedef struct cfg_item_t {
     int             pk;
     subject_t       val;
     struct dirty_t *dirty;
+    float           db_scale;
     int (*load)(struct cfg_item_t *item);
     int (*save)(struct cfg_item_t *item);
 } cfg_item_t;

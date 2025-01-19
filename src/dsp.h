@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "helpers.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -17,7 +19,7 @@
 #define SPECTRUM_NFFT   800
 
 void dsp_init();
-void dsp_samples(float complex *buf_samples, uint16_t size, bool tx);
+void dsp_samples(cfloat *buf_samples, uint16_t size, bool tx);
 void dsp_reset();
 
 float dsp_get_spectrum_beta();

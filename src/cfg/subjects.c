@@ -29,6 +29,16 @@ subject_t subject_create_uint64(uint64_t val) {
     return subj;
 }
 
+subject_t subject_create_float(float val) {
+    subject_t subj = malloc(sizeof(struct __subject));
+    pthread_mutex_init(&subj->mutex_set, NULL);
+    pthread_mutex_init(&subj->mutex_subscribe, NULL);
+    subj->float_val = val;
+    subj->dtype = DTYPE_FLOAT;
+    init_observers(subj);
+    return subj;
+}
+
 subject_t subject_create_group(subject_t *subjects, uint8_t count) {
     subject_t subj = malloc(sizeof(struct __subject));
     pthread_mutex_init(&subj->mutex_set, NULL);
@@ -55,6 +65,12 @@ uint64_t subject_get_uint64(subject_t subj) {
     if (subj->dtype != DTYPE_UINT64)
         fprintf(stderr, "WARNING: subject dtype (%d) is not UINT64, get result might be wrong\n", subj->dtype);
     return subj->uint64_val;
+}
+
+float subject_get_float(subject_t subj) {
+    if (subj->dtype != DTYPE_FLOAT)
+        fprintf(stderr, "WARNING: subject dtype (%d) is not FLOAT, get result might be wrong\n", subj->dtype);
+    return subj->float_val;
 }
 
 observer_t subject_add_observer(subject_t subj, void (*fn)(subject_t, void *), void *user_data) {
@@ -104,6 +120,19 @@ void subject_set_uint64(subject_t subj, uint64_t val) {
     pthread_mutex_lock(&subj->mutex_set);
     if (subj->uint64_val != val) {
         subj->uint64_val = val;
+        pthread_mutex_unlock(&subj->mutex_set);
+        call_observers(subj);
+    } else {
+        pthread_mutex_unlock(&subj->mutex_set);
+    }
+}
+
+void subject_set_float(subject_t subj, float val) {
+    if (subj->dtype != DTYPE_FLOAT)
+        printf("WARNING: subject dtype (%d) is not FLOAT, set result might be wrong\n", subj->dtype);
+    pthread_mutex_lock(&subj->mutex_set);
+    if (subj->float_val != val) {
+        subj->float_val = val;
         pthread_mutex_unlock(&subj->mutex_set);
         call_observers(subj);
     } else {

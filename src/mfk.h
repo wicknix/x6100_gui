@@ -8,6 +8,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -75,3 +79,7 @@ extern mfk_state_t  mfk_state;
 void mfk_update(int16_t diff, bool voice);
 void mfk_change_mode(int16_t dir);
 void mfk_set_mode(mfk_mode_t mode);
+
+#ifdef __cplusplus
+}
+#endif

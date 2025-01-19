@@ -80,29 +80,29 @@ params_t params = {
     // .nr                     = false,
     // .nr_level               = 0,
 
-    .agc_hang               = false,
-    .agc_knee               = -60,
-    .agc_slope              = 6,
+    // .agc_hang               = false,
+    // .agc_knee               = -60,
+    // .agc_slope              = 6,
 
     .vox                    = false,
     .vox_ag                 = 0,
     .vox_delay              = 100,
     .vox_gain               = 50,
 
-    .key_speed              = 15,
-    .key_mode               = x6100_key_manual,
-    .iambic_mode            = x6100_iambic_a,
-    .key_vol                = 10,
-    .key_train              = false,
-    .qsk_time               = 100,
-    .key_ratio              = 30,
+    // .key_speed              = 15,
+    // .key_mode               = x6100_key_manual,
+    // .iambic_mode            = x6100_iambic_a,
+    // .key_vol                = 10,
+    // .key_train              = false,
+    // .qsk_time               = 100,
+    // .key_ratio              = 30,
 
-    .cw_decoder             = true,
-    .cw_tune                = false,
-    .cw_decoder_snr         = 5.0f,
-    .cw_decoder_snr_gist    = 1.0f,
-    .cw_decoder_peak_beta   = 0.10f,
-    .cw_decoder_noise_beta  = 0.80f,
+    // .cw_decoder             = true,
+    // .cw_tune                = false,
+    // .cw_decoder_snr         = 5.0f,
+    // .cw_decoder_snr_gist    = 1.0f,
+    // .cw_decoder_peak_beta   = 0.10f,
+    // .cw_decoder_noise_beta  = 0.80f,
 
     .cw_encoder_period      = 10,
     .voice_msg_period       = 10,
@@ -242,20 +242,20 @@ static bool params_load() {
             params.spectrum_peak_hold = i;
         } else if (strcmp(name, "spectrum_peak_speed") == 0) {
             params.spectrum_peak_speed = i * 0.1f;
-        } else if (strcmp(name, "key_speed") == 0) {
-            params.key_speed = i;
-        } else if (strcmp(name, "key_mode") == 0) {
-            params.key_mode = i;
-        } else if (strcmp(name, "iambic_mode") == 0) {
-            params.iambic_mode = i;
-        } else if (strcmp(name, "key_vol") == 0) {
-            params.key_vol = i;
-        } else if (strcmp(name, "key_train") == 0) {
-            params.key_train = i;
-        } else if (strcmp(name, "qsk_time") == 0) {
-            params.qsk_time = i;
-        } else if (strcmp(name, "key_ratio") == 0) {
-            params.key_ratio = i;
+        // } else if (strcmp(name, "key_speed") == 0) {
+        //     params.key_speed = i;
+        // } else if (strcmp(name, "key_mode") == 0) {
+        //     params.key_mode = i;
+        // } else if (strcmp(name, "iambic_mode") == 0) {
+        //     params.iambic_mode = i;
+        // } else if (strcmp(name, "key_vol") == 0) {
+        //     params.key_vol = i;
+        // } else if (strcmp(name, "key_train") == 0) {
+        //     params.key_train = i;
+        // } else if (strcmp(name, "qsk_time") == 0) {
+        //     params.qsk_time = i;
+        // } else if (strcmp(name, "key_ratio") == 0) {
+        //     params.key_ratio = i;
         } else if (strcmp(name, "mic") == 0) {
             params.mic = i;
         } else if (strcmp(name, "hmic") == 0) {
@@ -280,22 +280,22 @@ static bool params_load() {
         //     params.nr = i;
         // } else if (strcmp(name, "nr_level") == 0) {
         //     params.nr_level = i;
-        } else if (strcmp(name, "agc_hang") == 0) {
-            params.agc_hang = i;
-        } else if (strcmp(name, "agc_knee") == 0) {
-            params.agc_knee = i;
-        } else if (strcmp(name, "agc_slope") == 0) {
-            params.agc_slope = i;
-        } else if (strcmp(name, "cw_decoder") == 0) {
-            params.cw_decoder = i;
-        } else if (strcmp(name, "cw_tune") == 0) {
-            params.cw_tune = i;
-        } else if (strcmp(name, "cw_decoder_snr_2") == 0) {
-            params.cw_decoder_snr = i * 0.1f;
-        } else if (strcmp(name, "cw_decoder_peak_beta") == 0) {
-            params.cw_decoder_peak_beta = i * 0.01f;
-        } else if (strcmp(name, "cw_decoder_noise_beta") == 0) {
-            params.cw_decoder_noise_beta = i * 0.01f;
+        // } else if (strcmp(name, "agc_hang") == 0) {
+        //     params.agc_hang = i;
+        // } else if (strcmp(name, "agc_knee") == 0) {
+        //     params.agc_knee = i;
+        // } else if (strcmp(name, "agc_slope") == 0) {
+        //     params.agc_slope = i;
+        // } else if (strcmp(name, "cw_decoder") == 0) {
+        //     params.cw_decoder = i;
+        // } else if (strcmp(name, "cw_tune") == 0) {
+        //     params.cw_tune = i;
+        // } else if (strcmp(name, "cw_decoder_snr_2") == 0) {
+        //     params.cw_decoder_snr = i * 0.1f;
+        // } else if (strcmp(name, "cw_decoder_peak_beta") == 0) {
+        //     params.cw_decoder_peak_beta = i * 0.01f;
+        // } else if (strcmp(name, "cw_decoder_noise_beta") == 0) {
+        //     params.cw_decoder_noise_beta = i * 0.01f;
         } else if (strcmp(name, "cw_encoder_period") == 0) {
             params.cw_encoder_period = i;
         } else if (strcmp(name, "voice_msg_period") == 0) {
@@ -451,13 +451,13 @@ static void params_save() {
     if (params.dirty.spectrum_peak_hold)    params_write_int("spectrum_peak_hold", params.spectrum_peak_hold, &params.dirty.spectrum_peak_hold);
     if (params.dirty.spectrum_peak_speed)   params_write_int("spectrum_peak_speed", params.spectrum_peak_speed * 10, &params.dirty.spectrum_peak_speed);
 
-    if (params.dirty.key_speed)             params_write_int("key_speed", params.key_speed, &params.dirty.key_speed);
-    if (params.dirty.key_mode)              params_write_int("key_mode", params.key_mode, &params.dirty.key_mode);
-    if (params.dirty.iambic_mode)           params_write_int("iambic_mode", params.iambic_mode, &params.dirty.iambic_mode);
-    if (params.dirty.key_vol)               params_write_int("key_vol", params.key_vol, &params.dirty.key_vol);
-    if (params.dirty.key_train)             params_write_int("key_train", params.key_train, &params.dirty.key_train);
-    if (params.dirty.qsk_time)              params_write_int("qsk_time", params.qsk_time, &params.dirty.qsk_time);
-    if (params.dirty.key_ratio)             params_write_int("key_ratio", params.key_ratio, &params.dirty.key_ratio);
+    // if (params.dirty.key_speed)             params_write_int("key_speed", params.key_speed, &params.dirty.key_speed);
+    // if (params.dirty.key_mode)              params_write_int("key_mode", params.key_mode, &params.dirty.key_mode);
+    // if (params.dirty.iambic_mode)           params_write_int("iambic_mode", params.iambic_mode, &params.dirty.iambic_mode);
+    // if (params.dirty.key_vol)               params_write_int("key_vol", params.key_vol, &params.dirty.key_vol);
+    // if (params.dirty.key_train)             params_write_int("key_train", params.key_train, &params.dirty.key_train);
+    // if (params.dirty.qsk_time)              params_write_int("qsk_time", params.qsk_time, &params.dirty.qsk_time);
+    // if (params.dirty.key_ratio)             params_write_int("key_ratio", params.key_ratio, &params.dirty.key_ratio);
 
     if (params.dirty.mic)                   params_write_int("mic", params.mic, &params.dirty.mic);
     if (params.dirty.hmic)                  params_write_int("hmic", params.hmic, &params.dirty.hmic);
@@ -474,15 +474,15 @@ static void params_save() {
     // if (params.dirty.nr)                    params_write_int("nr", params.nr, &params.dirty.nr);
     // if (params.dirty.nr_level)              params_write_int("nr_level", params.nr_level, &params.dirty.nr_level);
 
-    if (params.dirty.agc_hang)              params_write_int("agc_hang", params.agc_hang, &params.dirty.agc_hang);
-    if (params.dirty.agc_knee)              params_write_int("agc_knee", params.agc_knee, &params.dirty.agc_knee);
-    if (params.dirty.agc_slope)             params_write_int("agc_slope", params.agc_slope, &params.dirty.agc_slope);
+    // if (params.dirty.agc_hang)              params_write_int("agc_hang", params.agc_hang, &params.dirty.agc_hang);
+    // if (params.dirty.agc_knee)              params_write_int("agc_knee", params.agc_knee, &params.dirty.agc_knee);
+    // if (params.dirty.agc_slope)             params_write_int("agc_slope", params.agc_slope, &params.dirty.agc_slope);
 
-    if (params.dirty.cw_decoder)            params_write_int("cw_decoder", params.cw_decoder, &params.dirty.cw_decoder);
-    if (params.dirty.cw_tune)               params_write_int("cw_tune", params.cw_tune, &params.dirty.cw_tune);
-    if (params.dirty.cw_decoder_snr)        params_write_int("cw_decoder_snr_2", params.cw_decoder_snr * 10, &params.dirty.cw_decoder_snr);
-    if (params.dirty.cw_decoder_peak_beta)  params_write_int("cw_decoder_peak_beta", params.cw_decoder_peak_beta * 100, &params.dirty.cw_decoder_peak_beta);
-    if (params.dirty.cw_decoder_noise_beta) params_write_int("cw_decoder_noise_beta", params.cw_decoder_noise_beta * 100, &params.dirty.cw_decoder_noise_beta);
+    // if (params.dirty.cw_decoder)            params_write_int("cw_decoder", params.cw_decoder, &params.dirty.cw_decoder);
+    // if (params.dirty.cw_tune)               params_write_int("cw_tune", params.cw_tune, &params.dirty.cw_tune);
+    // if (params.dirty.cw_decoder_snr)        params_write_int("cw_decoder_snr_2", params.cw_decoder_snr * 10, &params.dirty.cw_decoder_snr);
+    // if (params.dirty.cw_decoder_peak_beta)  params_write_int("cw_decoder_peak_beta", params.cw_decoder_peak_beta * 100, &params.dirty.cw_decoder_peak_beta);
+    // if (params.dirty.cw_decoder_noise_beta) params_write_int("cw_decoder_noise_beta", params.cw_decoder_noise_beta * 100, &params.dirty.cw_decoder_noise_beta);
 
     if (params.dirty.cw_encoder_period)     params_write_int("cw_encoder_period", params.cw_encoder_period, &params.dirty.cw_encoder_period);
     if (params.dirty.voice_msg_period)      params_write_int("voice_msg_period", params.voice_msg_period, &params.dirty.voice_msg_period);

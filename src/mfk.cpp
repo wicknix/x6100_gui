@@ -7,24 +7,31 @@
  */
 #include "mfk.h"
 
-#include "params/params.h"
-#include "spectrum.h"
-#include "waterfall.h"
-#include "msg.h"
-#include "dsp.h"
-#include "radio.h"
-#include "cw.h"
-#include "rtty.h"
 #include "util.h"
-#include "info.h"
-#include "backlight.h"
+#include "cw.h"
 #include "voice.h"
-#include "cw_tune_ui.h"
-#include "band_info.h"
-#include "pubsub_ids.h"
-#include "meter.h"
 
-#include "lvgl/lvgl.h"
+#include <vector>
+
+extern "C" {
+    #include "params/params.h"
+    #include "spectrum.h"
+    #include "waterfall.h"
+    #include "msg.h"
+    #include "dsp.h"
+    #include "radio.h"
+    #include "rtty.h"
+    #include "info.h"
+    #include "backlight.h"
+    #include "cw_tune_ui.h"
+    #include "band_info.h"
+    #include "pubsub_ids.h"
+    #include "meter.h"
+
+    #include "lvgl/lvgl.h"
+}
+
+template <typename T> static T loop_items(std::vector<T> items, T cur, bool next);
 
 mfk_state_t  mfk_state = MFK_STATE_EDIT;
 mfk_mode_t   mfk_mode = MFK_MIN_LEVEL;
@@ -184,7 +191,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_SPEED:
-            i = radio_change_key_speed(diff);
+            // i = radio_change_key_speed(diff);
+            i = subject_get_int(cfg.key_speed.val);
+            if (diff) {
+                i = clip(i + diff, 5, 50);
+                subject_set_int(cfg.key_speed.val, i);
+            }
             msg_update_text_fmt("#%3X Key speed: %i wpm", color, i);
 
             if (diff) {
@@ -195,8 +207,13 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_MODE:
-            i = radio_change_key_mode(diff);
-            str = params_key_mode_str_get(i);
+            // i = radio_change_key_mode(diff);
+            i = subject_get_int(cfg.key_mode.val);
+            if (diff) {
+                i = loop_items({x6100_key_manual, x6100_key_auto_left, x6100_key_auto_right}, (x6100_key_mode_t)i, diff > 0);
+                subject_set_int(cfg.key_mode.val, i);
+            }
+            str = params_key_mode_str_get((x6100_key_mode_t)i);
             msg_update_text_fmt("#%3X Key mode: %s", color, str);
 
             if (diff) {
@@ -207,8 +224,13 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_IAMBIC_MODE:
-            i = radio_change_iambic_mode(diff);
-            str = params_iambic_mode_str_ger(i);
+            // i = radio_change_iambic_mode(diff);
+            i = subject_get_int(cfg.key_mode.val);
+            if (diff) {
+                i = loop_items({x6100_iambic_a, x6100_iambic_b}, (x6100_iambic_mode_t)i, diff > 0);
+                subject_set_int(cfg.key_mode.val, i);
+            }
+            str = params_iambic_mode_str_ger((x6100_iambic_mode_t)i);
             msg_update_text_fmt("#%3X Iambic mode: %s", color, str);
 
             if (diff) {
@@ -219,7 +241,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_TONE:
-            i = radio_change_key_tone(diff);
+            // i = radio_change_key_tone(diff);
+            i = subject_get_int(cfg.key_tone.val);
+            if (diff) {
+                i = clip(i + diff * 10, 400, 1200);
+                subject_set_int(cfg.key_tone.val, i);
+            }
             msg_update_text_fmt("#%3X Key tone: %i Hz", color, i);
 
             if (diff) {
@@ -230,7 +257,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_VOL:
-            i = radio_change_key_vol(diff);
+            // i = radio_change_key_vol(diff);
+            i = subject_get_int(cfg.key_vol.val);
+            if (diff) {
+                i = clip(i + diff, 0, 32);
+                subject_set_int(cfg.key_vol.val, i);
+            }
             msg_update_text_fmt("#%3X Key volume: %i", color, i);
 
             if (diff) {
@@ -241,7 +273,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_TRAIN:
-            b = radio_change_key_train(diff);
+            // b = radio_change_key_train(diff);
+            b = subject_get_int(cfg.key_train.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.key_train.val, b);
+            }
             msg_update_text_fmt("#%3X Key train: %s", color, b ? "On" : "Off");
 
             if (diff) {
@@ -252,7 +289,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_QSK_TIME:
-            i = radio_change_qsk_time(diff);
+            // i = radio_change_qsk_time(diff);
+            i = subject_get_int(cfg.qsk_time.val);
+            if (diff) {
+                i = clip(i + diff * 10, 0, 1000);
+                subject_set_int(cfg.qsk_time.val, i);
+            }
             msg_update_text_fmt("#%3X QSK time: %i ms", color, i);
 
             if (diff) {
@@ -263,11 +305,16 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_RATIO:
-            i = radio_change_key_ratio(diff);
-            msg_update_text_fmt("#%3X Key ratio: %.1f", color, i * 0.1f);
+            // i = radio_change_key_ratio(diff);
+            f = subject_get_float(cfg.key_ratio.val);
+            if (diff) {
+                f = clip(f + diff * 0.1f, 2.5f, 4.5f);
+                subject_set_float(cfg.key_ratio.val, f);
+            }
+            msg_update_text_fmt("#%3X Key ratio: %.1f", color, f);
 
             if (diff) {
-                voice_say_float("CW key ratio", i * 0.1f);
+                voice_say_float("CW key ratio", f);
             } else if (voice) {
                 voice_say_text_fmt("CW key ratio");
             }
@@ -275,7 +322,7 @@ void mfk_update(int16_t diff, bool voice) {
 
         case MFK_CHARGER:
             i = radio_change_charger(diff);
-            str = params_charger_str_get(i);
+            str = params_charger_str_get((radio_charger_t)i);
             msg_update_text_fmt("#%3X Charger: %s", color, str);
 
             if (diff) {
@@ -286,20 +333,21 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_ANT:
-            ;
-            int32_t ant = subject_get_int(cfg.ant_id.val);
-            if (diff != 0) {
-                ant = limit(ant + diff, 1, 5);
-                subject_set_int(cfg.ant_id.val, ant);
-                // radio_load_atu();
-                // info_atu_update();
-            }
-            msg_update_text_fmt("#%3X Antenna : %i", color, ant);
+            {
+                int32_t ant = subject_get_int(cfg.ant_id.val);
+                if (diff != 0) {
+                    ant = limit(ant + diff, 1, 5);
+                    subject_set_int(cfg.ant_id.val, ant);
+                    // radio_load_atu();
+                    // info_atu_update();
+                }
+                msg_update_text_fmt("#%3X Antenna : %i", color, ant);
 
-            if (diff) {
-                voice_say_int("Antenna", ant);
-            } else if (voice) {
-                voice_say_text_fmt("Antenna selector");
+                if (diff) {
+                    voice_say_int("Antenna", ant);
+                } else if (voice) {
+                    voice_say_text_fmt("Antenna selector");
+                }
             }
             break;
 
@@ -457,7 +505,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_AGC_HANG:
-            b = radio_change_agc_hang(diff);
+            // b = radio_change_agc_hang(diff);
+            b = subject_get_int(cfg.agc_hang.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.agc_hang.val, b);
+            }
             msg_update_text_fmt("#%3X AGC hang: %s", color, b ? "On" : "Off");
 
             if (diff) {
@@ -468,7 +521,13 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_AGC_KNEE:
-            i = radio_change_agc_knee(diff);
+            // limit(params.agc_knee + d, -100, 0);
+            // i = radio_change_agc_knee(diff);
+            i = subject_get_int(cfg.agc_knee.val);
+            if (diff) {
+                i = limit(i + diff, -100, 0);
+                subject_set_int(cfg.agc_knee.val, i);
+            }
             msg_update_text_fmt("#%3X AGC knee: %i dB", color, i);
 
             if (diff) {
@@ -479,7 +538,13 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_AGC_SLOPE:
-            i = radio_change_agc_slope(diff);
+            // limit(params.agc_slope + d, 0, 10);
+            // i = radio_change_agc_slope(diff);
+            i = subject_get_int(cfg.agc_slope.val);
+            if (diff) {
+                i = limit(i + diff, 0, 10);
+                subject_set_int(cfg.agc_slope.val, i);
+            }
             msg_update_text_fmt("#%3X AGC slope: %i dB", color, i);
 
             if (diff) {
@@ -490,7 +555,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_DECODER:
-            b = cw_change_decoder(diff);
+            // b = cw_change_decoder(diff);
+            b = subject_get_int(cfg.cw_decoder.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.cw_decoder.val, b);
+            }
             msg_update_text_fmt("#%3X CW decoder: %s", color, b ? "On" : "Off");
 
             if (diff) {
@@ -501,7 +571,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_TUNE:
-            b = cw_tune_toggle(diff);
+            // b = cw_tune_toggle(diff);
+            b = subject_get_int(cfg.cw_tune.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.cw_tune.val, b);
+            }
             msg_update_text_fmt("#%3X CW tune: %s", color, b ? "On" : "Off");
 
             if (diff) {
@@ -512,7 +587,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_DECODER_SNR:
-            f = cw_change_snr(diff);
+            // f = cw_change_snr(diff);
+            f = subject_get_float(cfg.cw_decoder_snr.val);
+            if (diff) {
+                f = clip(f + diff * 0.1f, 3.0f, 30.0f);
+                subject_set_float(cfg.cw_decoder_snr.val, f);
+            }
             msg_update_text_fmt("#%3X CW decoder SNR: %.1f dB", color, f);
 
             if (diff) {
@@ -523,7 +603,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_DECODER_PEAK_BETA:
-            f = cw_change_peak_beta(diff);
+            f = subject_get_float(cfg.cw_decoder_peak_beta.val);
+            if (diff) {
+                f = clip(f + diff * 0.01f, 0.1f, 0.95f);
+                subject_set_float(cfg.cw_decoder_peak_beta.val, f);
+            }
+            // f = cw_change_peak_beta(diff);
             msg_update_text_fmt("#%3X CW decoder peak beta: %.2f", color, f);
 
             if (diff) {
@@ -534,7 +619,12 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_DECODER_NOISE_BETA:
-            f = cw_change_noise_beta(diff);
+            f = subject_get_float(cfg.cw_decoder_noise_beta.val);
+            if (diff) {
+                f = clip(f + diff * 0.01f, 0.1f, 0.95f);
+                subject_set_float(cfg.cw_decoder_noise_beta.val, f);
+            }
+            // f = cw_change_noise_beta(diff);
             msg_update_text_fmt("#%3X CW decoder noise beta: %.2f", color, f);
 
             if (diff) {
@@ -594,11 +684,23 @@ void mfk_update(int16_t diff, bool voice) {
 }
 
 void mfk_change_mode(int16_t dir) {
-    mfk_mode = loop_modes(dir, mfk_mode, params.mfk_modes, MFK_LAST-1);
+    mfk_mode = (mfk_mode_t)loop_modes(dir, mfk_mode, params.mfk_modes, MFK_LAST-1);
     mfk_update(0, true);
 }
 
 void mfk_set_mode(mfk_mode_t mode) {
     mfk_mode = mode;
     mfk_state = MFK_STATE_EDIT;
+}
+
+template <typename T> static T loop_items(std::vector<T> items, T cur, bool next) {
+    int id;
+    size_t len = std::size(items);
+    for (id = 0; id < len; id++) {
+        if (items[id] == cur) {
+            break;
+        }
+    }
+    id = (id + len + (next ? 1 : -1)) % len;
+    return items[id];
 }

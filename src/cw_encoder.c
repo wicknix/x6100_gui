@@ -15,6 +15,7 @@
 #include "cw_decoder.h"
 #include "cw_encoder.h"
 #include "params/params.h"
+#include "cfg/cfg.h"
 #include "radio.h"
 #include "msg.h"
 #include "buttons.h"
@@ -73,8 +74,8 @@ static void * endecode_thread(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-    uint32_t    dit = 60 * 1000000 / (params.key_speed * 50);
-    uint32_t    dah = dit * params.key_ratio / 10;
+    uint32_t    dit = 60 * 1000000 / (subject_get_int(cfg.key_speed.val) * 50);
+    uint32_t    dah = dit * subject_get_float(cfg.key_ratio.val) / 10;
 
     while (true) {
         char    *morse;

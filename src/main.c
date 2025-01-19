@@ -108,7 +108,7 @@ int main(void) {
     wifi_power_setup();
     backlight_init();
     cat_init();
-    pannel_visible();
+    // pannel_visible();
     gps_init();
     if (!qso_log_init()) {
         LV_LOG_ERROR("Can't init QSO log");

@@ -69,14 +69,14 @@ void radio_change_atu();
 float radio_change_pwr(int16_t d);
 void radio_set_pwr(float d);
 
-uint16_t radio_change_key_speed(int16_t d);
-x6100_key_mode_t radio_change_key_mode(int16_t d);
-x6100_iambic_mode_t radio_change_iambic_mode(int16_t d);
-uint16_t radio_change_key_tone(int16_t d);
-uint16_t radio_change_key_vol(int16_t d);
-bool radio_change_key_train(int16_t d);
-uint16_t radio_change_qsk_time(int16_t d);
-uint8_t radio_change_key_ratio(int16_t d);
+// uint16_t radio_change_key_speed(int16_t d);
+// x6100_key_mode_t radio_change_key_mode(int16_t d);
+// x6100_iambic_mode_t radio_change_iambic_mode(int16_t d);
+// uint16_t radio_change_key_tone(int16_t d);
+// uint16_t radio_change_key_vol(int16_t d);
+// bool radio_change_key_train(int16_t d);
+// uint16_t radio_change_qsk_time(int16_t d);
+// uint8_t radio_change_key_ratio(int16_t d);
 radio_charger_t radio_change_charger(int16_t d);
 
 x6100_mic_sel_t radio_change_mic(int16_t d);
@@ -92,9 +92,9 @@ uint8_t radio_change_imic(int16_t d);
 // bool radio_change_nr(int16_t d);
 // uint8_t radio_change_nr_level(int16_t d);
 
-bool radio_change_agc_hang(int16_t d);
-int8_t radio_change_agc_knee(int16_t d);
-uint8_t radio_change_agc_slope(int16_t d);
+// bool radio_change_agc_hang(int16_t d);
+// int8_t radio_change_agc_knee(int16_t d);
+// uint8_t radio_change_agc_slope(int16_t d);
 
 void radio_start_atu();
 void radio_load_atu();
