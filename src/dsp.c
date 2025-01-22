@@ -308,19 +308,15 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
     uint16_t max_nth = 10;
 
     float min = data_buf[min_nth];
-    float max = data_buf[size - max_nth - 1];
+    // float max = data_buf[size - max_nth - 1];
 
-    if (max > S9_40) {
-        max = S9_40;
-    } else if (max < S8) {
-        max = S8;
-    }
-
-    if (min > S7) {
-        min = S7;
-    } else if (min < S_MIN) {
+    if (min < S_MIN) {
         min = S_MIN;
+    } else if (min > S8) {
+        min = S8;
     }
+    float max = min + 48;
+
     spectrum_update_min(min);
     waterfall_update_min(min);
 

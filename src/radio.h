@@ -55,8 +55,8 @@ uint16_t radio_change_vol(int16_t df);
 // uint16_t radio_change_rfg(int16_t df);
 uint16_t radio_change_sql(int16_t df);
 // uint32_t radio_change_filter_low(int32_t freq);
-uint32_t radio_change_filter_high(int32_t freq);
-uint32_t radio_change_filter_bw(int32_t bw);
+// uint32_t radio_change_filter_high(int32_t freq);
+// uint32_t radio_change_filter_bw(int32_t bw);
 uint16_t radio_change_moni(int16_t df);
 bool radio_change_spmode(int16_t df);
 
@@ -65,7 +65,7 @@ void radio_change_mute();
 // bool radio_change_pre();
 // bool radio_change_att();
 // void radio_change_agc();
-void radio_change_atu();
+// void radio_change_atu();
 float radio_change_pwr(int16_t d);
 void radio_set_pwr(float d);
 
@@ -97,13 +97,13 @@ uint8_t radio_change_imic(int16_t d);
 // uint8_t radio_change_agc_slope(int16_t d);
 
 void radio_start_atu();
-void radio_load_atu();
+// void radio_load_atu();
 
 bool radio_start_swrscan();
 void radio_stop_swrscan();
 
 void radio_vfo_set();
-void radio_filters_setup();
+// void radio_filters_setup();
 
 // void radio_filter_get(int32_t *from_freq, int32_t *to_freq);
 void radio_poweroff();

@@ -397,14 +397,14 @@ void radio_vfo_set() {
 //     radio_unlock();
 // }
 
-void radio_filters_setup() {
+// void radio_filters_setup() {
 
-    // int32_t low, high;
-    // params_current_mode_filter_get(&low, &high);
-    // radio_filter_set(&low, &high);
-    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
-    // update_agc_time();
-}
+//     // int32_t low, high;
+//     // params_current_mode_filter_get(&low, &high);
+//     // radio_filter_set(&low, &high);
+//     // lv_msg_send(MSG_PARAM_CHANGED, NULL);
+//     // update_agc_time();
+// }
 
 void radio_bb_reset() {
     x6100_gpio_set(x6100_pin_bb_reset, 1);
@@ -482,8 +482,8 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
     subject_add_observer_and_call(cfg.nr_level.val, on_change_uint8, x6100_control_nr_level_set);
 
     radio_vfo_set();
-    radio_filters_setup();
-    radio_load_atu();
+    // radio_filters_setup();
+    // radio_load_atu();
 
     // x6100_control_rfg_set(params_band_rfg_get());
     x6100_control_sql_set(params.sql);
@@ -723,33 +723,33 @@ uint16_t radio_change_sql(int16_t df) {
 //     return new_low;
 // }
 
-uint32_t radio_change_filter_high(int32_t freq) {
-    // if (freq == params_current_mode_filter_high_get()){
-    //     return freq;
-    // }
-    // int32_t old_low = params_current_mode_filter_low_get();
-    // int32_t new_high = params_current_mode_filter_high_set(freq);
-    // int32_t new_low = params_current_mode_filter_low_get();
-    // // if (old_low != new_low)
-    // //     radio_filter_set(&new_low, &new_high);
-    // // else
-    // //     radio_filter_set(NULL, &new_high);
+// uint32_t radio_change_filter_high(int32_t freq) {
+//     // if (freq == params_current_mode_filter_high_get()){
+//     //     return freq;
+//     // }
+//     // int32_t old_low = params_current_mode_filter_low_get();
+//     // int32_t new_high = params_current_mode_filter_high_set(freq);
+//     // int32_t new_low = params_current_mode_filter_low_get();
+//     // // if (old_low != new_low)
+//     // //     radio_filter_set(&new_low, &new_high);
+//     // // else
+//     // //     radio_filter_set(NULL, &new_high);
 
-    // return new_high;
-}
+//     // return new_high;
+// }
 
-uint32_t radio_change_filter_bw(int32_t bw) {
-    // if (bw == params_current_mode_filter_bw_get()){
-    //     return bw;
-    // }
-    // uint32_t new_bw = params_current_mode_filter_bw_set(bw);
-    // uint32_t low_freq = params_current_mode_filter_low_get();
-    // uint32_t high_freq = params_current_mode_filter_high_get();
+// uint32_t radio_change_filter_bw(int32_t bw) {
+//     // if (bw == params_current_mode_filter_bw_get()){
+//     //     return bw;
+//     // }
+//     // uint32_t new_bw = params_current_mode_filter_bw_set(bw);
+//     // uint32_t low_freq = params_current_mode_filter_low_get();
+//     // uint32_t high_freq = params_current_mode_filter_high_get();
 
-    // radio_filter_set(&low_freq, &high_freq);
+//     // radio_filter_set(&low_freq, &high_freq);
 
-    // return new_bw;
-}
+//     // return new_bw;
+// }
 
 
 // static void update_agc_time() {
@@ -827,17 +827,17 @@ uint32_t radio_change_filter_bw(int32_t bw) {
 //     WITH_RADIO_LOCK(x6100_control_vfo_agc_set(params_band_vfo_get(), agc));
 // }
 
-void radio_change_atu() {
-    // cfg_cur.atu->loaded;
-    // params_lock();
-    // params.atu.x = !params.atu.x;
-    // params_unlock(&params.atu.dirty);
+// void radio_change_atu() {
+//     // cfg_cur.atu->loaded;
+//     // params_lock();
+//     // params.atu.x = !params.atu.x;
+//     // params_unlock(&params.atu.dirty);
 
-    // WITH_RADIO_LOCK(x6100_control_atu_set(params.atu.x));
+//     // WITH_RADIO_LOCK(x6100_control_atu_set(params.atu.x));
 
-    // radio_load_atu();
-    // voice_say_text_fmt("Auto tuner %s", params.atu.x ? "On" : "Off");
-}
+//     // radio_load_atu();
+//     // voice_say_text_fmt("Auto tuner %s", params.atu.x ? "On" : "Off");
+// }
 
 void radio_start_atu() {
     if (state == RADIO_RX) {
@@ -868,28 +868,28 @@ void radio_stop_swrscan() {
     }
 }
 
-void radio_load_atu() {
-    // if (params.atu.x) {
-    //     if (params_band_cur_shift_get()) {
-    //         info_atu_update();
+// void radio_load_atu() {
+//     // if (params.atu.x) {
+//     //     if (params_band_cur_shift_get()) {
+//     //         info_atu_update();
 
-    //         WITH_RADIO_LOCK(x6100_control_atu_set(false));
+//     //         WITH_RADIO_LOCK(x6100_control_atu_set(false));
 
-    //         return;
-    //     }
+//     //         return;
+//     //     }
 
-    //     uint32_t atu_params = params_atu_load(&params.atu_loaded);
+//     //     uint32_t atu_params = params_atu_load(&params.atu_loaded);
 
-    //     radio_lock();
-    //     x6100_control_atu_set(true);
-    //     x6100_control_cmd(x6100_atu_network, atu_params);
-    //     radio_unlock();
+//     //     radio_lock();
+//     //     x6100_control_atu_set(true);
+//     //     x6100_control_cmd(x6100_atu_network, atu_params);
+//     //     radio_unlock();
 
-    //     if (state != RADIO_SWRSCAN) {
-    //         info_atu_update();
-    //     }
-    // }
-}
+//     //     if (state != RADIO_SWRSCAN) {
+//     //         info_atu_update();
+//     //     }
+//     // }
+// }
 
 void radio_set_pwr(float d) {
     WITH_RADIO_LOCK(x6100_control_txpwr_set(d));
