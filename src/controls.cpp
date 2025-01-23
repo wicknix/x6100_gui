@@ -1,4 +1,5 @@
 #include "controls.h"
+#include "cfg/subjects.h"
 
 extern "C" {
 #include "cfg/cfg.h"
@@ -6,7 +7,7 @@ extern "C" {
 #include "voice.h"
 }
 
-static inline bool toggle_subj(subject_t subj);
+static inline bool toggle_subj(Subject *subj);
 
 
 void controls_toggle_agc_hang(button_item_t *btn) {
@@ -51,7 +52,7 @@ void controls_toggle_nr(button_item_t *btn) {
     voice_say_bool("NR", new_val);
 }
 
-static inline bool toggle_subj(subject_t subj) {
+static inline bool toggle_subj(Subject *subj) {
     bool new_val = !subject_get_int(subj);
     subject_set_int(subj, new_val);
     return new_val;

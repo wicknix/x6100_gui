@@ -1,7 +1,6 @@
 #include "atu.private.h"
 
 #include "cfg.h"
-#include "subjects.private.h"
 
 #include "../lvgl/lvgl.h"
 #include <stdio.h>
@@ -20,7 +19,7 @@ static sqlite3_stmt   *read_stmt;
 static pthread_mutex_t write_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t read_mutex  = PTHREAD_MUTEX_INITIALIZER;
 
-static void    update_atu_network(subject_t subj, void *user_data);
+static void    update_atu_network(Subject *subj, void *user_data);
 static void    add_atu_net_to_cache(int32_t freq, uint32_t network);
 static void    load_all_atu_for_ant(int32_t ant_id);
 static int32_t find_atu_for_freq(int32_t freq);
@@ -133,7 +132,7 @@ int cfg_atu_save_network(uint32_t network) {
     return rc;
 }
 
-static void update_atu_network(subject_t subj, void *user_data) {
+static void update_atu_network(Subject *subj, void *user_data) {
     if (!subject_get_int(cfg.atu_enabled.val)) {
         return;
     }

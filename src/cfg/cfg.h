@@ -48,31 +48,35 @@ typedef struct {
 
     cfg_item_t nr;
     cfg_item_t nr_level;
+
+    // SWR scan
+    cfg_item_t swrscan_linear;
+    cfg_item_t swrscan_span;
 } cfg_t;
 extern cfg_t cfg;
 
 /* Current band/mode params */
 
 typedef struct {
-    subject_t      fg_freq;
-    subject_t      bg_freq;
-    subject_t      lo_offset;
-    subject_t      freq_shift;
-    subject_t      mode;
-    subject_t      agc;
-    subject_t      att;
-    subject_t      pre;
+    Subject *fg_freq;
+    Subject *bg_freq;
+    Subject *lo_offset;
+    Subject *freq_shift;
+    Subject *mode;
+    Subject *agc;
+    Subject *att;
+    Subject *pre;
     struct {
-        subject_t      low;
-        subject_t      high;
-        subject_t      bw;
+        Subject *low;
+        Subject *high;
+        Subject *bw;
         struct {
-            subject_t      from;
-            subject_t      to;
+            Subject *from;
+            Subject *to;
         } real;
     } filter;
-    subject_t      freq_step;
-    subject_t      zoom;
+    Subject       *freq_step;
+    Subject       *zoom;
     atu_network_t *atu;
     cfg_band_t    *band;
 } cfg_cur_t;

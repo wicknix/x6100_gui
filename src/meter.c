@@ -48,7 +48,7 @@ static s_item_t s_items[NUM_ITEMS] = {
     { .label = "+40",   .db = S9_40 }
 };
 
-static void on_bool_value_change(subject_t subj, void *user_data) {
+static void on_bool_value_change(Subject *subj, void *user_data) {
     *(bool*)user_data = subject_get_int(subj);
 }
 
@@ -63,7 +63,7 @@ static void meter_draw_cb(lv_event_t * e) {
     lv_coord_t y1 = obj->coords.y1 + 17;
 
     lv_coord_t w = lv_obj_get_width(obj) - 80;
-    lv_coord_t h = lv_obj_get_height(obj) - 1;
+    // lv_coord_t h = lv_obj_get_height(obj) - 1;
 
     uint8_t     slice_db = 3;
     uint8_t     slices_total = (max_db - min_db) / slice_db;
@@ -156,8 +156,10 @@ lv_obj_t * meter_init(lv_obj_t * parent) {
     lv_obj_add_event_cb(obj, rx_cb, EVENT_RADIO_RX, NULL);
     lv_obj_add_event_cb(obj, meter_draw_cb, LV_EVENT_DRAW_MAIN_END, NULL);
 
-    subject_add_observer_and_call(cfg_cur.pre, on_bool_value_change, &pre);
-    subject_add_observer_and_call(cfg_cur.att, on_bool_value_change, &att);
+    subject_add_delayed_observer(cfg_cur.pre, on_bool_value_change, &pre);
+    on_bool_value_change(cfg_cur.pre, &pre);
+    subject_add_delayed_observer(cfg_cur.att, on_bool_value_change, &att);
+    on_bool_value_change(cfg_cur.att, &att);
 
     return obj;
 }

@@ -75,10 +75,10 @@ int main(void) {
 
     keyboard_init();
 
-    keypad_t *keypad = keypad_init("/dev/input/event0");
-    keypad_t *power = keypad_init("/dev/input/event4");
+    keypad_init("/dev/input/event0");
+    keypad_init("/dev/input/event4");
 
-    rotary_t *main = rotary_init("/dev/input/event1");
+    rotary_init("/dev/input/event1");
 
     vol = rotary_init("/dev/input/event2");
     mfk = encoder_init("/dev/input/event3");
@@ -129,6 +129,7 @@ int main(void) {
     int64_t next_loop_time, sleep_time, loop_start_time;
     while (1) {
         loop_start_time = get_time();
+        observer_delayed_notify_all();
         event_obj_check();
         scheduler_work();
         next_loop_time = lv_timer_handler() + loop_start_time;

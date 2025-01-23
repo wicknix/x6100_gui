@@ -26,15 +26,15 @@ typedef enum {
 static lv_obj_t     *obj;
 static lv_obj_t     *items[6];
 
-static subject_t         mode_lock;
+static Subject *mode_lock;
 
 static void wifi_state_change_cb(void *s, lv_msg_t *m);
 
-static void vfo_label_update(subject_t subj, void * user_data);
-static void mode_label_update(subject_t subj, void * user_data);
-static void atu_label_update(subject_t subj, void * user_data);
-static void agc_label_update(subject_t subj, void * user_data);
-static void att_pre_label_update(subject_t subj, void * user_data);
+static void vfo_label_update(Subject *subj, void * user_data);
+static void mode_label_update(Subject *subj, void * user_data);
+static void atu_label_update(Subject *subj, void * user_data);
+static void agc_label_update(Subject *subj, void * user_data);
+static void att_pre_label_update(Subject *subj, void * user_data);
 
 lv_obj_t * info_init(lv_obj_t * parent) {
 
@@ -66,21 +66,26 @@ lv_obj_t * info_init(lv_obj_t * parent) {
     lv_label_set_text(items[INFO_WIFI], LV_SYMBOL_WIFI);
     lv_obj_set_style_text_color(items[INFO_WIFI], lv_color_hex(0x909090), 0);
 
-    subject_add_observer(cfg_cur.band->vfo.val, vfo_label_update, NULL);
-    subject_add_observer_and_call(cfg_cur.band->split.val, vfo_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.band->vfo.val, vfo_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.band->split.val, vfo_label_update, NULL);
+    vfo_label_update(cfg_cur.band->vfo.val, NULL);
 
-    subject_add_observer(cfg_cur.mode, mode_label_update, NULL);
-    subject_add_observer_and_call(mode_lock, mode_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.mode, mode_label_update, NULL);
+    subject_add_delayed_observer(mode_lock, mode_label_update, NULL);
+    mode_label_update(cfg_cur.band->vfo.val, NULL);
 
-    subject_add_observer(cfg.ant_id.val, atu_label_update, NULL);
-    subject_add_observer(cfg_cur.fg_freq, atu_label_update, NULL);
-    subject_add_observer(cfg_cur.atu->loaded, atu_label_update, NULL);
-    subject_add_observer_and_call(cfg.atu_enabled.val, atu_label_update, NULL);
+    subject_add_delayed_observer(cfg.ant_id.val, atu_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.fg_freq, atu_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.atu->loaded, atu_label_update, NULL);
+    subject_add_delayed_observer(cfg.atu_enabled.val, atu_label_update, NULL);
+    atu_label_update(cfg.atu_enabled.val, NULL);
 
-    subject_add_observer_and_call(cfg_cur.agc, agc_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.agc, agc_label_update, NULL);
+    agc_label_update(cfg_cur.agc, NULL);
 
-    subject_add_observer(cfg_cur.att, att_pre_label_update, NULL);
-    subject_add_observer_and_call(cfg_cur.pre, att_pre_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.att, att_pre_label_update, NULL);
+    subject_add_delayed_observer(cfg_cur.pre, att_pre_label_update, NULL);
+    att_pre_label_update(cfg_cur.pre, NULL);
 
     lv_msg_subscribe(MSG_WIFI_STATE_CHANGED, wifi_state_change_cb, NULL);
 
@@ -196,11 +201,11 @@ static void wifi_state_change_cb(void *s, lv_msg_t *m) {
 }
 
 
-static void vfo_label_update(subject_t subj, void * user_data) {
+static void vfo_label_update(Subject *subj, void * user_data) {
     lv_label_set_text(items[INFO_VFO], info_params_vfo_label_get());
 }
 
-static void mode_label_update(subject_t subj, void *user_data) {
+static void mode_label_update(Subject *subj, void *user_data) {
     lv_label_set_text(items[INFO_MODE], info_params_mode_label_get());
     x6100_mode_t mode = subject_get_int(cfg_cur.mode);
     if ((mode == x6100_mode_lsb_dig) || (mode == x6100_mode_usb_dig)) {
@@ -212,7 +217,7 @@ static void mode_label_update(subject_t subj, void *user_data) {
     }
 }
 
-static void atu_label_update(subject_t subj, void * user_data) {
+static void atu_label_update(Subject *subj, void * user_data) {
     int32_t ant = subject_get_int(cfg.ant_id.val);
     lv_label_set_text_fmt(items[INFO_ATU], "ATU%i", ant);
     int32_t freq = subject_get_int(cfg_cur.fg_freq);
@@ -233,11 +238,11 @@ static void atu_label_update(subject_t subj, void * user_data) {
     }
 }
 
-static void agc_label_update(subject_t subj, void * user_data) {
+static void agc_label_update(Subject *subj, void * user_data) {
     lv_label_set_text(items[INFO_AGC], info_params_agc());
 }
 
-static void att_pre_label_update(subject_t subj, void * user_data) {
+static void att_pre_label_update(Subject *subj, void * user_data) {
     if (subject_get_int(cfg_cur.att)) {
         lv_obj_set_style_text_color(items[INFO_PRE_ATT], lv_color_black(), 0);
         lv_obj_set_style_bg_color(items[INFO_PRE_ATT], lv_color_white(), 0);

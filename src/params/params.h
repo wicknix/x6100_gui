@@ -184,8 +184,8 @@ typedef struct {
 
     /* SWR Scan */
 
-    bool                swrscan_linear;
-    uint32_t            swrscan_span;
+    // bool                swrscan_linear;
+    // uint32_t            swrscan_span;
 
     /* FT8 */
 
@@ -312,8 +312,8 @@ typedef struct {
         bool    rtty_rate;
         bool    rtty_reverse;
 
-        bool    swrscan_linear;
-        bool    swrscan_span;
+        // bool    swrscan_linear;
+        // bool    swrscan_span;
 
         bool    ft8_show_all;
         bool    ft8_protocol;

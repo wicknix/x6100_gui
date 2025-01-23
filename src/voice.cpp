@@ -9,6 +9,7 @@
 #include "voice.h"
 
 #include "util.h"
+#include "cfg/cfg.h"
 
 extern "C" {
 #include <unistd.h>

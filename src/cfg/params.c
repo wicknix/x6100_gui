@@ -3,8 +3,6 @@
  */
 #include "params.private.h"
 
-#include "subjects.private.h"
-
 #include "../lvgl/lvgl.h"
 
 #include <stdio.h>
@@ -47,7 +45,7 @@ int cfg_params_load_item(cfg_item_t *item) {
     uint64_t uint64_val;
     rc = sqlite3_step(read_stmt);
     if (rc == SQLITE_ROW) {
-        switch (item->val->dtype) {
+        switch (subject_get_dtype(item->val)) {
             case DTYPE_INT:
                 int_val = sqlite3_column_int(read_stmt, 0);
                 LV_LOG_USER("Loaded %s=%i (pk=%i)", item->db_name, int_val, item->pk);
@@ -69,7 +67,7 @@ int cfg_params_load_item(cfg_item_t *item) {
                 subject_set_float(item->val, val);
                 break;
             default:
-                LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, item->val->dtype);
+                LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, subject_get_dtype(item->val));
                 pthread_mutex_unlock(&read_mutex);
                 return -1;
         }
@@ -84,42 +82,49 @@ int cfg_params_load_item(cfg_item_t *item) {
     return rc;
 }
 
-
 int cfg_params_save_item(cfg_item_t *item) {
     int rc;
     pthread_mutex_lock(&write_mutex);
-    rc = sqlite3_bind_text(insert_stmt, sqlite3_bind_parameter_index(insert_stmt, ":name"), item->db_name, strlen(item->db_name), 0);
+    rc = sqlite3_bind_text(insert_stmt, sqlite3_bind_parameter_index(insert_stmt, ":name"), item->db_name,
+                           strlen(item->db_name), 0);
     if (rc != SQLITE_OK) {
         LV_LOG_WARN("Can't bind name %s to save params query", item->db_name);
         pthread_mutex_unlock(&write_mutex);
         return rc;
     }
-    int val_index = sqlite3_bind_parameter_index(insert_stmt, ":val");
-    switch (item->val->dtype) {
+    int            val_index = sqlite3_bind_parameter_index(insert_stmt, ":val");
+    enum data_type dtype     = subject_get_dtype(item->val);
+    int32_t        int_val;
+    uint64_t       uint64_val;
+    float          float_val;
+    switch (dtype) {
         case DTYPE_INT:
-            rc = sqlite3_bind_int(insert_stmt, val_index, item->val->int_val);
+            int_val = subject_get_int(item->val);
+            rc      = sqlite3_bind_int(insert_stmt, val_index, int_val);
             if (rc != SQLITE_OK) {
-                LV_LOG_WARN("Can't bind val %i to save params query", item->val->int_val);
+                LV_LOG_WARN("Can't bind val %i to save params query", int_val);
             }
             break;
         case DTYPE_UINT64:
-            rc = sqlite3_bind_int64(insert_stmt, val_index, item->val->uint64_val);
+            uint64_val = subject_get_uint64(item->val);
+            rc         = sqlite3_bind_int64(insert_stmt, val_index, uint64_val);
             if (rc != SQLITE_OK) {
-                LV_LOG_WARN("Can't bind val %llu to save params query", item->val->uint64_val);
+                LV_LOG_WARN("Can't bind val %llu to save params query", uint64_val);
             }
             break;
         case DTYPE_FLOAT:
+            float_val = subject_get_float(item->val);
             if (item->db_scale != 0) {
-                rc = sqlite3_bind_int(insert_stmt, val_index, item->val->float_val / item->db_scale);
+                rc = sqlite3_bind_int(insert_stmt, val_index, float_val / item->db_scale);
             } else {
-                rc = sqlite3_bind_double(insert_stmt, val_index, item->val->float_val);
+                rc = sqlite3_bind_double(insert_stmt, val_index, float_val);
             }
             if (rc != SQLITE_OK) {
-                LV_LOG_WARN("Can't bind val %f to save params query", item->val->float_val);
+                LV_LOG_WARN("Can't bind val %f to save params query", float_val);
             }
             break;
         default:
-            LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, item->val->dtype);
+            LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, dtype);
             sqlite3_reset(insert_stmt);
             sqlite3_clear_bindings(insert_stmt);
             pthread_mutex_unlock(&write_mutex);
@@ -131,10 +136,18 @@ int cfg_params_save_item(cfg_item_t *item) {
         if (rc != SQLITE_DONE) {
             LV_LOG_ERROR("Failed save item %s: %s", item->db_name, sqlite3_errmsg(db));
         } else {
-            if (item->val->dtype == DTYPE_INT) {
-                LV_LOG_USER("Saved %s=%i (pk=%i)", item->db_name, item->val->int_val, item->pk);
-            } else {
-                LV_LOG_USER("Saved %s=%llu (pk=%i)", item->db_name, item->val->uint64_val, item->pk);
+            switch (dtype) {
+                case DTYPE_INT:
+                    LV_LOG_USER("Saved %s=%i (pk=%i)", item->db_name, int_val, item->pk);
+                    break;
+                case DTYPE_UINT64:
+                    LV_LOG_USER("Saved %s=%llu (pk=%i)", item->db_name, uint64_val, item->pk);
+                    break;
+                case DTYPE_FLOAT:
+                    LV_LOG_USER("Saved %s=%f (pk=%i)", item->db_name, float_val, item->pk);
+                    break;
+                default:
+                    break;
             }
             rc = 0;
         }

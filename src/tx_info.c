@@ -64,7 +64,7 @@ static item_t vswr_items[NUM_VSWR_ITEMS] = {
     {.label = ">5",  .val = 5.0f}
 };
 
-static void on_cur_mode_change(subject_t subj, void *user_data);
+static void on_cur_mode_change(Subject *subj, void *user_data);
 
 static void tx_info_draw_cb(lv_event_t *e) {
     lv_obj_t           *obj      = lv_event_get_target(e);
@@ -290,6 +290,6 @@ bool tx_info_refresh(uint8_t *prev_msg_id, float *alc_p, float *pwr_p, float *vs
 }
 
 
-static void on_cur_mode_change(subject_t subj, void *user_data) {
+static void on_cur_mode_change(Subject *subj, void *user_data) {
     cur_mode = subject_get_int(subj);
 }

@@ -114,8 +114,8 @@ params_t params = {
     .rtty_bits              = 5,
     .rtty_snr               = 3.0f,
 
-    .swrscan_linear         = true,
-    .swrscan_span           = 200000,
+    // .swrscan_linear         = true,
+    // .swrscan_span           = 200000,
 
     .ft8_show_all           = true,
     .ft8_protocol           = FTX_PROTOCOL_FT8,
@@ -338,10 +338,10 @@ static bool params_load() {
             params.clock_power_timeout = i;
         } else if (strcmp(name, "clock_tx_timeout") == 0) {
             params.clock_tx_timeout = i;
-        } else if (strcmp(name, "swrscan_linear") == 0) {
-            params.swrscan_linear = i;
-        } else if (strcmp(name, "swrscan_span") == 0) {
-            params.swrscan_span = i;
+        // } else if (strcmp(name, "swrscan_linear") == 0) {
+        //     params.swrscan_linear = i;
+        // } else if (strcmp(name, "swrscan_span") == 0) {
+        //     params.swrscan_span = i;
         } else if (strcmp(name, "ft8_show_all") == 0) {
             params.ft8_show_all = i;
         } else if (strcmp(name, "ft8_protocol") == 0) {
@@ -513,8 +513,8 @@ static void params_save() {
     if (params.dirty.clock_power_timeout)   params_write_int("clock_power_timeout", params.clock_power_timeout, &params.dirty.clock_power_timeout);
     if (params.dirty.clock_tx_timeout)      params_write_int("clock_tx_timeout", params.clock_tx_timeout, &params.dirty.clock_tx_timeout);
 
-    if (params.dirty.swrscan_linear)        params_write_int("swrscan_linear", params.swrscan_linear, &params.dirty.swrscan_linear);
-    if (params.dirty.swrscan_span)          params_write_int("swrscan_span", params.swrscan_span, &params.dirty.swrscan_span);
+    // if (params.dirty.swrscan_linear)        params_write_int("swrscan_linear", params.swrscan_linear, &params.dirty.swrscan_linear);
+    // if (params.dirty.swrscan_span)          params_write_int("swrscan_span", params.swrscan_span, &params.dirty.swrscan_span);
 
     if (params.dirty.ft8_show_all)          params_write_int("ft8_show_all", params.ft8_show_all, &params.dirty.ft8_show_all);
     if (params.dirty.ft8_protocol)          params_write_int("ft8_protocol", params.ft8_protocol, &params.dirty.ft8_protocol);

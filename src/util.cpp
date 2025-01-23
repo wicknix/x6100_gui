@@ -239,7 +239,7 @@ float wrms_get_val(wrms_t wr) {
 
 size_t argmax(float * x, size_t n) {
     float max = -INFINITY;
-    size_t pos;
+    size_t pos = 0;
     for (size_t i = 0; i < n; i++)
     {
         if (x[i] > max) {

@@ -4,7 +4,6 @@
 #include "band.private.h"
 #include "mode.private.h"
 #include "params.private.h"
-#include "subjects.private.h"
 #include "transverter.private.h"
 #include "memory.private.h"
 #include "digital_modes.private.h"
@@ -29,24 +28,24 @@ static int init_params_cfg(sqlite3 *db);
 
 static void *params_save_thread(void *arg);
 
-static void on_key_tone_change(subject_t subj, void *user_data);
-static void on_item_change(subject_t subj, void *user_data);
-static void on_vfo_change(subject_t subj, void *user_data);
-// static void on_band_id_change(subject_t subj, void *user_data);
-static void on_ab_freq_change(subject_t subj, void *user_data);
-static void on_ab_mode_change(subject_t subj, void *user_data);
-static void update_cur_low_filter(subject_t subj, void *user_data);
-static void update_cur_high_filter(subject_t subj, void *user_data);
-static void on_freq_step_change(subject_t subj, void *user_data);
-static void on_zoom_change(subject_t subj, void *user_data);
+static void on_key_tone_change(Subject *subj, void *user_data);
+static void on_item_change(Subject *subj, void *user_data);
+static void on_vfo_change(Subject *subj, void *user_data);
+// static void on_band_id_change(Subject *subj, void *user_data);
+static void on_ab_freq_change(Subject *subj, void *user_data);
+static void on_ab_mode_change(Subject *subj, void *user_data);
+static void update_cur_low_filter(Subject *subj, void *user_data);
+static void update_cur_high_filter(Subject *subj, void *user_data);
+static void on_freq_step_change(Subject *subj, void *user_data);
+static void on_zoom_change(Subject *subj, void *user_data);
 
-static void on_bg_freq_change(subject_t subj, void *user_data);
-static void on_cur_mode_change(subject_t subj, void *user_data);
-static void on_cur_filter_low_change(subject_t subj, void *user_data);
-static void on_cur_filter_high_change(subject_t subj, void *user_data);
-static void on_cur_filter_bw_change(subject_t subj, void *user_data);
-static void on_cur_freq_step_change(subject_t subj, void *user_data);
-static void on_cur_zoom_change(subject_t subj, void *user_data);
+static void on_bg_freq_change(Subject *subj, void *user_data);
+static void on_cur_mode_change(Subject *subj, void *user_data);
+static void on_cur_filter_low_change(Subject *subj, void *user_data);
+static void on_cur_filter_high_change(Subject *subj, void *user_data);
+static void on_cur_filter_bw_change(Subject *subj, void *user_data);
+static void on_cur_freq_step_change(Subject *subj, void *user_data);
+static void on_cur_zoom_change(Subject *subj, void *user_data);
 
 
 // #define TEST_CFG
@@ -97,7 +96,7 @@ int cfg_init(sqlite3 *db) {
 /**
  * Delayed save of item
  */
-static void on_item_change(subject_t subj, void *user_data) {
+static void on_item_change(Subject *subj, void *user_data) {
     cfg_item_t *item = (cfg_item_t *)user_data;
     pthread_mutex_lock(&item->dirty->mux);
     if (item->dirty->val != ITEM_STATE_LOADING) {
@@ -110,7 +109,7 @@ static void on_item_change(subject_t subj, void *user_data) {
 /**
  * Changing of key tone
  */
-static void on_key_tone_change(subject_t subj, void *user_data) {
+static void on_key_tone_change(Subject *subj, void *user_data) {
     int32_t key_tone = subject_get_int(subj);
     if (cfg_cur.mode == NULL) {
         LV_LOG_USER("Skip update filters, cfg_cur.mode is not initialized");
@@ -138,7 +137,7 @@ void init_items(cfg_item_t *cfg_arr, uint32_t count, int (*load)(struct cfg_item
         cfg_arr[i].dirty      = malloc(sizeof(*cfg_arr[i].dirty));
         cfg_arr[i].dirty->val = ITEM_STATE_CLEAN;
         pthread_mutex_init(&cfg_arr[i].dirty->mux, NULL);
-        observer_t o = subject_add_observer(cfg_arr[i].val, on_item_change, &cfg_arr[i]);
+        Observer *o = subject_add_observer(cfg_arr[i].val, on_item_change, &cfg_arr[i]);
     }
 }
 /**
@@ -257,6 +256,10 @@ static int init_params_cfg(sqlite3 *db) {
 
     cfg.nr = (cfg_item_t){.val = subject_create_int(false), .db_name = "nr"};
     cfg.nr_level = (cfg_item_t){.val = subject_create_int(0), .db_name = "nr_level"};
+
+    // SWR scan
+    cfg.swrscan_linear = (cfg_item_t){.val=subject_create_int(true), .db_name="swrscan_linear"};
+    cfg.swrscan_span = (cfg_item_t){.val=subject_create_int(200000), .db_name="swrscan_span"};
 
     /* Bind callbacks */
     // subject_add_observer(cfg.band_id.val, on_band_id_change, NULL);

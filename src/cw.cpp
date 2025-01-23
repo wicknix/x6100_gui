@@ -11,6 +11,8 @@
 #include <math.h>
 
 #include "util.h"
+#include "cfg/cfg.h"
+#include "cfg/subjects.h"
 
 extern "C" {
     #include "lvgl/lvgl.h"
@@ -22,7 +24,6 @@ extern "C" {
     #include "meter.h"
     #include "cw_tune_ui.h"
     #include "pubsub_ids.h"
-    #include "cfg/subjects.h"
 }
 
 typedef struct {
@@ -70,18 +71,18 @@ static pthread_mutex_t  cw_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static void dds_dec_init();
 
-static void on_key_tone_change(subject_t subj, void *user_data);
-static void on_val_float_change(subject_t subj, void *user_data);
-static void on_val_bool_change(subject_t subj, void *user_data);
+static void on_key_tone_change(Subject *subj, void *user_data);
+static void on_val_float_change(Subject *subj, void *user_data);
+static void on_val_bool_change(Subject *subj, void *user_data);
 
 void cw_init() {
-    subject_add_observer_and_call(cfg.key_tone.val, on_key_tone_change, NULL);
-    subject_add_observer_and_call(cfg.cw_decoder_peak_beta.val, on_val_float_change, (void*)&cw_decoder_peak_beta);
-    subject_add_observer_and_call(cfg.cw_decoder_noise_beta.val, on_val_float_change, (void*)&cw_decoder_noise_beta);
-    subject_add_observer_and_call(cfg.cw_decoder_snr.val, on_val_float_change, (void*)&cw_decoder_snr);
-    subject_add_observer_and_call(cfg.cw_decoder_snr_gist.val, on_val_float_change, (void*)&cw_decoder_snr_gist);
-    subject_add_observer_and_call(cfg.cw_decoder.val, on_val_bool_change, (void*)&cw_decoder);
-    subject_add_observer_and_call(cfg.cw_tune.val, on_val_bool_change, (void*)&cw_tune);
+    cfg.key_tone.val->subscribe(on_key_tone_change)->notify();
+    cfg.cw_decoder_peak_beta.val->subscribe(on_val_float_change, (void*)&cw_decoder_peak_beta)->notify();
+    cfg.cw_decoder_noise_beta.val->subscribe(on_val_float_change, (void*)&cw_decoder_noise_beta)->notify();
+    cfg.cw_decoder_snr.val->subscribe(on_val_float_change, (void*)&cw_decoder_snr)->notify();
+    cfg.cw_decoder_snr_gist.val->subscribe(on_val_float_change, (void*)&cw_decoder_snr_gist)->notify();
+    cfg.cw_decoder.val->subscribe(on_val_bool_change, (void*)&cw_decoder)->notify();
+    cfg.cw_tune.val->subscribe(on_val_bool_change, (void*)&cw_tune)->notify();
 
     input_cbuf = cbuffercf_create(10000);
     wrms = wrms_create(16, 4);
@@ -310,15 +311,15 @@ void cw_put_audio_samples(unsigned int n, cfloat *samples) {
 //     return params.cw_decoder_peak_beta;
 // }
 
-static void on_key_tone_change(subject_t subj, void *user_data) {
-    key_tone = subject_get_int(subj);
+static void on_key_tone_change(Subject *subj, void *user_data) {
+    key_tone = static_cast<SubjectT<int32_t>*>(subj)->get();
     dds_dec_init();
 }
 
-static void on_val_float_change(subject_t subj, void *user_data) {
-    *(float*)user_data = subject_get_float(subj);
+static void on_val_float_change(Subject *subj, void *user_data) {
+    *(float*)user_data = static_cast<SubjectT<float>*>(subj)->get();
 }
 
-static void on_val_bool_change(subject_t subj, void *user_data) {
-    *(bool*)user_data = subject_get_int(subj);
+static void on_val_bool_change(Subject *subj, void *user_data) {
+    *(bool*)user_data = static_cast<SubjectT<int32_t>*>(subj)->get();
 }

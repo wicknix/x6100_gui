@@ -83,7 +83,8 @@ bool radio_tick() {
             delay = 0;
             clock_update_power(pack->vext * 0.1f, pack->vbat*0.1f, pack->batcap, pack->flag.charging);
         }
-        dsp_samples(((void *)pack) + offsetof(x6100_flow_t, samples), RADIO_SAMPLES, pack->flag.tx);
+        dsp_samples((cfloat*)((char *)pack + offsetof(x6100_flow_t, samples)), RADIO_SAMPLES, pack->flag.tx);
+        // dsp_samples(pack->samples, RADIO_SAMPLES, pack->flag.tx);
 
         switch (state) {
             case RADIO_RX:
@@ -176,42 +177,42 @@ static void * radio_thread(void *arg) {
     }
 }
 
-static void on_change_int8(subject_t subj, void *user_data) {
+static void on_change_int8(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(int8_t) = (void (*)(int8_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_change_uint8(subject_t subj, void *user_data) {
+static void on_change_uint8(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint8_t) = (void (*)(uint8_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_change_uint16(subject_t subj, void *user_data) {
+static void on_change_uint16(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint16_t) = (void (*)(uint16_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_change_uint32(subject_t subj, void *user_data) {
+static void on_change_uint32(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint32_t) = (void (*)(uint32_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_change_float(subject_t subj, void *user_data) {
-    int32_t new_val = subject_get_int(subj);
+static void on_change_float(Subject *subj, void *user_data) {
+    float new_val = subject_get_float(subj);
     void (*fn)(float) = (void (*)(float))user_data;
     WITH_RADIO_LOCK(fn(new_val));
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_vfo_freq_change(subject_t subj, void *user_data) {
+static void on_vfo_freq_change(Subject *subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_freq_set(vfo, new_val));
@@ -219,7 +220,7 @@ static void on_vfo_freq_change(subject_t subj, void *user_data) {
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_vfo_mode_change(subject_t subj, void *user_data) {
+static void on_vfo_mode_change(Subject *subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_mode_set(vfo, new_val));
@@ -227,7 +228,7 @@ static void on_vfo_mode_change(subject_t subj, void *user_data) {
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_vfo_agc_change(subject_t subj, void *user_data) {
+static void on_vfo_agc_change(Subject *subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_agc_set(vfo, new_val));
@@ -235,7 +236,7 @@ static void on_vfo_agc_change(subject_t subj, void *user_data) {
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void update_agc_time(subject_t subj, void *user_data) {
+static void update_agc_time(Subject *subj, void *user_data) {
     x6100_agc_t     agc = subject_get_int(cfg_cur.agc);
     x6100_mode_t    mode = subject_get_int(cfg_cur.mode);
     uint16_t        agc_time = 500;
@@ -278,7 +279,7 @@ static void update_agc_time(subject_t subj, void *user_data) {
     LV_LOG_USER("Radio set agc time=%u for agc: %i\n", agc_time, agc);
 }
 
-static void on_vfo_att_change(subject_t subj, void *user_data) {
+static void on_vfo_att_change(Subject *subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_att_set(vfo, new_val));
@@ -286,7 +287,7 @@ static void on_vfo_att_change(subject_t subj, void *user_data) {
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_vfo_pre_change(subject_t subj, void *user_data) {
+static void on_vfo_pre_change(Subject *subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_pre_set(vfo, new_val));
@@ -294,14 +295,14 @@ static void on_vfo_pre_change(subject_t subj, void *user_data) {
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_atu_network_change(subject_t subj, void *user_data) {
+static void on_atu_network_change(Subject *subj, void *user_data) {
     uint32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_cmd(x6100_atu_network, new_val));
     LV_LOG_USER("Radio set atu network=%u", new_val);
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
-static void on_low_filter_change(subject_t subj, void *user_data) {
+static void on_low_filter_change(Subject *subj, void *user_data) {
     int32_t low = subject_get_int(subj);
     switch (subject_get_int(cfg_cur.mode)) {
         case x6100_mode_am:
@@ -318,7 +319,7 @@ static void on_low_filter_change(subject_t subj, void *user_data) {
     }
 }
 
-static void on_high_filter_change(subject_t subj, void *user_data) {
+static void on_high_filter_change(Subject *subj, void *user_data) {
     int32_t high = subject_get_int(subj);
     radio_lock();
     switch (subject_get_int(cfg_cur.mode)) {
@@ -1083,12 +1084,12 @@ uint8_t radio_change_imic(int16_t d) {
     return params.imic;
 }
 
-x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo) {
-    // params_band_vfo_set(vfo);
+// x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo) {
+//     // params_band_vfo_set(vfo);
 
-    // WITH_RADIO_LOCK(x6100_control_vfo_set(vfo));
-    // lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
-}
+//     // WITH_RADIO_LOCK(x6100_control_vfo_set(vfo));
+//     // lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
+// }
 
 x6100_vfo_t radio_toggle_vfo() {
     x6100_vfo_t new_vfo = (subject_get_int(cfg_cur.band->vfo.val) == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A;

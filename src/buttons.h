@@ -11,11 +11,11 @@
 #define BUTTONS 5
 
 #ifdef __cplusplus
+#include "cfg/subjects.h"
 
 extern "C" {
 #endif
 
-#include "cfg/subjects.h"
 #include "lvgl/lvgl.h"
 #include "params/params.h"
 #include "main_screen.h"
@@ -33,7 +33,6 @@ typedef struct button_item_t {
     union {
         const char *label;
         char *(*label_fn)();
-
     };
     void (*press)(struct button_item_t *);
     void (*hold)(struct button_item_t *);
@@ -43,8 +42,8 @@ typedef struct button_item_t {
     struct buttons_page_t *prev;
     int32_t                data;
     lv_obj_t              *label_obj;
-    subject_t              subj;
-    observer_t             observer;
+    Subject               *subj;
+    Observer              *observer;
 } button_item_t;
 
 typedef struct buttons_page_t {

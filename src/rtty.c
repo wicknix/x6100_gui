@@ -65,7 +65,7 @@ static const char rtty_symbols[32] = {'\0', '3', '\n', '-', ' ', '\0', '8', '7',
                                       '\'', ',', '!',  ':', '(', '5',  '"', ')', '2',  '#', '6',
                                       '0',  '1', '9',  '?', '&', ' ',  '.', '/', ';',  ' '};
 
-static void on_cur_mode_change(subject_t subj, void *user_data);
+static void on_cur_mode_change(Subject *subj, void *user_data);
 
 static void update_nco() {
     float radians = 2.0f * (float)M_PI * (float)params.rtty_center / (float)AUDIO_CAPTURE_RATE;
@@ -394,6 +394,6 @@ bool rtty_change_reverse(int16_t df) {
     return params.rtty_reverse;
 }
 
-static void on_cur_mode_change(subject_t subj, void *user_data) {
+static void on_cur_mode_change(Subject *subj, void *user_data) {
     cur_mode = subject_get_int(subj);
 }

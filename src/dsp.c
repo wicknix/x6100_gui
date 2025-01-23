@@ -64,10 +64,10 @@ static x6100_mode_t cur_mode;
 
 static void dsp_update_min_max(float *data_buf, uint16_t size);
 static void setup_spectrum_spgram();
-static void on_zoom_change(subject_t subj, void *user_data);
-static void on_real_filter_from_change(subject_t subj, void *user_data);
-static void on_real_filter_to_change(subject_t subj, void *user_data);
-static void on_cur_mode_change(subject_t subj, void *user_data);
+static void on_zoom_change(Subject *subj, void *user_data);
+static void on_real_filter_from_change(Subject *subj, void *user_data);
+static void on_real_filter_to_change(Subject *subj, void *user_data);
+static void on_cur_mode_change(Subject *subj, void *user_data);
 
 /* * */
 
@@ -202,7 +202,7 @@ void dsp_samples(float complex *buf_samples, uint16_t size, bool tx) {
     }
 }
 
-static void on_zoom_change(subject_t subj, void *user_data) {
+static void on_zoom_change(Subject *subj, void *user_data) {
     int32_t x = subject_get_int(subj);
     if (x == spectrum_factor)
         return;
@@ -245,15 +245,15 @@ static void on_zoom_change(subject_t subj, void *user_data) {
     pthread_mutex_unlock(&spectrum_mux);
 }
 
-static void on_real_filter_from_change(subject_t subj, void *user_data) {
+static void on_real_filter_from_change(Subject *subj, void *user_data) {
     filter_from = subject_get_int(subj);
 }
 
-static void on_real_filter_to_change(subject_t subj, void *user_data) {
+static void on_real_filter_to_change(Subject *subj, void *user_data) {
     filter_to = subject_get_int(subj);
 }
 
-static void on_cur_mode_change(subject_t subj, void *user_data) {
+static void on_cur_mode_change(Subject *subj, void *user_data) {
     cur_mode = subject_get_int(subj);
 }
 

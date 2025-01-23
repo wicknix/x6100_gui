@@ -118,7 +118,7 @@ void cfg_memory_save(int32_t id) {
 
     struct {
         const char *name;
-        subject_t subj;
+        Subject *subj;
     } items[] = {
         {"rfg", cfg_cur.band->rfg.val},
         // fg params, save as vfoa

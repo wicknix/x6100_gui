@@ -59,7 +59,7 @@
 static uint16_t     spectrum_height = (480 / 3);
 static uint16_t     freq_height = 36;
 static lv_obj_t     *obj;
-static subject_t    freq_lock;
+static Subject      *freq_lock;
 static bool         mode_lock = false;
 static bool         ab_lock = false;
 static bool         band_lock = false;
@@ -79,8 +79,8 @@ static void toggle_atu_enabled();
 
 // Observers functions
 
-static void on_fg_freq_change(subject_t subj, void *user_data);
-static void update_freq_boundaries(subject_t subj, void *user_data);
+static void on_fg_freq_change(Subject *subj, void *user_data);
+static void update_freq_boundaries(Subject *subj, void *user_data);
 
 
 void mem_load(uint16_t id) {
@@ -312,14 +312,14 @@ void main_screen_action(press_action_t action) {
 
         case ACTION_NR_TOGGLE:
             b = subject_get_int(cfg.nr.val);
-            b != b;
+            b = !b;
             subject_set_int(cfg.nr.val, b);
             msg_update_text_fmt("#FFFFFF NR: %s", b ? "On" : "Off");
             break;
 
         case ACTION_NB_TOGGLE:
             b = subject_get_int(cfg.nb.val);
-            b != b;
+            b = !b;
             subject_set_int(cfg.nb.val, b);
             msg_update_text_fmt("#FFFFFF NB: %s", b ? "On" : "Off");
             break;
@@ -450,6 +450,8 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
         case KEYPAD_MODE_SSB:
             next_mode = get_next_mode_ssb(state == KEYPAD_LONG);
             break;
+        default:
+            break;
     }
 
     for (size_t i = 0; i < sizeof(modes_text)/sizeof(modes_text[0]); i++) {
@@ -464,7 +466,6 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
 
 static void main_screen_keypad_cb(lv_event_t * e) {
     event_keypad_t *keypad = lv_event_get_param(e);
-    int32_t prev_freq = subject_get_int(cfg_cur.fg_freq);
 
     switch (keypad->key) {
         case KEYPAD_PRE: ;
@@ -783,6 +784,8 @@ static void main_screen_keypad_cb(lv_event_t * e) {
 
                     radio_set_ptt(false);
                     break;
+                default:
+                    break;
             }
             break;
 
@@ -925,6 +928,7 @@ static uint16_t freq_accel(uint16_t diff) {
         case FREQ_ACCEL_STRONG:
             return (diff < 6) ? 10 : 30;
     }
+    return 1;
 }
 
 static void freq_shift(int16_t diff) {
@@ -1124,8 +1128,6 @@ void main_screen_lock_ab(bool lock) {
 }
 
 void main_screen_set_freq(uint64_t freq) {
-    int32_t    prev_freq = subject_get_int(cfg_cur.fg_freq);
-
     if (params_bands_find(freq)) {
         if (params.current_band.type != 0) {
             if (params.current_band.id != params.band_id) {
@@ -1218,16 +1220,18 @@ lv_obj_t * main_screen() {
 
     msg_schedule_text_fmt("X6100 de R1CBU " VERSION);
 
-    subject_add_observer(freq_lock, on_fg_freq_change, NULL);
-    subject_add_observer(cfg_cur.band->split.val, on_fg_freq_change, NULL);
-    subject_add_observer(cfg_cur.fg_freq, on_fg_freq_change, NULL);
+    subject_add_delayed_observer(freq_lock, on_fg_freq_change, NULL);
+    subject_add_delayed_observer(cfg_cur.band->split.val, on_fg_freq_change, NULL);
+    subject_add_delayed_observer(cfg_cur.fg_freq, on_fg_freq_change, NULL);
 
-    subject_add_observer(freq_lock, update_freq_boundaries, NULL);
+    subject_add_delayed_observer(freq_lock, update_freq_boundaries, NULL);
     // update boundaries on TX with split
-    subject_add_observer(cfg_cur.fg_freq, update_freq_boundaries, NULL);
-    subject_add_observer_and_call(cfg_cur.zoom, update_freq_boundaries, NULL);
+    subject_add_delayed_observer(cfg_cur.fg_freq, update_freq_boundaries, NULL);
+    subject_add_delayed_observer(cfg_cur.zoom, update_freq_boundaries, NULL);
+    update_freq_boundaries(cfg_cur.zoom, NULL);
 
-    subject_add_observer_and_call(cfg_cur.bg_freq, on_fg_freq_change, NULL);
+    subject_add_delayed_observer(cfg_cur.bg_freq, on_fg_freq_change, NULL);
+    on_fg_freq_change(cfg_cur.bg_freq, NULL);
 
     return obj;
 }
@@ -1264,14 +1268,13 @@ void main_screen_band_set()
 // }
 
 
-static void on_fg_freq_change(subject_t subj, void *user_data) {
+static void on_fg_freq_change(Subject *subj, void *user_data) {
     int32_t    f;
-    x6100_vfo_t vfo = subject_get_int(cfg_cur.band->vfo.val);
     uint32_t    color = subject_get_int(freq_lock) ? 0xBBBBBB : 0xFFFFFF;
 
     bool split = subject_get_int(cfg_cur.band->split.val);
-    subject_t freq_fg_subj = cfg_cur.fg_freq;
-    subject_t freq_bg_subj = cfg_cur.bg_freq;
+    Subject *freq_fg_subj = cfg_cur.fg_freq;
+    Subject *freq_bg_subj = cfg_cur.bg_freq;
 
     if (split && radio_get_state() == RADIO_TX) {
         freq_fg_subj = cfg_cur.bg_freq;
@@ -1305,14 +1308,12 @@ static void on_fg_freq_change(subject_t subj, void *user_data) {
     // band_info_update(f);
 }
 
-static void update_freq_boundaries(subject_t subj, void *user_data) {
+static void update_freq_boundaries(Subject *subj, void *user_data) {
     bool split = subject_get_int(cfg_cur.band->split.val);
-    subject_t freq_fg_subj = cfg_cur.fg_freq;
-    subject_t freq_bg_subj = cfg_cur.bg_freq;
+    Subject *freq_fg_subj = cfg_cur.fg_freq;
 
     if (split && radio_get_state() == RADIO_TX) {
         freq_fg_subj = cfg_cur.bg_freq;
-        freq_bg_subj = cfg_cur.fg_freq;
     }
     int32_t  f = subject_get_int(freq_fg_subj);
 

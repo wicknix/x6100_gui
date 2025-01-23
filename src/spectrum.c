@@ -62,14 +62,14 @@ static peak_t *spectrum_peak;
 
 static pthread_mutex_t data_mux;
 
-static void on_zoom_changed(subject_t subj, void *user_data);
-static void on_real_filter_from_change(subject_t subj, void *user_data);
-static void on_real_filter_to_change(subject_t subj, void *user_data);
-static void on_cur_mode_change(subject_t subj, void *user_data);
-static void on_lo_offset_change(subject_t subj, void *user_data);
-static void on_grid_min_change(subject_t subj, void *user_data);
-static void on_grid_max_change(subject_t subj, void *user_data);
-static void on_int32_val_change(subject_t subj, void *user_data);
+static void on_zoom_changed(Subject *subj, void *user_data);
+static void on_real_filter_from_change(Subject *subj, void *user_data);
+static void on_real_filter_to_change(Subject *subj, void *user_data);
+static void on_cur_mode_change(Subject *subj, void *user_data);
+static void on_lo_offset_change(Subject *subj, void *user_data);
+static void on_grid_min_change(Subject *subj, void *user_data);
+static void on_grid_max_change(Subject *subj, void *user_data);
+static void on_int32_val_change(Subject *subj, void *user_data);
 
 static void spectrum_draw_cb(lv_event_t *e) {
     lv_obj_t          *obj      = lv_event_get_target(e);
@@ -407,37 +407,37 @@ void spectrum_change_freq(int16_t df) {
     }
 }
 
-static void on_zoom_changed(subject_t subj, void *user_data) {
-    zoom_factor = subject_get_int(subj);
+static void on_zoom_changed(Subject *subj, void *user_data) {
+    zoom_factor = (uint8_t)subject_get_int(subj);
     spectrum_clear();
 }
 
-static void on_real_filter_from_change(subject_t subj, void *user_data) {
+static void on_real_filter_from_change(Subject *subj, void *user_data) {
     filter_from = subject_get_int(subj);
 }
 
-static void on_real_filter_to_change(subject_t subj, void *user_data) {
+static void on_real_filter_to_change(Subject *subj, void *user_data) {
     filter_to = subject_get_int(subj);
 }
 
-static void on_cur_mode_change(subject_t subj, void *user_data) {
-    cur_mode = subject_get_int(subj);
+static void on_cur_mode_change(Subject *subj, void *user_data) {
+    cur_mode = (x6100_mode_t)subject_get_int(subj);
 }
 
-static void on_lo_offset_change(subject_t subj, void *user_data) {
+static void on_lo_offset_change(Subject *subj, void *user_data) {
     lo_offset = subject_get_int(subj);
 }
-static void on_grid_min_change(subject_t subj, void *user_data) {
+static void on_grid_min_change(Subject *subj, void *user_data) {
     if (!params.spectrum_auto_min.x) {
         grid_min = subject_get_int(subj);
     }
 }
-static void on_grid_max_change(subject_t subj, void *user_data) {
+static void on_grid_max_change(Subject *subj, void *user_data) {
     if (!params.spectrum_auto_max.x) {
         grid_max = subject_get_int(subj);
     }
 }
 
-static void on_int32_val_change(subject_t subj, void *user_data) {
+static void on_int32_val_change(Subject *subj, void *user_data) {
     *(int32_t*)user_data = subject_get_int(subj);
 }

@@ -10,6 +10,7 @@
 #include "util.h"
 #include "cw.h"
 #include "voice.h"
+#include "cfg/cfg.h"
 
 #include <vector>
 

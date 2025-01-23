@@ -13,7 +13,6 @@
 lv_group_t *keyboard_group;
 
 static lv_indev_drv_t       indev_drv_2;
-static lv_group_t           *group;
 static bool                 ready = false;
 
 void keyboard_init() {

@@ -4,7 +4,6 @@
 #include "band.private.h"
 
 #include "cfg.private.h"
-#include "subjects.private.h"
 
 #include "transverter.h"
 
@@ -37,21 +36,21 @@ cfg_band_t cfg_band;
 
 static void init_db(sqlite3 *database);
 
-static void on_fg_freq_change(subject_t subj, void *user_data);
-static void on_bg_freq_change(subject_t subj, void *user_data);
+static void on_fg_freq_change(Subject *subj, void *user_data);
+static void on_bg_freq_change(Subject *subj, void *user_data);
 
-static void on_ab_freq_change(subject_t subj, void *user_data);
-static void on_ab_mode_change(subject_t subj, void *user_data);
-static void on_ab_agc_change(subject_t subj, void *user_data);
-static void on_ab_att_change(subject_t subj, void *user_data);
-static void on_ab_pre_change(subject_t subj, void *user_data);
+static void on_ab_freq_change(Subject *subj, void *user_data);
+static void on_ab_mode_change(Subject *subj, void *user_data);
+static void on_ab_agc_change(Subject *subj, void *user_data);
+static void on_ab_att_change(Subject *subj, void *user_data);
+static void on_ab_pre_change(Subject *subj, void *user_data);
 
-static void on_band_id_change(subject_t subj, void *user_data);
-static void on_vfo_change(subject_t subj, void *user_data);
-static void on_cur_mode_change(subject_t subj, void *user_data);
-static void on_cur_agc_change(subject_t subj, void *user_data);
-static void on_cur_att_change(subject_t subj, void *user_data);
-static void on_cur_pre_change(subject_t subj, void *user_data);
+static void on_band_id_change(Subject *subj, void *user_data);
+static void on_vfo_change(Subject *subj, void *user_data);
+static void on_cur_mode_change(Subject *subj, void *user_data);
+static void on_cur_agc_change(Subject *subj, void *user_data);
+static void on_cur_att_change(Subject *subj, void *user_data);
+static void on_cur_pre_change(Subject *subj, void *user_data);
 
 void cfg_band_params_init(sqlite3 *database) {
     init_db(database);
@@ -382,8 +381,9 @@ void cfg_band_params_load_all() {
 }
 
 int cfg_band_params_load_item(cfg_item_t *item) {
-    if (item->val->dtype != DTYPE_INT) {
-        LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, item->val->dtype);
+    enum data_type dtype = subject_get_dtype(item->val);
+    if (dtype != DTYPE_INT) {
+        LV_LOG_WARN("Unknown item %s dtype: %u, can't load", item->db_name, dtype);
         return -1;
     }
 
@@ -475,10 +475,10 @@ int cfg_band_params_save_item(cfg_item_t *item) {
         return rc;
     }
     int val_index = sqlite3_bind_parameter_index(stmt, ":val");
-
-    switch (item->val->dtype) {
+    enum data_type dtype = subject_get_dtype(item->val);
+    switch (dtype) {
         case DTYPE_INT:
-            int_val = item->val->int_val;
+            int_val = subject_get_int(item->val);
             // Check that freq match band
             if ((strcmp(item->db_name, "vfoa_freq") == 0) || (strcmp(item->db_name, "vfob_freq") == 0)) {
                 if ((band_id == BAND_UNDEFINED) || ((int_val >= start_freq) && (int_val <= stop_freq))) {
@@ -493,7 +493,7 @@ int cfg_band_params_save_item(cfg_item_t *item) {
             }
             break;
         default:
-            LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, item->val->dtype);
+            LV_LOG_WARN("Unknown item %s dtype: %u, will not save", item->db_name, dtype);
             sqlite3_reset(stmt);
             sqlite3_clear_bindings(stmt);
             pthread_mutex_unlock(&write_mutex);
@@ -577,7 +577,7 @@ static void init_db(sqlite3 *database) {
     }
 }
 
-static void on_fg_freq_change(subject_t subj, void *user_data) {
+static void on_fg_freq_change(Subject *subj, void *user_data) {
     // Copy freq to foreground vfo
     int32_t     freq = subject_get_int(subj);
     x6100_vfo_t vfo  = subject_get_int(cfg_band.vfo.val);
@@ -586,7 +586,7 @@ static void on_fg_freq_change(subject_t subj, void *user_data) {
     subject_set_int(cfg_cur.freq_shift, cfg_transverter_get_shift(freq));
 }
 
-static void on_bg_freq_change(subject_t subj, void *user_data) {
+static void on_bg_freq_change(Subject *subj, void *user_data) {
     // Copy freq to background vfo
     int32_t     freq = subject_get_int(subj);
     x6100_vfo_t vfo  = subject_get_int(cfg_band.vfo.val);
@@ -600,7 +600,7 @@ static void on_bg_freq_change(subject_t subj, void *user_data) {
 /**
  * On changing freq
  */
-static void on_ab_freq_change(subject_t subj, void *user_data) {
+static void on_ab_freq_change(Subject *subj, void *user_data) {
     cfg_item_t *cfg_band_arr;
     cfg_band_arr           = (cfg_item_t *)&cfg_band;
     uint32_t cfg_band_size = sizeof(cfg_band) / sizeof(cfg_item_t);
@@ -622,7 +622,7 @@ static void on_ab_freq_change(subject_t subj, void *user_data) {
 /**
  * On changing mode
  */
-static void on_ab_mode_change(subject_t subj, void *user_data) {
+static void on_ab_mode_change(Subject *subj, void *user_data) {
     cfg_item_t  *item      = (cfg_item_t *)user_data;
     x6100_mode_t mode      = subject_get_int(subj);
     x6100_vfo_t  vfo       = subject_get_int(cfg_band.vfo.val);
@@ -635,7 +635,7 @@ static void on_ab_mode_change(subject_t subj, void *user_data) {
     }
 }
 
-static void on_ab_agc_change(subject_t subj, void *user_data) {
+static void on_ab_agc_change(Subject *subj, void *user_data) {
     cfg_item_t *item      = (cfg_item_t *)user_data;
     x6100_agc_t agc       = subject_get_int(subj);
     x6100_vfo_t vfo       = subject_get_int(cfg_band.vfo.val);
@@ -648,7 +648,7 @@ static void on_ab_agc_change(subject_t subj, void *user_data) {
     }
 }
 
-static void on_ab_att_change(subject_t subj, void *user_data) {
+static void on_ab_att_change(Subject *subj, void *user_data) {
     cfg_item_t *item      = (cfg_item_t *)user_data;
     x6100_att_t att       = subject_get_int(subj);
     x6100_vfo_t vfo       = subject_get_int(cfg_band.vfo.val);
@@ -661,7 +661,7 @@ static void on_ab_att_change(subject_t subj, void *user_data) {
     }
 }
 
-static void on_ab_pre_change(subject_t subj, void *user_data) {
+static void on_ab_pre_change(Subject *subj, void *user_data) {
     cfg_item_t *item      = (cfg_item_t *)user_data;
     x6100_pre_t pre       = subject_get_int(subj);
     x6100_vfo_t vfo       = subject_get_int(cfg_band.vfo.val);
@@ -677,7 +677,7 @@ static void on_ab_pre_change(subject_t subj, void *user_data) {
 /**
  * Change freq/mode on changing band
  */
-static void on_band_id_change(subject_t subj, void *user_data) {
+static void on_band_id_change(Subject *subj, void *user_data) {
     int32_t new_band_id = subject_get_int(subj);
     if (new_band_id != cfg_band.vfo.pk) {
         cfg_band_params_save_all();
@@ -686,8 +686,8 @@ static void on_band_id_change(subject_t subj, void *user_data) {
     }
 }
 
-static void on_vfo_change(subject_t subj, void *user_data) {
-    subject_t fg_freq_src, bg_freq_src, mode_src, agc_src, pre_src, att_src;
+static void on_vfo_change(Subject *subj, void *user_data) {
+    Subject *fg_freq_src, *bg_freq_src, *mode_src, *agc_src, *pre_src, *att_src;
     if (subject_get_int(subj) == X6100_VFO_A) {
         fg_freq_src = cfg_band.vfo_a.freq.val;
         bg_freq_src = cfg_band.vfo_b.freq.val;
@@ -711,10 +711,10 @@ static void on_vfo_change(subject_t subj, void *user_data) {
     subject_set_int(cfg_cur.att, subject_get_int(att_src));
 }
 
-static void on_cur_mode_change(subject_t subj, void *user_data) {
+static void on_cur_mode_change(Subject *subj, void *user_data) {
     // Copy mode to active vfo
     x6100_mode_t new_mode = subject_get_int(subj);
-    subject_t    target_subj;
+    Subject *    target_subj;
     if (subject_get_int(cfg_band.vfo.val) == X6100_VFO_A) {
         target_subj = cfg_band.vfo_a.mode.val;
     } else {
@@ -723,10 +723,10 @@ static void on_cur_mode_change(subject_t subj, void *user_data) {
     subject_set_int(target_subj, new_mode);
 }
 
-static void on_cur_agc_change(subject_t subj, void *user_data) {
+static void on_cur_agc_change(Subject *subj, void *user_data) {
     // Copy agc to active vfo
     x6100_agc_t new_agc = subject_get_int(subj);
-    subject_t   target_subj;
+    Subject *   target_subj;
     if (subject_get_int(cfg_band.vfo.val) == X6100_VFO_A) {
         target_subj = cfg_band.vfo_a.agc.val;
     } else {
@@ -735,10 +735,10 @@ static void on_cur_agc_change(subject_t subj, void *user_data) {
     subject_set_int(target_subj, new_agc);
 }
 
-static void on_cur_att_change(subject_t subj, void *user_data) {
+static void on_cur_att_change(Subject *subj, void *user_data) {
     // Copy att to active vfo
     x6100_att_t new_att = subject_get_int(subj);
-    subject_t   target_subj;
+    Subject *   target_subj;
     if (subject_get_int(cfg_band.vfo.val) == X6100_VFO_A) {
         target_subj = cfg_band.vfo_a.att.val;
     } else {
@@ -747,10 +747,10 @@ static void on_cur_att_change(subject_t subj, void *user_data) {
     subject_set_int(target_subj, new_att);
 }
 
-static void on_cur_pre_change(subject_t subj, void *user_data) {
+static void on_cur_pre_change(Subject *subj, void *user_data) {
     // Copy pre to active vfo
     x6100_pre_t new_pre = subject_get_int(subj);
-    subject_t   target_subj;
+    Subject *   target_subj;
     if (subject_get_int(cfg_band.vfo.val) == X6100_VFO_A) {
         target_subj = cfg_band.vfo_a.pre.val;
     } else {

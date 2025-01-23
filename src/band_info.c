@@ -30,8 +30,8 @@ static uint8_t      zoom     = 1;
 
 static lv_timer_t *timer = NULL;
 
-static void on_zoom_changed(subject_t subj, void *user_data);
-static void on_freq_changed(subject_t subj, void *user_data);
+static void on_zoom_changed(Subject *subj, void *user_data);
+static void on_freq_changed(Subject *subj, void *user_data);
 
 static void refresh_bands_info();
 
@@ -161,7 +161,7 @@ lv_obj_t *band_info_init(lv_obj_t *parent) {
     lv_anim_set_ready_cb(&fade, fade_ready);
 
     subject_add_observer_and_call(cfg_cur.zoom, on_zoom_changed, NULL);
-    subject_add_observer_and_call(cfg_cur.fg_freq, on_freq_changed, NULL);
+    subject_add_delayed_observer_and_call(cfg_cur.fg_freq, on_freq_changed, NULL);
 
     return obj;
 }
@@ -193,11 +193,11 @@ void band_info_update(int32_t f) {
     }
 }
 
-static void on_zoom_changed(subject_t subj, void *user_data) {
+static void on_zoom_changed(Subject *subj, void *user_data) {
     zoom = subject_get_int(subj);
 }
 
-static void on_freq_changed(subject_t subj, void *user_data) {
+static void on_freq_changed(Subject *subj, void *user_data) {
     band_info_update(subject_get_int(subj));
 }
 

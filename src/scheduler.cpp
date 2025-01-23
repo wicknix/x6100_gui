@@ -36,7 +36,7 @@ void scheduler_put(scheduler_fn_t fn, void * arg, size_t arg_size) {
         arg_copy = malloc(arg_size);
         memcpy(arg_copy, arg, arg_size);
     }
-    item_t item = {fn, arg};
+    item_t item = {fn, arg_copy};
     queue.push(item);
 }
 

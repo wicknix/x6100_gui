@@ -48,7 +48,7 @@ int32_t radio_change_freq(int32_t df, int32_t *prev_freq);
 // void radio_set_cur_mode(x6100_mode_t mode);
 // x6100_mode_t radio_current_mode();
 
-x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo);
+// x6100_vfo_t radio_set_vfo(x6100_vfo_t vfo);
 x6100_vfo_t radio_toggle_vfo();
 
 uint16_t radio_change_vol(int16_t df);

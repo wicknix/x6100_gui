@@ -113,7 +113,7 @@
 #define FRAME_ADD_LEN 5 /* Header and end len */
 
 typedef struct {
-    subject_t subj;
+    Subject *subj;
     int32_t   val;
 } subj_set_cmd_t;
 
@@ -135,7 +135,7 @@ static int32_t fg_freq;
 static void schedule_change_fg_freq(int32_t freq);
 static void send_waterfall_data();
 
-static void on_fg_freq_change(subject_t s, void *user_data);
+static void on_fg_freq_change(Subject *s, void *user_data);
 
 static void frame_repr(frame_t *frame, uint16_t len, char *buf_ptr) {
     buf_ptr += sprintf(buf_ptr, "[%02X:", frame->start[0]);
@@ -255,7 +255,7 @@ static void schedule_change_fg_att(x6100_att_t att) {
     }
 }
 
-static void schedule_change_subj(subject_t subj, int32_t val) {
+static void schedule_change_subj(Subject *subj, int32_t val) {
     if (val != subject_get_int(subj)) {
         subj_set_cmd_t set_cmd = {.subj = subj, .val = val};
         scheduler_put(set_subject_value, &set_cmd, sizeof(set_cmd));
@@ -751,7 +751,7 @@ static void init_egress_frame(frame_t *frame) {
     frame->src_addr = LOCAL_ADDRESS;
 }
 
-static void on_fg_freq_change(subject_t s, void *user_data) {
+static void on_fg_freq_change(Subject *s, void *user_data) {
     int32_t new_freq = subject_get_int(s);
     if (new_freq != fg_freq) {
         fg_freq = new_freq;

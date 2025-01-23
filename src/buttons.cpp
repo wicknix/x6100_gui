@@ -43,7 +43,7 @@ static void button_mfk_update_cb(button_item_t *item);
 static void button_mem_load_cb(button_item_t *item);
 
 static void param_changed_cb(void * s, lv_msg_t * m);
-static void label_update_cb(subject_t subj, void *user_data);
+static void label_update_cb(Subject *subj, void *user_data);
 
 static void button_vol_hold_cb(button_item_t *item);
 static void button_mfk_hold_cb(button_item_t *item);
@@ -590,7 +590,7 @@ void buttons_load(uint8_t n, button_item_t *item) {
         } else if (item->type == BTN_TEXT_FN) {
             lv_label_set_text(label, item->label_fn());
             if (item->subj) {
-                item->observer = subject_add_observer(item->subj, label_update_cb, item);
+                item->observer = subject_add_delayed_observer(item->subj, label_update_cb, item);
             } else {
                 lv_obj_set_user_data(label, (void *)item->label_fn);
             }
@@ -1010,7 +1010,7 @@ static void param_changed_cb(void * s, lv_msg_t * m) {
 }
 
 
-static void label_update_cb(subject_t subj, void *user_data) {
+static void label_update_cb(Subject *subj, void *user_data) {
     button_item_t *item = (button_item_t*)user_data;
     if (item->label_obj) {
         lv_label_set_text(item->label_obj, item->label_fn());

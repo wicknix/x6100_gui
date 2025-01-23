@@ -33,7 +33,7 @@ static lv_obj_t     *obj;
 static int8_t cur_freq=-100;
 
 static void update_cb(lv_event_t * e);
-static void update_visibility(subject_t subj, void *user_data);
+static void update_visibility(Subject *subj, void *user_data);
 
 void cw_tune_init(lv_obj_t *parent)
 {
@@ -56,8 +56,9 @@ void cw_tune_init(lv_obj_t *parent)
     lv_obj_add_style(obj, &cw_tune_style, 0);
 
     lv_obj_add_event_cb(obj, update_cb, LV_EVENT_DRAW_MAIN, NULL);
-    subject_add_observer(cfg_cur.mode, update_visibility, NULL);
-    subject_add_observer_and_call(cfg.cw_tune.val, update_visibility, NULL);
+    subject_add_delayed_observer(cfg_cur.mode, update_visibility, NULL);
+    subject_add_delayed_observer(cfg.cw_tune.val, update_visibility, NULL);
+    update_visibility(cfg.cw_tune.val, NULL);
 }
 
 // bool cw_tune_toggle(int16_t diff) {
@@ -118,7 +119,7 @@ static void update_cb(lv_event_t * e) {
     }
 }
 
-static void update_visibility(subject_t subj, void *user_data) {
+static void update_visibility(Subject *subj, void *user_data) {
     x6100_mode_t mode = subject_get_int(cfg_cur.mode);
     bool on = subject_get_int(cfg.cw_tune.val) && ((mode == x6100_mode_cw) || (mode == x6100_mode_cwr));
     if (on) {
