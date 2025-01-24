@@ -35,9 +35,9 @@ static lv_coord_t           h;
 static bool                 run = false;
 
 static uint16_t             freq_index;
-static uint64_t             freq_start;
-static uint64_t             freq_center;
-static uint64_t             freq_stop;
+static uint32_t             freq_start;
+static uint32_t             freq_center;
+static uint32_t             freq_stop;
 
 static bool    linear;
 static int32_t span;
@@ -109,23 +109,19 @@ static void do_init() {
 
 static void do_step(float vswr) {
     data[freq_index] = vswr;
+    int16_t filtered_index = (STEPS + freq_index - 2) % STEPS;
 
-    for (int16_t i = 0; i < STEPS; i++) {
-        data_filtered[i] = 0.0;
-
-        for (int16_t n = -2; n <= 2; n++) {
-            int16_t index = i + n;
-
-            if (index < 0) {
-                index = 0;
-            } else if (index > STEPS-1) {
-                index = STEPS-1;
-            }
-
-            data_filtered[i] += data[index];
+    float avg = 0.0f;
+    for (int16_t n = -2; n <= 2; n++) {
+        int16_t index = filtered_index + n;
+        if (index < 0) {
+            index = 0;
+        } else if (index > STEPS-1) {
+            index = STEPS-1;
         }
-        data_filtered[i] /= 5.0f;
+        avg += data[index];
     }
+    data_filtered[filtered_index] = avg / 5.0f;
 
     event_send(chart, LV_EVENT_REFRESH, NULL);
 
@@ -135,7 +131,7 @@ static void do_step(float vswr) {
         freq_index = 0;
     }
 
-    uint64_t freq = freq_start + (freq_stop - freq_start) * freq_index / STEPS;
+    uint32_t freq = freq_start + (freq_stop - freq_start) * freq_index / STEPS;
     radio_set_freq(freq);
 }
 
@@ -162,10 +158,10 @@ static void draw_cb(lv_event_t * e) {
     lv_draw_line_dsc_init(&line_dsc);
 
     lv_coord_t x1 = obj->coords.x1;
-    lv_coord_t y1 = obj->coords.y1;
+    lv_coord_t y1 = obj->coords.y1 - 5;
 
     lv_coord_t w = lv_obj_get_width(obj);
-    lv_coord_t h = lv_obj_get_height(obj);
+    lv_coord_t h = lv_obj_get_height(obj) - 5;
 
     lv_point_t a, b;
 
@@ -204,7 +200,7 @@ static void draw_cb(lv_event_t * e) {
         lv_draw_label(draw_ctx, &dsc_label, &area, str, NULL);
     }
 
-    uint64_t    freq = freq_center - span / 4;
+    uint32_t    freq = freq_center - span / 4;
     uint16_t    mhz, khz, hz;
 
     a.y = y1;

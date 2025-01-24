@@ -936,18 +936,10 @@ static void freq_shift(int16_t diff) {
         return;
     }
 
-    int32_t        freq, prev_freq;
-
-    // *prev_freq = subject_get_int(cfg_cur.fg_freq);
-
-    // radio_set_freq(align_int(*prev_freq + df, abs(df)));
-
-    // return subject_get_int(cfg_cur.fg_freq);
-
-    freq = radio_change_freq(diff * subject_get_int(cfg_cur.freq_step) * freq_accel(abs(diff)), &prev_freq);
-    // waterfall_set_freq(freq);
-    // spectrum_change_freq(freq - prev_freq);
-    // check_cross_band(freq, prev_freq);
+    int32_t freq = subject_get_int(cfg_cur.fg_freq);
+    int32_t df = diff * subject_get_int(cfg_cur.freq_step) * freq_accel(abs(diff));
+    freq = align_int(freq + df, abs(df));
+    subject_set_int(cfg_cur.fg_freq, freq);
 
     dialog_send(EVENT_FREQ_UPDATE, NULL);
     voice_say_freq(freq);

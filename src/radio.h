@@ -40,9 +40,13 @@ void radio_bb_reset();
 bool radio_tick();
 radio_state_t radio_get_state();
 
+/**
+ * Set freq for radio without updating corresponding subject.
+ * Useful for FT8 TX freq change and SWR scan
+ */
 void radio_set_freq(int32_t freq);
 bool radio_check_freq(int32_t freq);
-int32_t radio_change_freq(int32_t df, int32_t *prev_freq);
+// int32_t radio_change_freq(int32_t df, int32_t *prev_freq);
 
 // void radio_set_mode(x6100_vfo_t vfo,  x6100_mode_t mode);
 // void radio_set_cur_mode(x6100_mode_t mode);

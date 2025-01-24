@@ -215,7 +215,8 @@ static void on_change_float(Subject *subj, void *user_data) {
 static void on_vfo_freq_change(Subject *subj, void *user_data) {
     x6100_vfo_t vfo = (x6100_vfo_t )user_data;
     int32_t new_val = subject_get_int(subj);
-    WITH_RADIO_LOCK(x6100_control_vfo_freq_set(vfo, new_val));
+    int32_t shift = cfg_transverter_get_shift(new_val);
+    WITH_RADIO_LOCK(x6100_control_vfo_freq_set(vfo, new_val - shift));
     LV_LOG_USER("Radio set vfo %i freq=%i", vfo, new_val);;
     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
@@ -529,13 +530,9 @@ void radio_set_freq(int32_t freq) {
         LV_LOG_ERROR("Freq %i incorrect", freq);
         return;
     }
-    subject_set_int(cfg_cur.fg_freq, freq);
-    // params_band_cur_freq_set(freq);
-    // params_band_cur_shift_set(shift != 0);
-
-    // WITH_RADIO_LOCK(x6100_control_vfo_freq_set(params_band_vfo_get(), freq - shift));
-
-    // radio_load_atu();
+    x6100_vfo_t vfo = subject_get_int(cfg_cur.band->vfo.val);
+    int32_t shift = cfg_transverter_get_shift(freq);
+    WITH_RADIO_LOCK(x6100_control_vfo_freq_set(vfo, freq - shift));
 }
 
 bool radio_check_freq(int32_t freq) {
@@ -545,13 +542,13 @@ bool radio_check_freq(int32_t freq) {
     return cfg_transverter_get_shift(freq) != 0;
 }
 
-int32_t radio_change_freq(int32_t df, int32_t *prev_freq) {
-    *prev_freq = subject_get_int(cfg_cur.fg_freq);
+// int32_t radio_change_freq(int32_t df, int32_t *prev_freq) {
+//     *prev_freq = subject_get_int(cfg_cur.fg_freq);
 
-    radio_set_freq(align_int(*prev_freq + df, abs(df)));
+//     radio_set_freq(align_int(*prev_freq + df, abs(df)));
 
-    return subject_get_int(cfg_cur.fg_freq);
-}
+//     return subject_get_int(cfg_cur.fg_freq);
+// }
 
 uint16_t radio_change_vol(int16_t df) {
     int32_t vol = subject_get_int(cfg.vol.val);
