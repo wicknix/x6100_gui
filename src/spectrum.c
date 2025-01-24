@@ -27,6 +27,12 @@
 #define DEFAULT_MAX S9_20
 #define VISOR_HEIGHT_TX (100 - 61)
 #define VISOR_HEIGHT_RX 100
+#define SPECTRUM_SIZE 800
+
+typedef struct {
+    float    val;
+    uint64_t time;
+} peak_t;
 
 static float grid_min = DEFAULT_MIN;
 static float grid_max = DEFAULT_MAX;
@@ -36,11 +42,9 @@ static lv_obj_t *obj;
 static int32_t width_hz     = 100000;
 static int16_t visor_height = 100;
 
-static uint16_t spectrum_size = 800;
-static float   *spectrum_buf  = NULL;
-static uint8_t  zoom_factor   = 1;
-
-static int16_t delta_surplus = 0;
+static float   spectrum_buf[SPECTRUM_SIZE];
+static peak_t  spectrum_peak[SPECTRUM_SIZE];
+static uint8_t zoom_factor = 1;
 
 static bool spectrum_tx = false;
 
@@ -53,12 +57,10 @@ static int32_t dnf_enabled = false;
 static int32_t dnf_center;
 static int32_t dnf_width;
 
-typedef struct {
-    float    val;
-    uint64_t time;
-} peak_t;
+static int32_t cur_freq;
+static int16_t freq_mod;
 
-static peak_t *spectrum_peak;
+
 
 static pthread_mutex_t data_mux;
 
@@ -70,6 +72,7 @@ static void on_lo_offset_change(Subject *subj, void *user_data);
 static void on_grid_min_change(Subject *subj, void *user_data);
 static void on_grid_max_change(Subject *subj, void *user_data);
 static void on_int32_val_change(Subject *subj, void *user_data);
+static void on_cur_freq_change(Subject *subj, void *user_data);
 
 static void spectrum_draw_cb(lv_event_t *e) {
     lv_obj_t          *obj      = lv_event_get_target(e);
@@ -120,9 +123,9 @@ static void spectrum_draw_cb(lv_event_t *e) {
     peak_b.x = x1;
     peak_b.y = y1 + h;
 
-    for (uint16_t i = 0; i < spectrum_size; i++) {
+    for (uint16_t i = 0; i < SPECTRUM_SIZE; i++) {
         float    v = (spectrum_buf[i] - min) / (max - min);
-        uint16_t x = i * w / spectrum_size;
+        uint16_t x = i * w / SPECTRUM_SIZE;
 
         /* Peak */
 
@@ -258,9 +261,12 @@ static void spectrum_refresh(void *data) {
 
 lv_obj_t *spectrum_init(lv_obj_t *parent) {
     pthread_mutex_init(&data_mux, NULL);
-    spectrum_buf  = malloc(spectrum_size * sizeof(float));
-    spectrum_peak = malloc(spectrum_size * sizeof(peak_t));
     spectrum_min_max_reset();
+
+    for (size_t i = 0; i < SPECTRUM_SIZE; i++) {
+        spectrum_peak[i].val = S_MIN;
+        spectrum_buf[i] = S_MIN;
+    }
 
     obj = lv_obj_create(parent);
 
@@ -280,6 +286,8 @@ lv_obj_t *spectrum_init(lv_obj_t *parent) {
     subject_add_observer_and_call(cfg.dnf.val, on_int32_val_change, &dnf_enabled);
     subject_add_observer_and_call(cfg.dnf_center.val, on_int32_val_change, &dnf_center);
     subject_add_observer_and_call(cfg.dnf_width.val, on_int32_val_change, &dnf_width);
+
+    subject_add_observer_and_call(cfg_cur.fg_freq, on_cur_freq_change, NULL);
     return obj;
 }
 
@@ -346,64 +354,13 @@ void spectrum_update_min(float db) {
 
 void spectrum_clear() {
     spectrum_min_max_reset();
+    freq_mod = 0;
     uint64_t now = get_time();
 
-    for (uint16_t i = 0; i < spectrum_size; i++) {
+    for (uint16_t i = 0; i < SPECTRUM_SIZE; i++) {
         spectrum_buf[i]       = S_MIN;
         spectrum_peak[i].val  = S_MIN;
         spectrum_peak[i].time = now;
-    }
-}
-
-void spectrum_change_freq(int16_t df) {
-    peak_t  *from, *to;
-    uint64_t time = get_time();
-
-    uint16_t div     = width_hz / spectrum_size / zoom_factor;
-    int16_t  surplus = df % div;
-    int32_t  delta   = df / div;
-
-    if (surplus) {
-        delta_surplus += surplus;
-    } else {
-        delta_surplus = 0;
-    }
-
-    if (abs(delta_surplus) > div) {
-        delta += delta_surplus / div;
-        delta_surplus = delta_surplus % div;
-    }
-
-    if (delta == 0) {
-        return;
-    }
-
-    if (delta > 0) {
-        for (int16_t i = 0; i < spectrum_size - 1; i++) {
-            to = &spectrum_peak[i];
-
-            if (i >= spectrum_size - delta) {
-                to->val  = S_MIN;
-                to->time = time;
-            } else {
-                from = &spectrum_peak[i + delta];
-                *to  = *from;
-            }
-        }
-    } else {
-        delta = -delta;
-
-        for (int16_t i = spectrum_size - 1; i > 0; i--) {
-            to = &spectrum_peak[i];
-
-            if (i <= delta) {
-                to->val  = S_MIN;
-                to->time = time;
-            } else {
-                from = &spectrum_peak[i - delta];
-                *to  = *from;
-            }
-        }
     }
 }
 
@@ -440,4 +397,33 @@ static void on_grid_max_change(Subject *subj, void *user_data) {
 
 static void on_int32_val_change(Subject *subj, void *user_data) {
     *(int32_t*)user_data = subject_get_int(subj);
+}
+
+void on_cur_freq_change(Subject *subj, void *user_data) {
+    int32_t new_freq = subject_get_int(subj);
+    if (cur_freq != new_freq) {
+        int32_t df = new_freq - cur_freq + freq_mod;
+        cur_freq = new_freq;
+        uint64_t time = get_time();
+
+        uint16_t div     = width_hz / SPECTRUM_SIZE / zoom_factor;
+        int32_t  delta   = (df + div / 2) / div;
+        freq_mod = df - delta * div;
+
+        if (delta == 0) {
+            return;
+        }
+        peak_t  *to;
+        for (int16_t i = 0; i < SPECTRUM_SIZE; i++) {
+            int16_t dst_id = delta > 0 ? i : SPECTRUM_SIZE - i - 1;
+            to = &spectrum_peak[dst_id];
+            int16_t src_id = dst_id + delta;
+            if ((src_id < 0) || (src_id >= SPECTRUM_SIZE)) {
+                to->val = S_MIN;
+                to->time = time;
+            } else {
+                *to = spectrum_peak[src_id];
+            }
+        }
+    }
 }

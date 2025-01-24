@@ -937,9 +937,16 @@ static void freq_shift(int16_t diff) {
     }
 
     int32_t        freq, prev_freq;
+
+    // *prev_freq = subject_get_int(cfg_cur.fg_freq);
+
+    // radio_set_freq(align_int(*prev_freq + df, abs(df)));
+
+    // return subject_get_int(cfg_cur.fg_freq);
+
     freq = radio_change_freq(diff * subject_get_int(cfg_cur.freq_step) * freq_accel(abs(diff)), &prev_freq);
     // waterfall_set_freq(freq);
-    spectrum_change_freq(freq - prev_freq);
+    // spectrum_change_freq(freq - prev_freq);
     // check_cross_band(freq, prev_freq);
 
     dialog_send(EVENT_FREQ_UPDATE, NULL);
@@ -1138,7 +1145,7 @@ void main_screen_set_freq(uint64_t freq) {
         }
     }
 
-    radio_set_freq(freq);
+    subject_set_int(cfg_cur.fg_freq, freq);
     event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
 }
 
