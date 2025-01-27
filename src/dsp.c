@@ -80,9 +80,9 @@ void dsp_init() {
     spectrum_psd          = malloc(SPECTRUM_NFFT * sizeof(float));
     spectrum_psd_filtered = malloc(SPECTRUM_NFFT * sizeof(float));
 
-    waterfall_sg_rx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, WATERFALL_NFFT, WATERFALL_NFFT / 4);
+    waterfall_sg_rx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES, RADIO_SAMPLES);
     spgramcf_set_alpha(waterfall_sg_rx, 0.2f);
-    waterfall_sg_tx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, WATERFALL_NFFT, WATERFALL_NFFT / 4);
+    waterfall_sg_tx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES, RADIO_SAMPLES);
     spgramcf_set_alpha(waterfall_sg_tx, 0.2f);
 
     waterfall_psd = malloc(WATERFALL_NFFT * sizeof(float));
@@ -115,6 +115,7 @@ static void process_samples(float complex *buf_samples, uint16_t size, firdecim_
     iirfilt_cccf_execute_block(dc_block, buf_samples, size, buf_filtered);
 
     if (spectrum_factor > 1) {
+        firdecim_crcf_reset(sp_decim);
         firdecim_crcf_execute_block(sp_decim, buf_filtered, size / spectrum_factor, spectrum_dec_buf);
         spgramcf_write(sp_sg, spectrum_dec_buf, size / spectrum_factor);
     } else {
@@ -229,9 +230,9 @@ static void on_zoom_change(Subject *subj, void *user_data) {
     }
 
     if (spectrum_factor > 1) {
-        spectrum_decim_rx = firdecim_crcf_create_kaiser(spectrum_factor, 16, 40.0f);
+        spectrum_decim_rx = firdecim_crcf_create_kaiser(spectrum_factor, 8, 60.0f);
         firdecim_crcf_set_scale(spectrum_decim_rx, sqrt(1.0f / (float)spectrum_factor));
-        spectrum_decim_tx = firdecim_crcf_create_kaiser(spectrum_factor, 16, 40.0f);
+        spectrum_decim_tx = firdecim_crcf_create_kaiser(spectrum_factor, 8, 60.0f);
         firdecim_crcf_set_scale(spectrum_decim_tx, sqrt(1.0f / (float)spectrum_factor));
         spectrum_dec_buf = (float complex *)malloc(RADIO_SAMPLES * sizeof(float complex) / spectrum_factor);
     }
@@ -331,12 +332,9 @@ static void setup_spectrum_spgram() {
     if (spectrum_sg_tx) {
         spgramcf_destroy(spectrum_sg_tx);
     }
-    uint16_t window = SPECTRUM_NFFT * 3 / 2 / spectrum_factor;
-    if (SPECTRUM_NFFT < window) {
-        window = SPECTRUM_NFFT;
-    }
-    spectrum_sg_rx = spgramcf_create(SPECTRUM_NFFT, LIQUID_WINDOW_HANN, window, SPECTRUM_NFFT / 4);
+    uint16_t window = RADIO_SAMPLES / spectrum_factor;
+    spectrum_sg_rx = spgramcf_create(SPECTRUM_NFFT, LIQUID_WINDOW_HANN, window, window);
     spgramcf_set_alpha(spectrum_sg_rx, 0.4f);
-    spectrum_sg_tx = spgramcf_create(SPECTRUM_NFFT, LIQUID_WINDOW_HANN, window, SPECTRUM_NFFT / 4);
+    spectrum_sg_tx = spgramcf_create(SPECTRUM_NFFT, LIQUID_WINDOW_HANN, window, window);
     spgramcf_set_alpha(spectrum_sg_tx, 0.4f);
 }
