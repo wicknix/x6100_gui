@@ -42,8 +42,8 @@ static firdecim_crcf spectrum_decim_tx;
 
 static spgramcf spectrum_sg_rx;
 static spgramcf spectrum_sg_tx;
-static float   *spectrum_psd;
-static float   *spectrum_psd_filtered;
+static float    spectrum_psd[SPECTRUM_NFFT];
+static float    spectrum_psd_filtered[SPECTRUM_NFFT];
 static float    spectrum_beta   = 0.7f;
 static uint8_t  spectrum_fps_ms = (1000 / 15);
 static uint64_t spectrum_time;
@@ -51,7 +51,7 @@ static cfloat  *spectrum_dec_buf;
 
 static spgramcf waterfall_sg_rx;
 static spgramcf waterfall_sg_tx;
-static float   *waterfall_psd;
+static float    waterfall_psd[WATERFALL_NFFT];
 static uint8_t  waterfall_fps_ms = (1000 / 25);
 static uint64_t waterfall_time;
 
@@ -102,15 +102,10 @@ void dsp_init() {
 
     setup_spectrum_spgram();
 
-    spectrum_psd          = (float *)malloc(SPECTRUM_NFFT * sizeof(float));
-    spectrum_psd_filtered = (float *)malloc(SPECTRUM_NFFT * sizeof(float));
-
     waterfall_sg_rx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES, RADIO_SAMPLES);
     spgramcf_set_alpha(waterfall_sg_rx, 0.2f);
     waterfall_sg_tx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES, RADIO_SAMPLES);
     spgramcf_set_alpha(waterfall_sg_tx, 0.2f);
-
-    waterfall_psd = (float *)malloc(WATERFALL_NFFT * sizeof(float));
 
     spectrum_time  = get_time();
     waterfall_time = get_time();
