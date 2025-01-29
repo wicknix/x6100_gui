@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <liquid/liquid.h>
 
-#define WATERFALL_NFFT  1024
+#define WATERFALL_NFFT  (RADIO_SAMPLES * 2)
 #define SPECTRUM_NFFT   800
 
 void dsp_init();
