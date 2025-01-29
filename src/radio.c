@@ -83,8 +83,8 @@ bool radio_tick() {
             delay = 0;
             clock_update_power(pack->vext * 0.1f, pack->vbat*0.1f, pack->batcap, pack->flag.charging);
         }
-        dsp_samples((cfloat*)((char *)pack + offsetof(x6100_flow_t, samples)), RADIO_SAMPLES, pack->flag.tx);
-        // dsp_samples(pack->samples, RADIO_SAMPLES, pack->flag.tx);
+        cfloat *samples = (cfloat*)((char *)pack + offsetof(x6100_flow_t, samples));
+        dsp_samples(samples, RADIO_SAMPLES, pack->flag.tx);
 
         switch (state) {
             case RADIO_RX:
@@ -181,35 +181,35 @@ static void on_change_int8(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(int8_t) = (void (*)(int8_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_change_uint8(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint8_t) = (void (*)(uint8_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_change_uint16(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint16_t) = (void (*)(uint16_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_change_uint32(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     void (*fn)(uint32_t) = (void (*)(uint32_t))user_data;
     WITH_RADIO_LOCK(fn(new_val));
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_change_float(Subject *subj, void *user_data) {
     float new_val = subject_get_float(subj);
     void (*fn)(float) = (void (*)(float))user_data;
     WITH_RADIO_LOCK(fn(new_val));
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_freq_change(Subject *subj, void *user_data) {
@@ -218,7 +218,7 @@ static void on_vfo_freq_change(Subject *subj, void *user_data) {
     int32_t shift = cfg_transverter_get_shift(new_val);
     WITH_RADIO_LOCK(x6100_control_vfo_freq_set(vfo, new_val - shift));
     LV_LOG_USER("Radio set vfo %i freq=%i", vfo, new_val);;
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_mode_change(Subject *subj, void *user_data) {
@@ -226,7 +226,7 @@ static void on_vfo_mode_change(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_mode_set(vfo, new_val));
     LV_LOG_USER("Radio set vfo %i mode=%i", vfo, new_val);;
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_agc_change(Subject *subj, void *user_data) {
@@ -234,7 +234,7 @@ static void on_vfo_agc_change(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_agc_set(vfo, new_val));
     LV_LOG_USER("Radio set vfo %i agc=%i", vfo, new_val);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void update_agc_time(Subject *subj, void *user_data) {
@@ -285,7 +285,7 @@ static void on_vfo_att_change(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_att_set(vfo, new_val));
     LV_LOG_USER("Radio set vfo %i att=%i", vfo, new_val);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_vfo_pre_change(Subject *subj, void *user_data) {
@@ -293,14 +293,14 @@ static void on_vfo_pre_change(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_vfo_pre_set(vfo, new_val));
     LV_LOG_USER("Radio set vfo %i pre=%i", vfo, new_val);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_atu_network_change(Subject *subj, void *user_data) {
     uint32_t new_val = subject_get_int(subj);
     WITH_RADIO_LOCK(x6100_control_cmd(x6100_atu_network, new_val));
     LV_LOG_USER("Radio set atu network=%u", new_val);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
 }
 
 static void on_low_filter_change(Subject *subj, void *user_data) {

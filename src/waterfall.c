@@ -127,7 +127,7 @@ void waterfall_data(float *data_buf, uint16_t size, bool tx) {
         }
 
         uint8_t id = v * 255;
-        waterfall_cache[last_row_id * size + size - 1 - x] = id;
+        waterfall_cache[last_row_id * size + x] = id;
     }
     scheduler_put_noargs(refresh_waterfall);
 }
