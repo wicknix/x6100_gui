@@ -91,7 +91,7 @@ lv_obj_t * pannel_init(lv_obj_t *parent) {
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
 
     subject_add_delayed_observer(cfg_cur.mode, update_visibility, NULL);
-    subject_add_delayed_observer(cfg.cw_decoder.val, update_visibility, NULL);
+    subject_add_delayed_observer_and_call(cfg.cw_decoder.val, update_visibility, NULL);
     return obj;
 }
 

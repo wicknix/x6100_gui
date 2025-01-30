@@ -79,7 +79,7 @@ void cfg_mode_params_init(sqlite3 *database) {
     subject_add_observer_and_call(cfg_cur.mode, update_real_filters, NULL);
 
     subject_add_observer(cfg_cur.mode, update_lo_offset, NULL);
-    subject_add_observer(cfg.key_tone.val, update_lo_offset, NULL);
+    subject_add_observer_and_call(cfg.key_tone.val, update_lo_offset, NULL);
 
     cfg_mode.filter_low  = (cfg_item_t){.val = subject_create_int(low), .db_name = "filter_low", .pk = db_mode};
     cfg_mode.filter_high = (cfg_item_t){.val = subject_create_int(high), .db_name = "filter_high", .pk = db_mode};

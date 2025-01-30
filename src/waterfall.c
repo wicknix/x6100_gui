@@ -251,8 +251,9 @@ static void redraw_cb(lv_event_t * e) {
     int16_t mapping[width];
     float rel_position;
     for (uint16_t i = 0; i < width; i++) {
+        // Position on screen, center x is 0
         rel_position = (((float) i + 0.5) / width) - 0.5f;
-        mapping[i] = roundf(((rel_position / current_zoom) + 0.5f) * WATERFALL_NFFT - 1.0f);
+        mapping[i] = roundf(((rel_position / current_zoom) + 0.5f) * WATERFALL_NFFT + 0.5f);
     }
 
     for (src_y = 0; src_y < height; src_y++) {

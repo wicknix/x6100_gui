@@ -520,6 +520,7 @@ void buttons_init(lv_obj_t *parent) {
     btn_cw_peak_beta.subj    = cfg.cw_decoder_peak_beta.val;
     btn_cw_noise_beta.subj   = cfg.cw_decoder_noise_beta.val;
 
+    btn_dnf.subj = cfg.dnf.val;
     btn_dnf_center.subj = cfg.dnf_center.val;
     btn_dnf_width.subj  = cfg.dnf_width.val;
     btn_nb.subj         = cfg.nb.val;
