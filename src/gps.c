@@ -11,24 +11,18 @@
 #include "lvgl/lvgl.h"
 #include "events.h"
 #include "dialog_gps.h"
+#include "usb_devices.h"
+#include "pubsub_ids.h"
 
-#include <unistd.h>
-#include <stdint.h>
-#include <stdlib.h>
 #include <errno.h>
 #include <pthread.h>
-#include <math.h>
-#include <libudev.h>
 
 static struct gps_data_t    gpsdata;
 static uint64_t             prev_time = 0;
 static gps_status_t         status=GPS_STATUS_WAITING;
 
-static struct udev *udev;
-static struct udev_device *dev;
-static struct udev_monitor *mon;
-static int fd;
-
+static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  cond = PTHREAD_COND_INITIALIZER;
 
 static bool connect() {
     if (gps_open("localhost", "2947", &gpsdata) == -1) {
@@ -65,31 +59,6 @@ static void disconnect() {
 
 }
 
-static void wait_new_device() {
-	while (1) {
-		fd_set fds;
-		struct timeval tv;
-		int ret;
-
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-
-		ret = select(fd+1, &fds, NULL, NULL, &tv);
-		if (ret > 0 && FD_ISSET(fd, &fds)) {
-			dev = udev_monitor_receive_device(mon);
-			if (dev && (strcmp(udev_device_get_action(dev), "add") == 0)) {
-				/* free dev */
-				udev_device_unref(dev);
-                return;
-			}
-		}
-		/* 500 milliseconds */
-		usleep(500*1000);
-	}
-}
-
 static void * gps_thread(void *arg) {
     while (true) {
         status = GPS_STATUS_WAITING;
@@ -99,26 +68,26 @@ static void * gps_thread(void *arg) {
             disconnect();
         } else {
             status = GPS_STATUS_WAITING;
-            wait_new_device();
+            pthread_mutex_lock(&lock);
+            pthread_cond_wait(&cond, &lock);
+            pthread_mutex_unlock(&lock);
         }
     }
 }
 
-void gps_init() {
-    /* create udev object */
-	udev = udev_new();
-	if (!udev) {
-		LV_LOG_ERROR("Cannot create udev context.");
-	}
-    mon = udev_monitor_new_from_netlink(udev, "udev");
-	udev_monitor_filter_add_match_subsystem_devtype(mon, "usb", NULL);
-	udev_monitor_enable_receiving(mon);
-	fd = udev_monitor_get_fd(mon);
+static void on_usb_device_change(void * s, lv_msg_t * msg) {
+    enum usb_devices_event_t event = (enum usb_devices_event_t)msg->payload;
+    if (event == USB_DEV_ADDED) {
+        pthread_cond_signal(&cond);
+    }
+}
 
+void gps_init() {
     pthread_t thread;
 
     pthread_create(&thread, NULL, gps_thread, NULL);
     pthread_detach(thread);
+    lv_msg_subscribe(MSG_USB_DEVICE_CHANGED, on_usb_device_change, NULL);
 }
 
 
