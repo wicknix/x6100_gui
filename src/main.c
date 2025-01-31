@@ -38,6 +38,7 @@
 #include "qso_log.h"
 #include "scheduler.h"
 #include "wifi.h"
+#include "usb_devices.h"
 
 #define DISP_BUF_SIZE (800 * 480 * 4)
 
@@ -57,6 +58,7 @@ int main(void) {
     fbdev_init();
     audio_init();
     event_init();
+    usb_devices_monitor_init();
 
     lv_disp_draw_buf_init(&disp_buf, buf, NULL, DISP_BUF_SIZE);
     lv_disp_drv_init(&disp_drv);

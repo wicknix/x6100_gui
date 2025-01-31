@@ -2,7 +2,7 @@ add_executable(${PROJECT_NAME})
 
 target_sources(${PROJECT_NAME} PUBLIC
     main.c main_screen.c
-    styles.c spectrum.c radio.c dsp.c util.cpp
+    styles.c spectrum.c radio.c dsp.cpp util.cpp
     waterfall.c rotary.c keyboard.c encoder.c
     events.c msg.c msg_tiny.c keypad.c
     bands.c hkey.c clock.c info.c
@@ -14,7 +14,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     dialog_msg_voice.c dialog_recorder.c dialog_qth.c dialog_callsign.c
     textarea_window.c cw_encoder.c buttons.cpp vol.c recorder.c
     voice.cpp cw_tune_ui.c adif.c qso_log.c scheduler.cpp
-    dialog_wifi.c wifi.cpp controls.cpp
+    dialog_wifi.c wifi.cpp controls.cpp usb_devices.cpp
 )
 
 add_subdirectory(fonts)
