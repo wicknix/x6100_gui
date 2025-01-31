@@ -207,7 +207,7 @@ static void *params_save_thread(void *arg) {
         save_items_to_db(cfg_band_arr, cfg_band_size);
         save_items_to_db(cfg_mode_arr, cfg_mode_size);
         save_items_to_db(cfg_transverter_arr, cfg_transverter_size);
-        sleep_usec(500000);
+        sleep_usec(10000000);
     }
 }
 
