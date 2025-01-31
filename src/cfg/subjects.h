@@ -28,7 +28,7 @@ class Observer {
     public:
     Observer(Subject *subj, void (*fn)(Subject *, void *), void *user_data): subj(subj), fn(fn), user_data(user_data) {
     };
-    ~Observer();
+    virtual ~Observer();
     virtual void notify();
 };
 

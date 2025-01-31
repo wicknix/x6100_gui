@@ -580,7 +580,8 @@ void buttons_load(uint8_t n, button_item_t *item) {
     if (prev_item) {
         prev_item->label_obj = NULL;
         if (item->observer) {
-            observer_del(item->observer);
+            delete item->observer;
+            item->observer = NULL;
         }
     }
 
@@ -591,7 +592,7 @@ void buttons_load(uint8_t n, button_item_t *item) {
         } else if (item->type == BTN_TEXT_FN) {
             lv_label_set_text(label, item->label_fn());
             if (item->subj) {
-                item->observer = subject_add_delayed_observer(item->subj, label_update_cb, item);
+                item->observer = item->subj->subscribe_delayed(label_update_cb, item);
             } else {
                 lv_obj_set_user_data(label, (void *)item->label_fn);
             }
@@ -627,6 +628,10 @@ void buttons_unload_page() {
         lv_obj_set_user_data(label, NULL);
         if (btn[i].item) {
             btn[i].item->label_obj = NULL;
+            if (btn[i].item->observer) {
+                delete btn[i].item->observer;
+                btn[i].item->observer = NULL;
+            }
             btn[i].item = NULL;
         }
     }
