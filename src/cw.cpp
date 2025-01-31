@@ -47,8 +47,9 @@ static wdelayf   rms_delay;
 
 static cbuffercf fft_cbuf;
 static fftplan   fft_plan;
-static cfloat   *fft_time;
-static cfloat   *fft_freq;
+static float     window[FFT];
+static cfloat    fft_time[FFT];
+static cfloat    fft_freq[FFT];
 static float     audio_psd_squared[FFT];
 
 static float peak_filtered;
@@ -88,8 +89,17 @@ void cw_init() {
     wrms = wrms_create(16, 4);
     rms_cbuf = cbuffercf_create(4000 / 8 * 2);
     fft_cbuf = cbuffercf_create(4000 / 8 * 2);
-    fft_time = (cfloat *)malloc(FFT*(sizeof(cfloat)));
-    fft_freq = (cfloat *)malloc(FFT*(sizeof(cfloat)));
+
+    // Window for FFT
+    float scale = 0.0f;
+    for (size_t i = 0; i < FFT; i++) {
+        window[i] = liquid_hann(i, FFT);
+        scale += window[i] * window[i];
+    }
+    scale = 1.0f / sqrtf(scale);
+    // scale window and copy
+    for (size_t i=0; i<FFT; i++)
+        window[i] *= scale;
 
     fft_plan = fft_create_plan(FFT, fft_time, fft_freq, LIQUID_FFT_FORWARD, 0);
 
@@ -224,6 +234,7 @@ void cw_put_audio_samples(unsigned int n, cfloat *samples) {
         while (cbuffercf_size(fft_cbuf) >= FFT) {
             for (size_t i = 0; i < FFT; i++) {
                 cbuffercf_pop(fft_cbuf, &fft_time[i]);
+                fft_time[i] *= window[i];
             }
             fft_execute(fft_plan);
 
