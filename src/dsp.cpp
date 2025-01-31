@@ -11,19 +11,25 @@
 #include "cw.h"
 #include "util.h"
 #include "cfg/subjects.h"
-#include "audio.h"
-#include "cfg/cfg.h"
-#include "dialog_msg_voice.h"
-#include "meter.h"
-#include "radio.h"
-#include "recorder.h"
-#include "rtty.h"
-#include "spectrum.h"
-#include "waterfall.h"
 
-#include <math.h>
-#include <pthread.h>
-#include <stdlib.h>
+#include <algorithm>
+#include <numeric>
+
+extern "C" {
+    #include "audio.h"
+    #include "cfg/cfg.h"
+    #include "dialog_msg_voice.h"
+    #include "meter.h"
+    #include "radio.h"
+    #include "recorder.h"
+    #include "rtty.h"
+    #include "spectrum.h"
+    #include "waterfall.h"
+
+    #include <math.h>
+    #include <pthread.h>
+    #include <stdlib.h>
+}
 
 
 #define ANF_DECIM_FACTOR 8 // 100000 -> 12500
@@ -40,24 +46,24 @@ static uint8_t       spectrum_factor = 1;
 static firdecim_crcf spectrum_decim_rx;
 static firdecim_crcf spectrum_decim_tx;
 
-static spgramcf spectrum_sg_rx;
-static spgramcf spectrum_sg_tx;
-static float    spectrum_psd[SPECTRUM_NFFT];
-static float    spectrum_psd_filtered[SPECTRUM_NFFT];
-static float    spectrum_beta   = 0.7f;
-static uint8_t  spectrum_fps_ms = (1000 / 15);
-static uint64_t spectrum_time;
-static cfloat  *spectrum_dec_buf;
+static ChunkedSpgram *spectrum_sg_rx;
+static ChunkedSpgram *spectrum_sg_tx;
+static float          spectrum_psd[SPECTRUM_NFFT];
+static float          spectrum_psd_filtered[SPECTRUM_NFFT];
+static float          spectrum_beta   = 0.7f;
+static uint8_t        spectrum_fps_ms = (1000 / 15);
+static uint64_t       spectrum_time;
+static cfloat         spectrum_dec_buf[SPECTRUM_NFFT / 2];
 
-static spgramcf waterfall_sg_rx;
-static spgramcf waterfall_sg_tx;
-static float    waterfall_psd[WATERFALL_NFFT];
-static uint8_t  waterfall_fps_ms = (1000 / 25);
-static uint64_t waterfall_time;
+static ChunkedSpgram *waterfall_sg_rx;
+static ChunkedSpgram *waterfall_sg_tx;
+static float          waterfall_psd[WATERFALL_NFFT];
+static uint8_t        waterfall_fps_ms = (1000 / 25);
+static uint64_t       waterfall_time;
 
 static bool          anf_enabled = true;
 static firdecim_crcf anf_decim;
-static cfloat       *anf_dec_buf;
+static cfloat        anf_dec_buf[RADIO_SAMPLES / ANF_DECIM_FACTOR];
 static spgramcf      anf_sg;
 static float        *anf_psd;
 static uint64_t      anf_time;
@@ -86,6 +92,130 @@ static void on_real_filter_from_change(Subject *subj, void *user_data);
 static void on_real_filter_to_change(Subject *subj, void *user_data);
 static void on_cur_mode_change(Subject *subj, void *user_data);
 
+
+ChunkedSpgram::ChunkedSpgram(size_t chunk_size, size_t nfft, size_t buffer_size) {
+    this->chunk_size = chunk_size;
+    this->nfft = nfft;
+    if (buffer_size > 0) {
+        this->buffer_size = buffer_size;
+    } else {
+        this->buffer_size = nfft - nfft % chunk_size;
+    }
+    this->buffer = windowcf_create(this->buffer_size);
+    this->buf_time = (cfloat *) calloc(sizeof(cfloat), nfft);
+    this->buf_freq = (cfloat *) calloc(sizeof(cfloat), nfft);
+    this->psd = (float *) calloc(sizeof(float), nfft);
+    this->fft = fft_create_plan(nfft, buf_time, buf_freq, LIQUID_FFT_FORWARD, 0);
+    this->w = (cfloat *) calloc(sizeof(cfloat), chunk_size);
+
+    size_t i;
+    for (i = 0; i < chunk_size; i++) {
+        this->w[i] = liquid_kaiser(i, chunk_size, 5.0f);
+        // this->w[i] = liquid_hann(i, chunk_size);
+    }
+    // scale by window magnitude
+    float g = 0.0f;
+    for (i=0; i<chunk_size; i++)
+        g += std::norm(this->w[i]);
+    g = 1.0f / sqrtf(g * nfft / chunk_size);
+
+    // scale window and copy
+    for (i=0; i<chunk_size; i++)
+        this->w[i] *= g;
+
+}
+
+ChunkedSpgram::~ChunkedSpgram() {
+    free(this->buf_time);
+    free(this->buf_freq);
+    free(this->psd);
+    free(this->w);
+
+    windowcf_destroy(buffer);
+    fft_destroy_plan(fft);
+}
+
+void ChunkedSpgram::set_alpha(float val) {
+    // validate input
+    if (val != -1 && (val < 0.0f || val > 1.0f)) {
+        printf("set_alpha(), alpha must be in {-1,[0,1]}");
+        return;
+    }
+
+    // set accumulation flag appropriately
+    accumulate = (val == -1.0f) ? true : false;
+
+    if (accumulate) {
+        this->alpha = 1.0f;
+        this->gamma = 1.0f;
+    } else {
+        this->alpha = val;
+        this->gamma = 1.0f - val;
+    }
+}
+
+void ChunkedSpgram::clear() {
+    num_transforms = 0;
+    num_samples = 0;
+    for (size_t i = 0; i < nfft; i++) {
+        psd[i] = 0.0f;
+        buf_time[i] = 0.0f;
+    }
+}
+
+void ChunkedSpgram::reset() {
+    clear();
+    windowcf_reset(buffer);
+}
+
+void ChunkedSpgram::write(cfloat *chunk) {
+    cfloat val;
+    for (size_t i=0; i<chunk_size; i++) {
+        val = chunk[i] * w[i];
+        windowcf_push(buffer, val);
+    }
+    num_samples += chunk_size;
+    if (num_samples >= buffer_size){}
+    cfloat *rc;
+    windowcf_read(buffer, &rc);
+    memcpy(buf_time, rc, sizeof(cfloat) * buffer_size);
+    fft_execute(fft);
+
+    // accumulate output
+    // TODO: vectorize this operation
+    for (size_t i=0; i<nfft; i++) {
+        float v = std::norm(buf_freq[i]);
+        if (num_transforms == 0)
+            psd[i] = v;
+        else
+            psd[i] = gamma*psd[i] + alpha*v;
+    }
+    num_transforms++;
+}
+
+void ChunkedSpgram::get_psd_mag(float *psd) {
+    // compute magnitude (linear) and run FFT shift
+    unsigned int i;
+    unsigned int nfft_2 = nfft / 2;
+    float scale = accumulate ? 1.0f / std::max((size_t)1, num_transforms) : 1.0f;
+    for (i=0; i<nfft; i++) {
+        unsigned int k = (i + nfft_2) % nfft;
+        psd[i] = std::max((float)LIQUID_SPGRAM_PSD_MIN, this->psd[k]) * scale;
+    }
+    if (accumulate) {
+        clear();
+    }
+}
+
+void ChunkedSpgram::get_psd(float *psd) {
+    // compute magnitude, linear
+    get_psd_mag(psd);
+    // convert to dB
+    unsigned int i;
+    for (i=0; i<nfft; i++)
+        psd[i] = 10*log10f(psd[i]);
+}
+
 /* * */
 
 static void on_anf_update(Subject *subj, void *user_data) {
@@ -97,15 +227,19 @@ static void on_anf_update(Subject *subj, void *user_data) {
     subject_set_int(cfg.dnf_center.val, new_val);
 }
 
+static void on_freq_change(Subject *subj, void *user_data) {
+    dsp_reset();
+}
+
 void dsp_init() {
     dc_block = iirfilt_cccf_create_dc_blocker(0.005f);
 
     setup_spectrum_spgram();
 
-    waterfall_sg_rx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES, RADIO_SAMPLES);
-    spgramcf_set_alpha(waterfall_sg_rx, 0.2f);
-    waterfall_sg_tx = spgramcf_create(WATERFALL_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES, RADIO_SAMPLES);
-    spgramcf_set_alpha(waterfall_sg_tx, 0.2f);
+    waterfall_sg_rx = new ChunkedSpgram(RADIO_SAMPLES, WATERFALL_NFFT);
+    waterfall_sg_rx->set_alpha(0.8f);
+    waterfall_sg_tx = new ChunkedSpgram(RADIO_SAMPLES, WATERFALL_NFFT);
+    waterfall_sg_tx->set_alpha(0.8f);
 
     spectrum_time  = get_time();
     waterfall_time = get_time();
@@ -115,7 +249,6 @@ void dsp_init() {
     subject_add_observer(anf_freq, on_anf_update, NULL);
     anf_decim = firdecim_crcf_create_kaiser(ANF_DECIM_FACTOR, 8, 60.0f);
     firdecim_crcf_set_scale(anf_decim, 1.0f/(float)ANF_DECIM_FACTOR);
-    anf_dec_buf = (cfloat *)malloc(RADIO_SAMPLES * sizeof(cfloat) / ANF_DECIM_FACTOR);
     anf_sg = spgramcf_create(ANF_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES / ANF_DECIM_FACTOR, RADIO_SAMPLES / ANF_DECIM_FACTOR);
     // spgramcf_set_alpha(anf_sg, 0.3f);
     anf_psd = (float *)malloc(ANF_NFFT * sizeof(float));
@@ -130,6 +263,8 @@ void dsp_init() {
     subject_add_observer_and_call(cfg_cur.filter.real.from, on_real_filter_from_change, NULL);
     subject_add_observer_and_call(cfg_cur.filter.real.to, on_real_filter_to_change, NULL);
     subject_add_observer_and_call(cfg_cur.mode, on_cur_mode_change, NULL);
+
+    subject_add_observer_and_call(cfg_cur.fg_freq, on_freq_change, NULL);
     ready = true;
 }
 
@@ -137,26 +272,28 @@ void dsp_reset() {
     psd_delay = 4;
 
     iirfilt_cccf_reset(dc_block);
-    spgramcf_reset(spectrum_sg_rx);
-    spgramcf_reset(waterfall_sg_rx);
+    spectrum_sg_rx->reset();
+    spectrum_sg_tx->reset();
+    waterfall_sg_rx->reset();
+    waterfall_sg_tx->reset();
 }
 
-static void process_samples(cfloat *buf_samples, uint16_t size, firdecim_crcf sp_decim, spgramcf sp_sg,
-                            spgramcf wf_sg, bool tx) {
+static void process_samples(cfloat *buf_samples, uint16_t size, firdecim_crcf sp_decim, ChunkedSpgram *sp_sg,
+                            ChunkedSpgram *wf_sg, bool tx) {
     iirfilt_cccf_execute_block(dc_block, buf_samples, size, buf_filtered);
     // Swap I and Q
     for (size_t i = 0; i < size; i++) {
-        buf_filtered[i] = CMPLXF(cimagf(buf_filtered[i]), crealf(buf_filtered[i]));
+        buf_filtered[i] = {buf_filtered[i].imag(), buf_filtered[i].real()};
     }
 
     if (spectrum_factor > 1) {
         firdecim_crcf_execute_block(sp_decim, buf_filtered, size / spectrum_factor, spectrum_dec_buf);
-        spgramcf_write(sp_sg, spectrum_dec_buf, size / spectrum_factor);
+        sp_sg->write(spectrum_dec_buf);
     } else {
-        spgramcf_write(sp_sg, buf_filtered, size);
+        sp_sg->write(buf_filtered);
     }
 
-    spgramcf_write(wf_sg, buf_filtered, size);
+    wf_sg->write(buf_filtered);
 
     // if anf enabled and not tx
     if (!tx && anf_enabled) {
@@ -166,9 +303,9 @@ static void process_samples(cfloat *buf_samples, uint16_t size, firdecim_crcf sp
     }
 }
 
-static bool update_spectrum(spgramcf sp_sg, uint64_t now, bool tx) {
-    if ((now - spectrum_time > spectrum_fps_ms) && (!psd_delay)) {
-        spgramcf_get_psd(sp_sg, spectrum_psd);
+static bool update_spectrum(ChunkedSpgram *sp_sg, uint64_t now, bool tx) {
+    if ((now - spectrum_time > spectrum_fps_ms)) {
+        sp_sg->get_psd(spectrum_psd);
         liquid_vectorf_addscalar(spectrum_psd, SPECTRUM_NFFT, -30.0f, spectrum_psd);
         // Decrease beta for high zoom
         float new_beta = powf(spectrum_beta, ((float)spectrum_factor - 1.0f) / 2.0f + 1.0f);
@@ -180,9 +317,10 @@ static bool update_spectrum(spgramcf sp_sg, uint64_t now, bool tx) {
     return false;
 }
 
-static bool update_waterfall(spgramcf wf_sg, uint64_t now, bool tx) {
+static bool update_waterfall(ChunkedSpgram *wf_sg, uint64_t now, bool tx) {
     if ((now - waterfall_time > waterfall_fps_ms) && (!psd_delay)) {
-        spgramcf_get_psd(wf_sg, waterfall_psd);
+        wf_sg->get_psd(waterfall_psd);
+        // spgramcf_get_psd(wf_sg, waterfall_psd);
         liquid_vectorf_addscalar(waterfall_psd, WATERFALL_NFFT, -30.0f, waterfall_psd);
         waterfall_data(waterfall_psd, WATERFALL_NFFT, tx);
         waterfall_time = now;
@@ -210,7 +348,6 @@ static void update_s_meter() {
 }
 
 static bool update_anf(uint64_t now) {
-    static float avg[3000 / ANF_STEP];
     if ((now - anf_time > ANF_INTERVAL_MS) && (!psd_delay)) {
         bool lsb = (cur_mode == x6100_mode_lsb);
         spgramcf_get_psd(anf_sg, anf_psd);
@@ -233,23 +370,10 @@ static bool update_anf(uint64_t now) {
             }
             mean += anf_psd[i];
         }
-        // Average
-        for (size_t i = 0; i < 3000 / ANF_STEP; i++) {
-            if (avg[i] < S_MIN - 6.0f) {
-                avg[i] = S_MIN;
-            } else {
-                avg[i] = avg[i] - 6.0f;
-            }
-        }
         int16_t f_pos = max_pos - center;
         if (f_pos < 0) {
             f_pos = - f_pos;
         }
-        // TODO: add +- 1
-        avg[f_pos] += max;
-
-        liquid_vectorf_mulscalar(avg, 3000 / ANF_STEP, 0.5f, avg);
-
 
         mean -= 3 * max;
         mean /= (stop - start - 3);
@@ -258,8 +382,8 @@ static bool update_anf(uint64_t now) {
             max_pos--;
         }
         float peak_freq = ((float)max_pos - center) * ANF_STEP;
-        printf("ptp: %f, above_mean: %f\n", max - min, max - mean);
-        if (max - mean > 6.0f){
+        // printf("ptp: %f, above_mean: %f\n", max - min, max - mean);
+        if (max - mean > 8.0f){
             anf_freq_hist[anf_freq_hist_pos] = roundf((peak_freq + ANF_STEP / 2) / 50) * 50;
         } else {
             anf_freq_hist[anf_freq_hist_pos] = 0;
@@ -290,7 +414,7 @@ static bool update_anf(uint64_t now) {
 
 void dsp_samples(cfloat *buf_samples, uint16_t size, bool tx) {
     firdecim_crcf sp_decim;
-    spgramcf      sp_sg, wf_sg;
+    ChunkedSpgram *sp_sg, *wf_sg;
     uint64_t      now = get_time();
 
     if (psd_delay) {
@@ -345,21 +469,12 @@ static void on_zoom_change(Subject *subj, void *user_data) {
         spectrum_decim_tx = NULL;
     }
 
-    if (spectrum_dec_buf) {
-        free(spectrum_dec_buf);
-        spectrum_dec_buf = NULL;
-    }
-
     if (spectrum_factor > 1) {
         spectrum_decim_rx = firdecim_crcf_create_kaiser(spectrum_factor, 8, 60.0f);
         firdecim_crcf_set_scale(spectrum_decim_rx, sqrt(1.0f / (float)spectrum_factor));
         spectrum_decim_tx = firdecim_crcf_create_kaiser(spectrum_factor, 8, 60.0f);
         firdecim_crcf_set_scale(spectrum_decim_tx, sqrt(1.0f / (float)spectrum_factor));
-        spectrum_dec_buf = (cfloat *)malloc(RADIO_SAMPLES * sizeof(cfloat) / spectrum_factor);
     }
-
-    spgramcf_reset(spectrum_sg_rx);
-    spgramcf_reset(spectrum_sg_tx);
 
     for (uint16_t i = 0; i < SPECTRUM_NFFT; i++)
         spectrum_psd_filtered[i] = S_MIN;
@@ -435,8 +550,8 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
         return;
     }
     qsort(data_buf, size, sizeof(float), compare_fft);
-    uint16_t min_nth = 15;
-    uint16_t max_nth = 10;
+    uint16_t min_nth = size * 15 / 100;
+    uint16_t max_nth = size * 10 / 100;
 
     float min = data_buf[min_nth];
     // float max = data_buf[size - max_nth - 1];
@@ -458,14 +573,14 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
 
 static void setup_spectrum_spgram() {
     if (spectrum_sg_rx) {
-        spgramcf_destroy(spectrum_sg_rx);
+        delete spectrum_sg_rx;
     }
     if (spectrum_sg_tx) {
-        spgramcf_destroy(spectrum_sg_tx);
+        delete spectrum_sg_tx;
     }
-    uint16_t window = RADIO_SAMPLES / spectrum_factor;
-    spectrum_sg_rx = spgramcf_create(SPECTRUM_NFFT, LIQUID_WINDOW_HANN, window, window);
-    spgramcf_set_alpha(spectrum_sg_rx, 0.4f);
-    spectrum_sg_tx = spgramcf_create(SPECTRUM_NFFT, LIQUID_WINDOW_HANN, window, window);
-    spgramcf_set_alpha(spectrum_sg_tx, 0.4f);
+    size_t chunk_size = RADIO_SAMPLES / spectrum_factor;
+    spectrum_sg_rx = new ChunkedSpgram(chunk_size, SPECTRUM_NFFT, chunk_size);
+    spectrum_sg_rx->set_alpha(0.4f);
+    spectrum_sg_tx = new ChunkedSpgram(chunk_size, SPECTRUM_NFFT, chunk_size);
+    spectrum_sg_tx->set_alpha(0.4f);
 }
