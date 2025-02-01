@@ -164,7 +164,6 @@ static button_item_t btn_tx_pwr = make_btn(tx_power_label_getter, VOL_PWR);
 static button_item_t btn_flt_low  = make_btn(filter_low_label_getter, VOL_FILTER_LOW);
 static button_item_t btn_flt_high = make_btn(filter_high_label_getter, VOL_FILTER_HIGH);
 static button_item_t btn_flt_bw   = make_btn(filter_bw_label_getter, VOL_FILTER_BW);
-static button_item_t btn_sp_mode  = make_btn(speaker_mode_label_getter, VOL_SPMODE);
 
 /* VOL page 3 */
 
@@ -333,10 +332,9 @@ static button_item_t btn_rtty_reverse = {
 
 
 /* VOL pages */
-static button_item_t btn_vol_p1 = make_page_btn("(VOL 1:4)", "Volume|page 1");
-static button_item_t btn_vol_p2 = make_page_btn("(VOL 2:4)", "Volume|page 2");
-static button_item_t btn_vol_p3 = make_page_btn("(VOL 3:4)", "Volume|page 3");
-static button_item_t btn_vol_p4 = make_page_btn("(VOL 4:4)", "Volume|page 4");
+static button_item_t btn_vol_p1 = make_page_btn("(VOL 1:3)", "Volume|page 1");
+static button_item_t btn_vol_p2 = make_page_btn("(VOL 2:3)", "Volume|page 2");
+static button_item_t btn_vol_p3 = make_page_btn("(VOL 3:3)", "Volume|page 3");
 
 buttons_page_t buttons_page_vol_1 = {
     {&btn_vol_p1, &btn_vol, &btn_sql, &btn_rfg, &btn_tx_pwr}
@@ -345,10 +343,7 @@ static buttons_page_t page_vol_2 = {
     {&btn_vol_p2, &btn_mic_sel, &btn_hmic_gain, &btn_imic_hain, &btn_moni_lvl}
 };
 static buttons_page_t page_vol_3 = {
-    {&btn_vol_p3, &btn_sp_mode}
-};
-static buttons_page_t page_vol_4 = {
-    {&btn_vol_p4, &btn_voice, &btn_voice_rate, &btn_voice_pitch, &btn_voice_vol}
+    {&btn_vol_p3, &btn_voice, &btn_voice_rate, &btn_voice_pitch, &btn_voice_vol}
 };
 
 /* MFK pages */
@@ -446,7 +441,6 @@ buttons_group_t buttons_group_gen = {
     &buttons_page_vol_1,
     &page_vol_2,
     &page_vol_3,
-    &page_vol_4,
     &page_mfk_1,
     &page_mfk_2,
     &page_mfk_3,
@@ -805,13 +799,6 @@ static char * filter_high_label_getter() {
 static char * filter_bw_label_getter() {
     static char buf[22];
     sprintf(buf, "Filter BW:\n%i Hz", subject_get_int(cfg_cur.filter.bw));
-    return buf;
-}
-
-
-static char * speaker_mode_label_getter() {
-    static char buf[22];
-    sprintf(buf, "SP mode:\n%s", params.spmode.x ? "Speaker": "Phones");
     return buf;
 }
 

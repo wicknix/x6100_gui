@@ -1182,6 +1182,44 @@ static uint8_t make_auto(uint8_t row) {
     return row + 1;
 }
 
+static uint8_t make_waterfall_line_zoom(uint8_t row) {
+    lv_obj_t    *obj;
+    uint8_t     col = 0;
+
+    row_dsc[row] = 54;
+
+    obj = lv_label_create(grid);
+
+    lv_label_set_text(obj, "Waterfall line, zoom");
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, col++, 1, LV_GRID_ALIGN_CENTER, row, 1);
+
+    obj = lv_obj_create(grid);
+
+    lv_obj_set_size(obj, SMALL_3, 56);
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 3, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_center(obj);
+
+    obj = switch_bool(obj, &params.waterfall_center_line);
+
+    lv_obj_set_width(obj, SMALL_3 - 30);
+
+    obj = lv_obj_create(grid);
+
+    lv_obj_set_size(obj, SMALL_3, 56);
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 4, 3, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_center(obj);
+
+    obj = switch_bool(obj, &params.waterfall_zoom);
+
+    lv_obj_set_width(obj, SMALL_3 - 30);
+
+    return row + 1;
+}
+
 static uint8_t make_waterfall_smooth_scroll(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
@@ -1195,20 +1233,30 @@ static uint8_t make_waterfall_smooth_scroll(uint8_t row) {
 
     obj = lv_obj_create(grid);
 
-    lv_obj_set_size(obj, SMALL_6, 56);
-    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 3, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_set_size(obj, SMALL_3, 56);
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 4, 3, LV_GRID_ALIGN_CENTER, row, 1);
     lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(obj);
 
     obj = switch_bool(obj, &params.waterfall_smooth_scroll);
 
-    lv_obj_set_width(obj, SMALL_6 - 30);
+    lv_obj_set_width(obj, SMALL_3 - 30);
 
     return row + 1;
 }
 
-static uint8_t make_waterfall_center_line(uint8_t row) {
+static void sp_mode_update_cb(lv_event_t * e) {
+    lv_obj_t *obj = lv_event_get_target(e);
+
+    if (lv_obj_has_state(obj, LV_STATE_CHECKED)) {
+        radio_change_spmode(-1);
+    } else {
+        radio_change_spmode(1);
+    }
+}
+
+static uint8_t make_sp_mode(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
 
@@ -1216,46 +1264,29 @@ static uint8_t make_waterfall_center_line(uint8_t row) {
 
     obj = lv_label_create(grid);
 
-    lv_label_set_text(obj, "Waterfall center line");
+    lv_label_set_text(obj, "Speaker mode");
     lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, col++, 1, LV_GRID_ALIGN_CENTER, row, 1);
 
     obj = lv_obj_create(grid);
 
-    lv_obj_set_size(obj, SMALL_6, 56);
-    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 3, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_set_size(obj, SMALL_3, 56);
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 4, 3, LV_GRID_ALIGN_CENTER, row, 1);
     lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(obj);
 
-    obj = switch_bool(obj, &params.waterfall_center_line);
+    obj = lv_switch_create(obj);
 
-    lv_obj_set_width(obj, SMALL_6 - 30);
+    dialog_item(&dialog, obj);
 
-    return row + 1;
-}
-
-static uint8_t make_waterfall_zoom(uint8_t row) {
-    lv_obj_t    *obj;
-    uint8_t     col = 0;
-
-    row_dsc[row] = 54;
-
-    obj = lv_label_create(grid);
-
-    lv_label_set_text(obj, "Waterfall zoom");
-    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, col++, 1, LV_GRID_ALIGN_CENTER, row, 1);
-
-    obj = lv_obj_create(grid);
-
-    lv_obj_set_size(obj, SMALL_6, 56);
-    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 3, LV_GRID_ALIGN_CENTER, row, 1);
-    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(obj);
+    lv_obj_add_event_cb(obj, sp_mode_update_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
-    obj = switch_bool(obj, &params.waterfall_zoom);
+    if (!params.spmode.x) {
+        lv_obj_add_state(obj, LV_STATE_CHECKED);
+    }
 
-    lv_obj_set_width(obj, SMALL_6 - 30);
+    lv_obj_set_width(obj, SMALL_3 - 30);
 
     return row + 1;
 }
@@ -1359,14 +1390,12 @@ static void construct_cb(lv_obj_t *parent) {
     row = make_delimiter(row);
     row = make_auto(row);
 
+    row = make_delimiter(row);
+    row = make_waterfall_line_zoom(row);
     row = make_waterfall_smooth_scroll(row);
-    row = make_delimiter(row);
 
-    row = make_waterfall_center_line(row);
     row = make_delimiter(row);
-
-    row = make_waterfall_zoom(row);
-    row = make_delimiter(row);
+    row = make_sp_mode(row);
 
     row = make_delimiter(row);
     row = make_freq_accel(row);

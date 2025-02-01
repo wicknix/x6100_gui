@@ -178,11 +178,6 @@ void vol_update(int16_t diff, bool voice) {
             }
             break;
 
-        case VOL_SPMODE:
-            b = radio_change_spmode(diff);
-            msg_update_text_fmt("#%3X Speaker mode: %s", color, b ? "On" : "Off");
-            break;
-
         case VOL_VOICE_LANG:
             s = (char *)voice_change(diff);
             msg_update_text_fmt("#%3X Voice: %s", color, s);
