@@ -22,6 +22,7 @@ typedef enum {
     BAND_20M    = 20,
     BAND_30M    = 30,
     BAND_40M    = 40,
+    BAND_60M    = 60,
     BAND_80M    = 80,
     BAND_160M   = 160,
 } qso_log_band_t;

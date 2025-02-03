@@ -68,6 +68,9 @@ qso_log_band_t qso_log_freq_to_band(uint64_t freq_hz)
     case 3500 ... 4000:
         return BAND_80M;
         break;
+    case 5351 ... 5367:
+        return BAND_60M;
+        break;
     case 7000 ... 7300:
         return BAND_40M;
         break;
