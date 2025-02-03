@@ -27,6 +27,7 @@
 #define PX_BYTES    sizeof(lv_color_t)
 #define DEFAULT_MIN S4
 #define DEFAULT_MAX S9_20
+#define WIDTH 800
 
 static lv_obj_t         *obj;
 static lv_obj_t         *img;
@@ -35,7 +36,6 @@ static lv_style_t       middle_line_style;
 static lv_obj_t         *middle_line;
 static lv_point_t       middle_line_points[] = { {0, 0}, {0, 0} };
 
-static lv_coord_t       width;
 static lv_coord_t       height;
 static int32_t          width_hz = 100000;
 
@@ -151,10 +151,9 @@ void waterfall_set_height(lv_coord_t h) {
     /* For more accurate horizontal scroll, it should be a "multiple of 500Hz" */
     /* 800 * 500Hz / 100000Hz = 4.0px */
 
-    width = 800;
     height = lv_obj_get_height(obj);
 
-    frame = lv_img_buf_alloc(width, height, LV_IMG_CF_TRUE_COLOR);
+    frame = lv_img_buf_alloc(WIDTH, height, LV_IMG_CF_TRUE_COLOR);
 
     img = lv_img_create(obj);
     lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
@@ -238,7 +237,7 @@ void waterfall_refresh_period_set(uint8_t k) {
 
 static void redraw_cb(lv_event_t * e) {
     int32_t src_x_offset;
-    uint16_t src_y, src_x, dst_y, dst_x;
+    uint16_t src_y, src_x0, dst_y, dst_x;
 
     uint8_t current_zoom = 1;
     if (params.waterfall_zoom.x) {
@@ -248,28 +247,34 @@ static void redraw_cb(lv_event_t * e) {
     lv_color_t black = lv_color_black();
     lv_color_t px_color;
 
-    int16_t mapping[width];
-    float rel_position;
-    for (uint16_t i = 0; i < width; i++) {
+    // Closest left id for screen pixel
+    uint16_t x0_arr[WIDTH];
+    // Actual point offset, multiplied by 8
+    uint8_t x0_dist[WIDTH];
+    for (uint16_t i = 0; i < WIDTH; i++) {
         // Position on screen, center x is 0
-        rel_position = (((float) i + 0.5) / width) - 0.5f;
-        mapping[i] = roundf(((rel_position / current_zoom) + 0.5f) * WATERFALL_NFFT + 0.5f);
+        float rel_screen_position = (((float) i + 0.5) / WIDTH) - 0.5f;
+        float src_px = ((rel_screen_position / current_zoom) + 0.5f) * WATERFALL_NFFT + 0.5f;
+        x0_arr[i] = src_px;
+        x0_dist[i] = (src_px - x0_arr[i]) * 8;
     }
 
-    for (src_y = 0; src_y < height; src_y++) {
+    for (src_y = 0; src_y < height; src_y+=4) {
         dst_y = ((height - src_y + last_row_id) % height);
         src_x_offset = (freq_offsets[src_y] - wf_center_freq) * WATERFALL_NFFT / width_hz;
         if ((src_x_offset > WATERFALL_NFFT) || (src_x_offset < -WATERFALL_NFFT)) {
-            memset((lv_color_t *)frame->data + dst_y * width, 0, width * PX_BYTES);
+            memset((lv_color_t *)frame->data + dst_y * WIDTH, 0, WIDTH * PX_BYTES);
         } else {
-            for (dst_x = 0; dst_x < width; dst_x++) {
-                src_x = mapping[dst_x] - src_x_offset;
-                if ((src_x < 0) || (src_x >= WATERFALL_NFFT)) {
+            for (dst_x = 0; dst_x < WIDTH; dst_x++) {
+                src_x0 = x0_arr[dst_x] - src_x_offset;
+                if ((src_x0 < 0) || (src_x0 >= WATERFALL_NFFT - 1)) {
                     px_color = black;
                 } else {
-                    px_color = (lv_color_t)wf_palette[*(waterfall_cache + (src_y * WATERFALL_NFFT + src_x))];
+                    uint8_t * y0_p = waterfall_cache + (src_y * WATERFALL_NFFT + src_x0);
+                    uint8_t y = *y0_p + ((x0_dist[dst_x] * (*(y0_p+1) - *y0_p)) >> 3);
+                    px_color = (lv_color_t)wf_palette[y];
                 }
-                *((lv_color_t*)frame->data + (dst_y * width + dst_x)) = px_color;
+                *((lv_color_t*)frame->data + (dst_y * WIDTH + dst_x)) = px_color;
             }
         }
     }
