@@ -259,7 +259,7 @@ static void redraw_cb(lv_event_t * e) {
         x0_dist[i] = (src_px - x0_arr[i]) * 8;
     }
 
-    for (src_y = 0; src_y < height; src_y+=4) {
+    for (src_y = 0; src_y < height; src_y++) {
         dst_y = ((height - src_y + last_row_id) % height);
         src_x_offset = (freq_offsets[src_y] - wf_center_freq) * WATERFALL_NFFT / width_hz;
         if ((src_x_offset > WATERFALL_NFFT) || (src_x_offset < -WATERFALL_NFFT)) {
