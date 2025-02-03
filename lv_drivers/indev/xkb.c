@@ -208,8 +208,6 @@ uint32_t xkb_process_key_state(xkb_drv_state_t *state, uint32_t scancode, uint8_
     if (size > 1) {
       xkb_state_key_get_utf8(state->state, keycode, buffer, size);
       memcpy(&result, buffer, 4);
-    } else {
-      result = xkb_state_key_get_one_sym(state->state, keycode);
     }
   }
 

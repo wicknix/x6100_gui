@@ -75,7 +75,7 @@ void evdev_init(void)
  *         false: the device file doesn't exist current system
  */
 bool evdev_set_file(char* dev_name)
-{ 
+{
      if(evdev_fd != -1) {
         close(evdev_fd);
      }
@@ -212,6 +212,7 @@ void evdev_read(lv_indev_drv_t * drv, lv_indev_data_t * data)
                 }
                 evdev_key_val = data->key;
                 evdev_button = data->state;
+                data->continue_reading = true;
                 return;
             }
         }
