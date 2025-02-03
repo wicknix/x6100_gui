@@ -94,6 +94,7 @@ static char * cw_noise_beta_label_getter();
 static char * dnf_label_getter();
 static char * dnf_center_label_getter();
 static char * dnf_width_label_getter();
+static char * dnf_auto_label_getter();
 
 static char * nb_label_getter();
 static char * nb_level_label_getter();
@@ -265,10 +266,14 @@ static button_item_t btn_dnf        = {.type     = BTN_TEXT_FN,
                                        .label_fn = dnf_label_getter,
                                        .press    = controls_toggle_dnf,
                                        .hold     = button_mfk_hold_cb,
-                                       .data     = MFK_DNF,
-                                       .subj     = cfg.dnf.val};
+                                       .data     = MFK_DNF};
 static button_item_t btn_dnf_center = make_btn(dnf_center_label_getter, MFK_DNF_CENTER);
 static button_item_t btn_dnf_width  = make_btn(dnf_width_label_getter, MFK_DNF_WIDTH);
+static button_item_t btn_dnf_auto   = {.type     = BTN_TEXT_FN,
+                                       .label_fn = dnf_auto_label_getter,
+                                       .press    = controls_toggle_dnf_auto,
+                                       .hold     = button_mfk_hold_cb,
+                                       .data     = MFK_DNF_AUTO};
 
 static button_item_t btn_nb       = {.type     = BTN_TEXT_FN,
                                      .label_fn = nb_label_getter,
@@ -402,7 +407,7 @@ static button_item_t btn_dfn_p2 = make_page_btn("(DFN 2:3)", "NB page");
 static button_item_t btn_dfn_p3 = make_page_btn("(DFN 3:3)", "NR page");
 
 static buttons_page_t page_dfn_1 = {
-    {&btn_dfn_p1, &btn_dnf, &btn_dnf_center, &btn_dnf_width}
+    {&btn_dfn_p1, &btn_dnf, &btn_dnf_center, &btn_dnf_width, &btn_dnf_auto}
 };
 static buttons_page_t page_dfn_2 = {
     {&btn_dfn_p2, &btn_nb, &btn_nb_level, &btn_nb_width}
@@ -514,9 +519,10 @@ void buttons_init(lv_obj_t *parent) {
     btn_cw_peak_beta.subj    = cfg.cw_decoder_peak_beta.val;
     btn_cw_noise_beta.subj   = cfg.cw_decoder_noise_beta.val;
 
-    btn_dnf.subj = cfg.dnf.val;
+    btn_dnf.subj        = cfg.dnf.val;
     btn_dnf_center.subj = cfg.dnf_center.val;
     btn_dnf_width.subj  = cfg.dnf_width.val;
+    btn_dnf_auto.subj   = cfg.dnf_auto.val;
     btn_nb.subj         = cfg.nb.val;
     btn_nb_level.subj   = cfg.nb_level.val;
     btn_nb_width.subj   = cfg.nb_width.val;
@@ -958,6 +964,12 @@ static char * dnf_center_label_getter() {
 static char * dnf_width_label_getter() {
     static char buf[22];
     sprintf(buf, "DNF width:\n%zu Hz", subject_get_int(cfg.dnf_width.val));
+    return buf;
+}
+
+static char * dnf_auto_label_getter() {
+    static char buf[22];
+    sprintf(buf, "DNF auto:\n%s", subject_get_int(cfg.dnf_auto.val) ? "On": "Off");
     return buf;
 }
 

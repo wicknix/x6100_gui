@@ -249,6 +249,7 @@ static int init_params_cfg(sqlite3 *db) {
     cfg.dnf = (cfg_item_t){.val = subject_create_int(false), .db_name = "dnf"};
     cfg.dnf_center = (cfg_item_t){.val = subject_create_int(1000), .db_name = "dnf_center"};
     cfg.dnf_width = (cfg_item_t){.val = subject_create_int(50), .db_name = "dnf_width"};
+    cfg.dnf_auto = (cfg_item_t){.val = subject_create_int(false), .db_name = "dnf_auto"};
 
     cfg.nb = (cfg_item_t){.val = subject_create_int(false), .db_name = "nb"};
     cfg.nb_level = (cfg_item_t){.val = subject_create_int(10), .db_name = "nb_level"};

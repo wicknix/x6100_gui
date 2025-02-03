@@ -10,6 +10,7 @@
 
 #include "cw.h"
 #include "util.h"
+#include "buttons.h"
 #include "cfg/subjects.h"
 
 #include <algorithm>
@@ -33,7 +34,7 @@ extern "C" {
 
 
 #define ANF_DECIM_FACTOR 8 // 100000 -> 12500
-#define ANF_STEP 50 // Hz
+#define ANF_STEP 25 // Hz
 #define ANF_NFFT 100000 / ANF_DECIM_FACTOR / ANF_STEP
 #define ANF_INTERVAL_MS 500
 #define ANF_HIST_LEN 3
@@ -61,20 +62,14 @@ static float          waterfall_psd[WATERFALL_NFFT];
 static uint8_t        waterfall_fps_ms = (1000 / 25);
 static uint64_t       waterfall_time;
 
-static bool          anf_enabled = true;
-static firdecim_crcf anf_decim;
-static cfloat        anf_dec_buf[RADIO_SAMPLES / ANF_DECIM_FACTOR];
-static spgramcf      anf_sg;
-static float        *anf_psd;
-static uint64_t      anf_time;
-static int16_t       anf_freq_hist[ANF_HIST_LEN];
-static int16_t       anf_freq_hist_pos;
-static Subject      *anf_freq;
+static Anf *anf;
+static bool anf_enabled = true;
 
 static cfloat buf_filtered[RADIO_SAMPLES];
 
-static uint8_t psd_delay;
-static uint8_t min_max_delay;
+static uint32_t cur_freq;
+static uint8_t  psd_delay;
+static uint8_t  min_max_delay;
 
 static firhilbf audio_hilb;
 static cfloat  *audio;
@@ -90,7 +85,8 @@ static void setup_spectrum_spgram();
 static void on_zoom_change(Subject *subj, void *user_data);
 static void on_real_filter_from_change(Subject *subj, void *user_data);
 static void on_real_filter_to_change(Subject *subj, void *user_data);
-static void on_cur_mode_change(Subject *subj, void *user_data);
+static void update_dnf_enabled(Subject *subj, void *user_data);
+static void on_cur_freq_change(Subject *subj, void *user_data);
 
 
 ChunkedSpgram::ChunkedSpgram(size_t chunk_size, size_t nfft, size_t buffer_size) {
@@ -168,7 +164,7 @@ void ChunkedSpgram::reset() {
     windowcf_reset(buffer);
 }
 
-void ChunkedSpgram::write(cfloat *chunk) {
+void ChunkedSpgram::execute_block(cfloat *chunk) {
     cfloat val;
     for (size_t i=0; i<chunk_size; i++) {
         val = chunk[i] * w[i];
@@ -216,19 +212,140 @@ void ChunkedSpgram::get_psd(float *psd) {
         psd[i] = 10*log10f(psd[i]);
 }
 
+/* Anf class */
+
+Anf::Anf(size_t decim_factor, size_t chunk_size, size_t nfft, size_t interval_ms, size_t freq_bin) {
+    this->decim_factor = decim_factor;
+    this->interval_ms = interval_ms;
+    this->freq_bin = freq_bin;
+    this->nfft = nfft;
+
+    decim_buf = (cfloat *)calloc(chunk_size / decim_factor, sizeof(cfloat));
+    psd = (float *)calloc(nfft, sizeof(float));
+
+    decim = firdecim_crcf_create_kaiser(this->decim_factor, 8, 60.0f);
+    firdecim_crcf_set_scale(decim, 1.0f/(float)this->decim_factor);
+    sg = spgramcf_create(nfft, LIQUID_WINDOW_HANN, chunk_size / this->decim_factor, chunk_size / this->decim_factor);
+    last_ts = get_time();
+    notch_freq_subj = new SubjectT(0);
+}
+
+void Anf::set_freq_from(int32_t freq) {
+    freq_from = freq;
+}
+
+void Anf::set_freq_to(int32_t freq) {
+    freq_to = freq;
+}
+
+void Anf::shift(int32_t freq_diff, bool lower_band) {
+    if (lower_band)
+        freq_diff = -freq_diff;
+
+    // Shift history
+    for (size_t i = 0; i < hist_size; i++){
+        freq_hist[i] -= freq_diff;
+    }
+    // Shift detected val
+    int32_t notch_freq = notch_freq_subj->get();
+    if (notch_freq > 0) {
+        notch_freq -= freq_diff;
+        notch_freq_subj->set(notch_freq);
+    }
+    firdecim_crcf_reset(decim);
+    spgramcf_reset(sg);
+}
+
+void Anf::reset() {
+    for (size_t i = 0; i < hist_size; i++){
+        freq_hist[i] = 0;
+    }
+    notch_freq_subj->set(0);
+    firdecim_crcf_reset(decim);
+    spgramcf_reset(sg);
+}
+
+void Anf::execute_block(cfloat *block, size_t size) {
+    size_t decim_size = size / decim_factor;
+    firdecim_crcf_execute_block(decim, block, decim_size, decim_buf);
+    spgramcf_write(sg, decim_buf, decim_size);
+}
+
+void Anf::update(uint64_t now, bool lower_band) {
+    if ((now - last_ts > interval_ms) && (spgramcf_get_num_transforms(sg) > 5)) {
+        spgramcf_get_psd(sg, psd);
+        float max = -INFINITY;
+        float min = INFINITY;
+        float mean = 0;
+        int32_t max_pos = 0;
+
+        // Search for peak
+        size_t center = nfft / 2;
+        size_t start = center + freq_from / (int32_t)freq_bin;
+        size_t stop = center + freq_to / (int32_t)freq_bin;
+        for (size_t i = start; i < stop; i++){
+            if (max < psd[i]) {
+                max = psd[i];
+                max_pos = i;
+            }
+            if (min > psd[i]) {
+                min = psd[i];
+            }
+            mean += psd[i];
+        }
+        size_t peak_width = 150 / freq_bin;
+        if (stop - start < peak_width) {
+            peak_width = (stop - start) / 2;
+        }
+        mean -= peak_width * max;
+        mean /= (stop - start - peak_width);
+        // Adjust pos for USB
+        if (!lower_band) {
+            max_pos--;
+        }
+        int16_t peak_freq = (max_pos - center) * freq_bin;
+        if (max - mean > 6.0f){
+            freq_hist[hist_pos] = peak_freq;
+        } else {
+            freq_hist[hist_pos] = 0;
+        }
+        hist_pos = (hist_pos + 1) % hist_size;
+
+        // Inspect history
+        int16_t mean_freq = 0;
+        for (size_t i = 0; i < hist_size; i++) {
+            mean_freq += freq_hist[i];
+        }
+        mean_freq /= (int16_t)hist_size;
+
+        int16_t deviations = 0;
+        for (size_t i = 0; i < hist_size; i++) {
+            deviations += abs(mean_freq - freq_hist[i]);
+        }
+        deviations /= (int16_t)hist_size - 1;
+        if (deviations < freq_bin) {
+            int16_t new_freq = roundf((float)mean_freq / 50) * 50;
+            if (lower_band) {
+                new_freq = - new_freq;
+            }
+            notch_freq_subj->set(new_freq);
+        }
+        last_ts = now;
+        spgramcf_reset(sg);
+    }
+}
+
 /* * */
 
 static void on_anf_update(Subject *subj, void *user_data) {
+    if (!anf_enabled) {
+        return;
+    }
     int32_t new_val = subject_get_int(subj);
-    if (new_val == 0) {
+    if ((new_val <= 0) || (new_val > 3000)) {
         new_val = 3000;
     }
-    printf("New ANF freq: %i\n", subject_get_int(subj));
     subject_set_int(cfg.dnf_center.val, new_val);
-}
-
-static void on_freq_change(Subject *subj, void *user_data) {
-    dsp_reset();
 }
 
 void dsp_init() {
@@ -244,15 +361,8 @@ void dsp_init() {
     spectrum_time  = get_time();
     waterfall_time = get_time();
 
-    // Auto notch filter
-    anf_freq = subject_create_int(3000);
-    subject_add_observer(anf_freq, on_anf_update, NULL);
-    anf_decim = firdecim_crcf_create_kaiser(ANF_DECIM_FACTOR, 8, 60.0f);
-    firdecim_crcf_set_scale(anf_decim, 1.0f/(float)ANF_DECIM_FACTOR);
-    anf_sg = spgramcf_create(ANF_NFFT, LIQUID_WINDOW_HANN, RADIO_SAMPLES / ANF_DECIM_FACTOR, RADIO_SAMPLES / ANF_DECIM_FACTOR);
-    // spgramcf_set_alpha(anf_sg, 0.3f);
-    anf_psd = (float *)malloc(ANF_NFFT * sizeof(float));
-    anf_time = get_time();
+    anf = new Anf(ANF_DECIM_FACTOR, RADIO_SAMPLES, ANF_NFFT, ANF_INTERVAL_MS, ANF_STEP);
+    anf->notch_freq_subj->subscribe(on_anf_update);
 
     psd_delay = 4;
 
@@ -262,9 +372,10 @@ void dsp_init() {
     subject_add_observer_and_call(cfg_cur.zoom, on_zoom_change, NULL);
     subject_add_observer_and_call(cfg_cur.filter.real.from, on_real_filter_from_change, NULL);
     subject_add_observer_and_call(cfg_cur.filter.real.to, on_real_filter_to_change, NULL);
-    subject_add_observer_and_call(cfg_cur.mode, on_cur_mode_change, NULL);
+    cfg.dnf_auto.val->subscribe(update_dnf_enabled);
+    cfg_cur.mode->subscribe(update_dnf_enabled)->notify();
 
-    subject_add_observer_and_call(cfg_cur.fg_freq, on_freq_change, NULL);
+    cfg_cur.fg_freq->subscribe(on_cur_freq_change);
     ready = true;
 }
 
@@ -288,18 +399,15 @@ static void process_samples(cfloat *buf_samples, uint16_t size, firdecim_crcf sp
 
     if (spectrum_factor > 1) {
         firdecim_crcf_execute_block(sp_decim, buf_filtered, size / spectrum_factor, spectrum_dec_buf);
-        sp_sg->write(spectrum_dec_buf);
+        sp_sg->execute_block(spectrum_dec_buf);
     } else {
-        sp_sg->write(buf_filtered);
+        sp_sg->execute_block(buf_filtered);
     }
 
-    wf_sg->write(buf_filtered);
+    wf_sg->execute_block(buf_filtered);
 
-    // if anf enabled and not tx
     if (!tx && anf_enabled) {
-        size_t decim_size = size / ANF_DECIM_FACTOR;
-        firdecim_crcf_execute_block(anf_decim, buf_filtered, decim_size, anf_dec_buf);
-        spgramcf_write(anf_sg, anf_dec_buf, decim_size);
+        anf->execute_block(buf_filtered, size);
     }
 }
 
@@ -320,7 +428,6 @@ static bool update_spectrum(ChunkedSpgram *sp_sg, uint64_t now, bool tx) {
 static bool update_waterfall(ChunkedSpgram *wf_sg, uint64_t now, bool tx) {
     if ((now - waterfall_time > waterfall_fps_ms) && (!psd_delay)) {
         wf_sg->get_psd(waterfall_psd);
-        // spgramcf_get_psd(wf_sg, waterfall_psd);
         liquid_vectorf_addscalar(waterfall_psd, WATERFALL_NFFT, -30.0f, waterfall_psd);
         waterfall_data(waterfall_psd, WATERFALL_NFFT, tx);
         waterfall_time = now;
@@ -345,71 +452,6 @@ static void update_s_meter() {
 
         meter_update(peak_db, 0.8f);
     }
-}
-
-static bool update_anf(uint64_t now) {
-    if ((now - anf_time > ANF_INTERVAL_MS) && (!psd_delay)) {
-        bool lsb = (cur_mode == x6100_mode_lsb);
-        spgramcf_get_psd(anf_sg, anf_psd);
-        float max = -INFINITY;
-        float min = INFINITY;
-        float mean = 0;
-        size_t max_pos = 0;
-
-        // Search for peak
-        size_t center = ANF_NFFT / 2;
-        size_t start = center + filter_from / ANF_STEP;
-        size_t stop = center + filter_to / ANF_STEP;
-        for (size_t i = start; i < stop; i++){
-            if (max < anf_psd[i]) {
-                max = anf_psd[i];
-                max_pos = i;
-            }
-            if (min > anf_psd[i]) {
-                min = anf_psd[i];
-            }
-            mean += anf_psd[i];
-        }
-        int16_t f_pos = max_pos - center;
-        if (f_pos < 0) {
-            f_pos = - f_pos;
-        }
-
-        mean -= 3 * max;
-        mean /= (stop - start - 3);
-        // Adjust pos for USB
-        if (!lsb) {
-            max_pos--;
-        }
-        float peak_freq = ((float)max_pos - center) * ANF_STEP;
-        // printf("ptp: %f, above_mean: %f\n", max - min, max - mean);
-        if (max - mean > 8.0f){
-            anf_freq_hist[anf_freq_hist_pos] = roundf((peak_freq + ANF_STEP / 2) / 50) * 50;
-        } else {
-            anf_freq_hist[anf_freq_hist_pos] = 0;
-        }
-        anf_freq_hist_pos = (anf_freq_hist_pos + 1) % ANF_HIST_LEN;
-        // Check all history contains same freq
-        bool same_freq_val = true;
-        for (size_t i = 1; i < ANF_HIST_LEN; i++) {
-            if (anf_freq_hist[i] != anf_freq_hist[0]) {
-                same_freq_val = false;
-                break;
-            }
-        }
-        if (same_freq_val) {
-            int16_t new_freq = anf_freq_hist[0];
-            if (lsb) {
-                new_freq = - new_freq;
-            }
-            subject_set_int(anf_freq, new_freq);
-        }
-
-        anf_time = now;
-        spgramcf_reset(anf_sg);
-        return true;
-    }
-    return false;
 }
 
 void dsp_samples(cfloat *buf_samples, uint16_t size, bool tx) {
@@ -443,8 +485,8 @@ void dsp_samples(cfloat *buf_samples, uint16_t size, bool tx) {
             min_max_delay = 2;
         }
     }
-    if (!tx) {
-        update_anf(now);
+    if (!tx  && !psd_delay) {
+        anf->update(now, cur_mode==x6100_mode_lsb);
     }
 }
 
@@ -484,23 +526,36 @@ static void on_zoom_change(Subject *subj, void *user_data) {
 
 static void on_real_filter_from_change(Subject *subj, void *user_data) {
     filter_from = subject_get_int(subj);
+    anf->set_freq_from(filter_from);
 }
 
 static void on_real_filter_to_change(Subject *subj, void *user_data) {
     filter_to = subject_get_int(subj);
+    anf->set_freq_to(filter_to);
 }
 
-static void on_cur_mode_change(Subject *subj, void *user_data) {
-    cur_mode = (x6100_mode_t)subject_get_int(subj);
+static void update_dnf_enabled(Subject *subj, void *user_data) {
+    cur_mode = (x6100_mode_t)subject_get_int(cfg_cur.mode);
+    bool enabled = subject_get_int(cfg.dnf_auto.val);
     switch (cur_mode) {
         case x6100_mode_lsb:
         case x6100_mode_usb:
-            anf_enabled = true;
+            anf_enabled = enabled;
             break;
         default:
             anf_enabled = false;
             break;
     }
+    anf->reset();
+}
+
+static void on_cur_freq_change(Subject *subj, void *user_data) {
+    int32_t new_freq = static_cast<SubjectT<int32_t> *>(subj)->get();
+    int32_t diff = new_freq - cur_freq;
+    cur_freq = new_freq;
+    anf->shift(diff, cur_mode == x6100_mode_lsb);
+    waterfall_sg_rx->reset();
+    psd_delay = 1;
 }
 
 float dsp_get_spectrum_beta() {

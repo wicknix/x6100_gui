@@ -42,6 +42,11 @@ void controls_toggle_dnf(button_item_t *btn) {
     voice_say_bool("DNF", new_val);
 }
 
+void controls_toggle_dnf_auto(button_item_t *btn) {
+    bool new_val = toggle_subj(cfg.dnf_auto.val);
+    voice_say_bool("DNF auto", new_val);
+}
+
 void controls_toggle_nb(button_item_t *btn) {
     bool new_val = toggle_subj(cfg.nb.val);
     voice_say_bool("NB", new_val);

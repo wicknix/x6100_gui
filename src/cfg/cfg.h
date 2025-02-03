@@ -41,6 +41,7 @@ typedef struct {
     cfg_item_t dnf;
     cfg_item_t dnf_center;
     cfg_item_t dnf_width;
+    cfg_item_t dnf_auto;
 
     cfg_item_t nb;
     cfg_item_t nb_level;
