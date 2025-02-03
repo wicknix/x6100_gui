@@ -270,7 +270,7 @@ void static waterfall_process(float complex *frame, const size_t size) {
         liquid_vectorf_addscalar(
             &waterfall_psd[low_bin],
             high_bin - low_bin,
-            -10.f * log10f(sqrtf(waterfall_nfft)) - 16.0f,
+            -10.f * log10f(sqrtf(waterfall_nfft)),
             &waterfall_psd[low_bin]);
 
         lv_waterfall_add_data(waterfall, &waterfall_psd[low_bin], high_bin - low_bin);
@@ -549,6 +549,10 @@ static void fade_ready(lv_anim_t * a) {
 }
 
 static void rotary_cb(int32_t diff) {
+    uint32_t abs_diff = abs(diff);
+    if (abs_diff > 3) {
+        diff *= (abs_diff < 6) ? 5 : 10;
+    }
     uint32_t f = params.ft8_tx_freq.x + diff;
 
     if (f > filter_high) {
@@ -584,7 +588,8 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_add_event_cb(dialog.obj, band_cb, EVENT_BAND_UP, NULL);
     lv_obj_add_event_cb(dialog.obj, band_cb, EVENT_BAND_DOWN, NULL);
 
-    decim = firdecim_crcf_create_kaiser(DECIM, 16, 40.0f);
+    decim = firdecim_crcf_create_kaiser(DECIM, 8, 40.0f);
+    firdecim_crcf_set_scale(decim, 1.0f / DECIM);
     audio_buf = cbuffercf_create(AUDIO_CAPTURE_RATE * 3);
 
     /* Waterfall */
@@ -703,7 +708,6 @@ static void construct_cb(lv_obj_t *parent) {
 
 static void reload_buttons() {
     buttons_unload_page();
-    printf("loading ft8 keys\n");
     switch (button_page)
     {
     case 0:
