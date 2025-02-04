@@ -579,9 +579,9 @@ void buttons_load(uint8_t n, button_item_t *item) {
     button_item_t *prev_item = btn[n].item;
     if (prev_item) {
         prev_item->label_obj = NULL;
-        if (item->observer) {
-            delete item->observer;
-            item->observer = NULL;
+        if (prev_item->observer) {
+            delete prev_item->observer;
+            prev_item->observer = NULL;
         }
     }
 
