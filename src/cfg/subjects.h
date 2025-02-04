@@ -111,11 +111,6 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 
-// #define MAX_OBSERVERS 16
-
-// typedef struct __subject *subject_t;
-
-// typedef struct __observer *observer_t;
 
 Subject *subject_create_int(int32_t val);
 Subject *subject_create_uint64(uint64_t val);
