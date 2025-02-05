@@ -725,6 +725,7 @@ void buttons_press(uint8_t n, bool hold) {
     button_item_t *item = btn[n].item;
     if (item == NULL) {
         LV_LOG_WARN("Button %u is NULL", n);
+        return;
     }
     if (hold) {
         if (item->hold) {

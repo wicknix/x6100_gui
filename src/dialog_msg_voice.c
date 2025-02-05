@@ -70,18 +70,22 @@ static void dialog_msg_voice_rename_cb(button_item_t *item);
 static void dialog_msg_voice_delete_cb(button_item_t *item);
 
 static button_item_t btn_rec_stop = {
+    .type  = BTN_TEXT,
     .label = "Rec\nStop",
     .press = rec_stop_cb,
 };
 static button_item_t btn_play_stop = {
+    .type  = BTN_TEXT,
     .label = "Play\nStop",
     .press = play_stop_cb,
 };
 static button_item_t btn_send_stop = {
+    .type  = BTN_TEXT,
     .label = "Send\nStop",
     .press = send_stop_cb,
 };
 static button_item_t btn_beacon_stop = {
+    .type  = BTN_TEXT,
     .label = "Beacon\nStop",
     .press = beacon_stop_cb,
 };
