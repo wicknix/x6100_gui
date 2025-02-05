@@ -67,6 +67,23 @@ static void radio_unlock() {
     pthread_mutex_unlock(&control_mux);
 }
 
+/**
+ * Restore "listening" of main board and USB soundcard after ATU
+ */
+static void recover_processing_audio_inputs() {
+    usleep(10000);
+    x6100_vfo_t vfo = subject_get_int(cfg_cur.band->vfo.val);
+    radio_lock();
+    x6100_control_vfo_mode_set(vfo, x6100_mode_usb_dig);
+    x6100_control_txpwr_set(0.1f);
+    x6100_control_modem_set(true);
+    usleep(50000);
+    x6100_control_modem_set(false);
+    x6100_control_txpwr_set(params.pwr);
+    x6100_control_vfo_mode_set(vfo, subject_get_int(cfg_cur.mode));
+    radio_unlock();
+}
+
 bool radio_tick() {
     if (now_time < prev_time) {
         prev_time = now_time;
@@ -121,6 +138,7 @@ bool radio_tick() {
                     cfg_atu_save_network(pack->atu_params);
                     WITH_RADIO_LOCK(x6100_control_atu_tune(false));
                     subject_set_int(cfg.atu_enabled.val, true);
+                    recover_processing_audio_inputs();
                     notify_rx();
 
                     // TODO: change with observer on atu->loaded change
@@ -217,8 +235,7 @@ static void on_vfo_freq_change(Subject *subj, void *user_data) {
     int32_t new_val = subject_get_int(subj);
     int32_t shift = cfg_transverter_get_shift(new_val);
     WITH_RADIO_LOCK(x6100_control_vfo_freq_set(vfo, new_val - shift));
-    LV_LOG_USER("Radio set vfo %i freq=%i", vfo, new_val);;
-    // lv_msg_send(MSG_PARAM_CHANGED, NULL);
+    LV_LOG_USER("Radio set vfo %i freq=%i (%i)", vfo, new_val - shift);
 }
 
 static void on_vfo_mode_change(Subject *subj, void *user_data) {
