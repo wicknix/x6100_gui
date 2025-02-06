@@ -5,20 +5,22 @@
  *
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
-
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include "lvgl/lvgl.h"
+#include "cw_encoder.h"
 
 #include "cw_decoder.h"
-#include "cw_encoder.h"
 #include "params/params.h"
 #include "cfg/cfg.h"
 #include "radio.h"
 #include "msg.h"
 #include "buttons.h"
+
+#include "lvgl/lvgl.h"
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+#include <sched.h>
+
 
 static cw_encoder_state_t   state = CW_ENCODER_IDLE;
 static pthread_t            thread;
@@ -44,38 +46,48 @@ static uint8_t get_morse(char *str, char **morse) {
     return 0;
 }
 
-static void send_morse(char *str, uint32_t dit, uint32_t dah) {
+static void send_morse(char *str, time_t dit_nsec, time_t dah_nsec) {
+    struct timespec t;
+    t.tv_sec = 0;
     while (*str) {
         switch (*str) {
             case '.':
+                t.tv_nsec = dit_nsec;
                 radio_set_morse_key(true);
-                usleep(dit);
+                nanosleep(&t, NULL);
                 radio_set_morse_key(false);
                 break;
 
             case '-':
+                t.tv_nsec = dah_nsec;
                 radio_set_morse_key(true);
-                usleep(dah);
+                nanosleep(&t, NULL);
                 radio_set_morse_key(false);
                 break;
 
             default:
                 break;
         }
-
-        usleep(dit);
         str++;
+        t.tv_nsec = dit_nsec;
+        nanosleep(&t, NULL);
     }
-
-    usleep(dah - dit);
+    t.tv_nsec = dah_nsec - dit_nsec;
+    nanosleep(&t, NULL);
 }
 
 static void * endecode_thread(void *arg) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
-    uint32_t    dit = 60 * 1000000 / (subject_get_int(cfg.key_speed.val) * 50);
-    uint32_t    dah = dit * subject_get_float(cfg.key_ratio.val) / 10;
+
+    time_t dit_nsec = 20000000L / (subject_get_int(cfg.key_speed.val)) * 60;
+    time_t dah_nsec = dit_nsec * subject_get_float(cfg.key_ratio.val);
+    time_t world_space_nsec = dit_nsec * 7;
+
+    struct timespec t;
+
+    t.tv_sec = 0;
 
     while (true) {
         char    *morse;
@@ -83,19 +95,19 @@ static void * endecode_thread(void *arg) {
 
         if (*current_char == ' ') {
             current_char++;
-            usleep(dit * (7 - 3));
+            t.tv_nsec = world_space_nsec - dah_nsec;
+            nanosleep(&t, NULL);
         } else {
             len = get_morse(current_char, &morse);
-
             if (len) {
-                send_morse(morse, dit, dah);
+                send_morse(morse, dit_nsec, dah_nsec);
                 current_char += len;
             } else {
                 current_char++;
-                usleep(dit * (7 - 3));
+                t.tv_nsec = world_space_nsec - dah_nsec;
+                nanosleep(&t, NULL);
             }
         }
-
         if (*current_char == 0) {
             if (state == CW_ENCODER_SEND) {
                 state = CW_ENCODER_IDLE;
@@ -136,7 +148,15 @@ void cw_encoder_send(const char *text, bool beacon) {
     current_char = current_msg;
     state = beacon ? CW_ENCODER_BEACON : CW_ENCODER_SEND;
 
-    pthread_create(&thread, NULL, endecode_thread, NULL);
+    int rc;
+    pthread_attr_t attr;
+    struct sched_param param;
+    rc = pthread_attr_init (&attr);
+    rc = pthread_attr_getschedparam (&attr, &param);
+    param.sched_priority += 5;
+    rc = pthread_attr_setschedparam (&attr, &param);
+
+    pthread_create(&thread, &attr, endecode_thread, NULL);
 }
 
 cw_encoder_state_t cw_encoder_state() {
