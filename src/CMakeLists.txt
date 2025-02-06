@@ -37,20 +37,19 @@ pkg_check_modules(deps REQUIRED IMPORTED_TARGET
 )
 
 
-target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer -fasynchronous-unwind-tables)
-target_link_options(${PROJECT_NAME} PRIVATE -g -rdynamic)
-
-
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    PkgConfig::deps
-    FT8 QTH
-    Threads::Threads
-    lvgl lvgl::drivers
-    aether_x6100_control
-    liquid
-    RHVoice RHVoice_core RHVoice_audio
-    ft8
+PkgConfig::deps
+FT8 QTH
+Threads::Threads
+lvgl lvgl::drivers
+aether_x6100_control
+liquid
+RHVoice RHVoice_core RHVoice_audio
+ft8
 )
+
+# target_compile_options(${PROJECT_NAME} PRIVATE -g -fno-omit-frame-pointer -fasynchronous-unwind-tables)
+# target_link_options(${PROJECT_NAME} PRIVATE -g -rdynamic)
 
 # target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined  -fno-omit-frame-pointer -fno-sanitize-recover)
 # target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-recover -static-libasan -static-libubsan)
