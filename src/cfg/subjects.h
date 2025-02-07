@@ -12,7 +12,7 @@ enum data_type {
 
 #include <mutex>
 #include <algorithm>
-#include <vector>
+#include <list>
 #include <type_traits>
 #include <thread>
 #include <atomic>
@@ -33,7 +33,7 @@ class Observer {
 };
 
 class ObserverDelayed: public Observer {
-    static std::vector<ObserverDelayed*> instances;
+    static std::list<ObserverDelayed*> instances;
     std::thread::id tid;
     std::atomic<bool> changed = false;
     public:
@@ -50,7 +50,7 @@ class ObserverDelayed: public Observer {
 class Subject {
     std::mutex mutex_subscribe;
     protected:
-    std::vector<Observer*> observers;
+    std::list<Observer*> observers;
     data_type type;
     public:
     virtual data_type dtype();
@@ -60,12 +60,11 @@ class Subject {
 };
 
 template <typename T> class SubjectT : public Subject {
-    static_assert(std::is_same_v<T, int32_t>
-                  || std::is_same_v<T, uint64_t>
-                  || std::is_same_v<T, float>,
+    static_assert(std::is_same_v<T, int32_t> || \
+                  std::is_same_v<T, uint64_t> || \
+                  std::is_same_v<T, float>,
                   "Unsupported type");
-    T          val;
-    std::mutex mutex_set;
+    std::atomic<T> val;
 
   public:
     SubjectT(T val) : val(val) {};
@@ -73,24 +72,20 @@ template <typename T> class SubjectT : public Subject {
         return val;
     };
     void set(T val) {
-        bool changed = false;
-        {
-            const std::lock_guard<std::mutex> lock(mutex_set);
-            if (this->val != val) {
-                this->val = val;
-                changed   = true;
-            }
-        }
-        if (changed) {
+        if (this->val != val) {
+            this->val = val;
             for (auto observer : observers) {
                 observer->notify();
             }
         }
     };
     data_type dtype() {
-        if (std::is_same_v<T, int32_t>) return DTYPE_INT;
-        if (std::is_same_v<T, uint64_t>) return DTYPE_UINT64;
-        if (std::is_same_v<T, float>) return DTYPE_FLOAT;
+        if (std::is_same_v<T, int32_t>)
+            return DTYPE_INT;
+        if (std::is_same_v<T, uint64_t>)
+            return DTYPE_UINT64;
+        if (std::is_same_v<T, float>)
+            return DTYPE_FLOAT;
         return DTYPE_INVALID;
     }
 };

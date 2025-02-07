@@ -15,7 +15,7 @@ void Observer::notify() {
     this->fn(subj, user_data);
 };
 
-std::vector<ObserverDelayed*> ObserverDelayed::instances;
+std::list<ObserverDelayed*> ObserverDelayed::instances;
 
 ObserverDelayed::~ObserverDelayed() {
     auto item = std::find(instances.begin(), instances.end(), this);
