@@ -44,7 +44,6 @@ static void construct_cb(lv_obj_t *parent) {
 
     lv_textarea_set_accepted_chars(text,
         "0123456789/"
-        "abcdefghijklmnopqrstuvwxyz"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     );
 
