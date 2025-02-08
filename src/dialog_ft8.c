@@ -64,6 +64,8 @@
 #define MAX_TABLE_MSG   512
 #define CLEAN_N_ROWS    64
 
+#define MAX_TX_START_DELAY 1.0f
+
 #define WAIT_SYNC_TEXT "Wait sync"
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
@@ -170,7 +172,7 @@ static void keyboard_close();
 static void add_info(const char * fmt, ...);
 static void add_tx_text(const char * text);
 static void make_cq_msg(const char *callsign, const char *qth, const char *cq_mod, char *text);
-static bool get_time_slot(struct timespec now);
+static bool get_time_slot(struct timespec now, float *time_since_start);
 
 // button label is current state, press action and name - next state
 
@@ -790,7 +792,11 @@ static void tx_cq_en_dis_cb(lv_event_t * e) {
 
         struct timespec now;
         clock_gettime(CLOCK_REALTIME, &now);
-        tx_time_slot = !get_time_slot(now);
+        float time_since_slot_start;
+        tx_time_slot = !get_time_slot(now, &time_since_slot_start);
+        if (time_since_slot_start < MAX_TX_START_DELAY) {
+            tx_time_slot = !tx_time_slot;
+        }
 
         if (tx_msg.msg[2] == '_') {
             msg_schedule_text_fmt("Next TX: CQ %s", tx_msg.msg + 3);
@@ -953,17 +959,19 @@ static void audio_cb(unsigned int n, float complex *samples) {
     }
 }
 
-static bool get_time_slot(struct timespec now) {
+static bool get_time_slot(struct timespec now, float *sec_since_start) {
     bool cur_odd;
-    float sec = (now.tv_sec % 60) + now.tv_nsec / 1000000000.0f;
+    float sec = (now.tv_sec % 60) + now.tv_nsec / 1.0e9f;
 
     switch (params.ft8_protocol) {
     case FTX_PROTOCOL_FT4:
         cur_odd = (int)(sec / FT4_SLOT_TIME) % 2;
+        *sec_since_start = fmodf(sec, FT4_SLOT_TIME);
         break;
 
-    case FTX_PROTOCOL_FT8:
+        case FTX_PROTOCOL_FT8:
         cur_odd = (int)(sec / FT8_SLOT_TIME) % 2;
+        *sec_since_start = fmodf(sec, FT8_SLOT_TIME);
         break;
     }
     return cur_odd;
@@ -1192,23 +1200,27 @@ static void * decode_thread(void *arg) {
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
 
     struct timespec now;
+    struct timespec slot_start_ts;
     bool            new_odd;
-    struct tm       *ts;
-    bool            new_slot=false;
-    bool            have_tx_msg=false;
+    struct tm      *ts;
+    float           sec_since_slot_start;
+    bool            new_slot    = false;
+    bool            have_tx_msg = false;
 
     slot_info_t s_info = {.odd=false, .answer_generated=false};
 
     while (true) {
         clock_gettime(CLOCK_REALTIME, &now);
-        new_odd = get_time_slot(now);
+        new_odd = get_time_slot(now, &sec_since_slot_start);
         new_slot = new_odd != s_info.odd;
         rx_worker(new_slot, &s_info);
+        s_info.odd = new_odd;
 
-        if (new_slot) {
-            have_tx_msg = tx_msg.msg[0] != '\0';
+        have_tx_msg = tx_msg.msg[0] != '\0';
 
-            if (have_tx_msg && (tx_time_slot == new_odd) && tx_enabled) {
+        if ((sec_since_slot_start < MAX_TX_START_DELAY) && have_tx_msg) {
+            // Start TX and continue after done
+            if ((tx_time_slot == new_odd) && tx_enabled) {
                 state = TX_PROCESS;
                 add_tx_text(tx_msg.msg);
                 tx_worker();
@@ -1218,18 +1230,21 @@ static void * decode_thread(void *arg) {
                 if (tx_msg.repeats == 0){
                     tx_msg.msg[0] = '\0';
                 }
-            } else {
-                state = RX_PROCESS;
-                if ((!have_tx_msg || !tx_enabled)) {
-                    ts = localtime(&now.tv_sec);
-                    add_info("RX %s %02i:%02i:%02i", cfg_digital_label_get(),
-                        ts->tm_hour, ts->tm_min, ts->tm_sec);
-                }
+                continue;
+            }
+        }
+
+        if (new_slot) {
+            // Add message about new slot;
+            state = RX_PROCESS;
+            if ((!have_tx_msg || !tx_enabled)) {
+                ts = localtime(&now.tv_sec);
+                add_info("RX %s %02i:%02i:%02i", cfg_digital_label_get(),
+                    ts->tm_hour, ts->tm_min, ts->tm_sec);
             }
         } else {
-            usleep(30000);
+            usleep(100000);
         }
-        s_info.odd = new_odd;
     }
 
     return NULL;
