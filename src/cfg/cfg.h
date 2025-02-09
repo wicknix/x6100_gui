@@ -53,6 +53,9 @@ typedef struct {
     // SWR scan
     cfg_item_t swrscan_linear;
     cfg_item_t swrscan_span;
+
+    // FT8
+    cfg_item_t ft8_hold_freq;
 } cfg_t;
 extern cfg_t cfg;
 

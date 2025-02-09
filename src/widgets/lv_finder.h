@@ -21,7 +21,6 @@ extern "C" {
  *      TYPEDEFS
  **********************/
 
-#define LV_FINDER_CURSORS    2
 
 typedef struct {
     lv_obj_t        obj;
@@ -31,9 +30,8 @@ typedef struct {
 
     int16_t         range_min;
     int16_t         range_max;
-    
-    uint8_t         cursor_num;
-    int16_t         cursor[LV_FINDER_CURSORS];
+
+    int16_t         cursor;
 } lv_finder_t;
 
 extern const lv_obj_class_t lv_finder_class;
@@ -49,7 +47,8 @@ lv_obj_t * lv_finder_create(lv_obj_t * parent);
  *====================*/
 
 void lv_finder_set_range(lv_obj_t * obj, int16_t min, int16_t max);
-void lv_finder_set_cursor(lv_obj_t * obj, uint8_t index, int16_t value);
+void lv_finder_set_cursor(lv_obj_t * obj, int16_t value);
+void lv_finder_clear_cursor(lv_obj_t * obj);
 void lv_finder_set_width(lv_obj_t * obj, uint16_t x);
 void lv_finder_set_value(lv_obj_t * obj, int16_t x);
 

@@ -23,6 +23,8 @@ typedef struct {
     int            local_snr;
     int            remote_snr;
     bool           to_me;
+    float          freq_hz;
+    float          time_sec;
     ftx_msg_type_t type;
 } ftx_msg_meta_t;
 

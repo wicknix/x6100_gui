@@ -262,6 +262,9 @@ static int init_params_cfg(sqlite3 *db) {
     cfg.swrscan_linear = (cfg_item_t){.val=subject_create_int(true), .db_name="swrscan_linear"};
     cfg.swrscan_span = (cfg_item_t){.val=subject_create_int(200000), .db_name="swrscan_span"};
 
+    // FT8
+    cfg.ft8_hold_freq = (cfg_item_t){.val=subject_create_int(true), .db_name="ft8_hold_freq"};
+
     /* Bind callbacks */
     // subject_add_observer(cfg.band_id.val, on_band_id_change, NULL);
     subject_add_observer(cfg.key_tone.val, on_key_tone_change, NULL);

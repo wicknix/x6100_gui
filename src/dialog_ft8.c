@@ -64,7 +64,7 @@
 #define MAX_TABLE_MSG   512
 #define CLEAN_N_ROWS    64
 
-#define MAX_TX_START_DELAY 1.0f
+#define MAX_TX_START_DELAY 1.5f
 
 #define WAIT_SYNC_TEXT "Wait sync"
 
@@ -155,6 +155,7 @@ static void mode_ft4_ft8_cb(lv_event_t * e);
 static void tx_cq_en_dis_cb(lv_event_t * e);
 static void tx_call_en_dis_cb(lv_event_t * e);
 
+static void hold_tx_freq_cb(lv_event_t * e);
 static void mode_auto_cb(lv_event_t * e);
 static void cq_modifier_cb(lv_event_t * e);
 static void load_page(lv_event_t *e);
@@ -183,6 +184,7 @@ static button_item_t button_tx_cq_en_dis = { .type=BTN_TEXT, .label = "TX CQ:\nD
 static button_item_t button_tx_call_en_dis = { .type=BTN_TEXT, .label = "TX Call:\nDisabled", .press = tx_call_en_dis_cb};
 
 static button_item_t button_page_2 = { .type=BTN_TEXT, .label = "(Page: 2:2)", .press = load_page};
+static button_item_t button_hold_freq = { .type=BTN_TEXT, .label = "Hold Freq:\nEnabled", .press = hold_tx_freq_cb };
 static button_item_t button_auto_en_dis = { .type=BTN_TEXT, .label = "Auto:\nDisabled", .press = mode_auto_cb };
 static button_item_t button_cq_mod = { .type=BTN_TEXT, .label = "CQ\nModifier", .press = cq_modifier_cb };
 static button_item_t button_time_sync = { .type=BTN_TEXT, .label = "Time\nSync", .press = time_sync };
@@ -230,10 +232,9 @@ static void worker_init() {
     decim_buf = (float complex *) malloc(block_size * sizeof(float complex));
 
     /* Waterfall */
-    // TODO: check nfft for waterfall
-    waterfall_nfft = block_size * 2;
+    waterfall_nfft = (uint16_t)(WIDTH * SAMPLE_RATE / (filter_high - filter_low));
 
-    waterfall_sg = spgramcf_create(waterfall_nfft, LIQUID_WINDOW_HANN, waterfall_nfft, waterfall_nfft / 4);
+    waterfall_sg = spgramcf_create(waterfall_nfft, LIQUID_WINDOW_HANN, waterfall_nfft, waterfall_nfft / 2);
     waterfall_psd = (float *) malloc(waterfall_nfft * sizeof(float));
     waterfall_time = get_time();
 
@@ -255,6 +256,7 @@ static void worker_done() {
     free(waterfall_psd);
 
     ftx_qso_processor_delete(qso_processor);
+    lv_finder_clear_cursor(finder);
     tx_msg.msg[0] = '\0';
 }
 
@@ -550,6 +552,21 @@ static void fade_ready(lv_anim_t * a) {
     fade_run = false;
 }
 
+static void set_freq(uint32_t freq) {
+    if (freq > filter_high) {
+        freq = filter_high;
+    }
+
+    if (freq < filter_low) {
+        freq = filter_low;
+    }
+
+    params_uint16_set(&params.ft8_tx_freq, freq);
+
+    lv_finder_set_value(finder, freq);
+    lv_obj_invalidate(finder);
+}
+
 static void rotary_cb(int32_t diff) {
     uint32_t abs_diff = abs(diff);
     if (abs_diff > 3) {
@@ -557,18 +574,7 @@ static void rotary_cb(int32_t diff) {
     }
     uint32_t f = params.ft8_tx_freq.x + diff;
 
-    if (f > filter_high) {
-        f = filter_high;
-    }
-
-    if (f < filter_low) {
-        f = filter_low;
-    }
-
-    params_uint16_set(&params.ft8_tx_freq, f);
-
-    lv_finder_set_value(finder, f);
-    lv_obj_invalidate(finder);
+    set_freq(f);
 
     if (!fade_run) {
         fade_run = true;
@@ -582,6 +588,7 @@ static void rotary_cb(int32_t diff) {
         timer = lv_timer_create(msg_timer, 1000, NULL);
         lv_timer_set_repeat_count(timer, 1);
     }
+
 }
 
 static void construct_cb(lv_obj_t *parent) {
@@ -680,7 +687,6 @@ static void construct_cb(lv_obj_t *parent) {
 
     filter_low = subject_get_int(cfg_cur.filter.low);
     filter_high = subject_get_int(cfg_cur.filter.high);
-    // params_current_mode_filter_get(&f_low, &f_high);
 
     lv_finder_set_range(finder, filter_low, filter_high);
 
@@ -731,11 +737,14 @@ static void reload_buttons() {
     case 1:
         buttons_load(0, &button_page_2);
 
-        button_auto_en_dis.label = params.ft8_auto.x ? "Auto:\nEnabled" : "Auto:\nDisabled";
-        buttons_load(1, &button_auto_en_dis);
+        button_hold_freq.label = subject_get_int(cfg.ft8_hold_freq.val) ? "Hold Freq:\nEnabled" : "Hold Freq:\nDisabled";
+        buttons_load(1, &button_hold_freq);
 
-        buttons_load(2, &button_cq_mod);
-        buttons_load(3, &button_time_sync);
+        button_auto_en_dis.label = params.ft8_auto.x ? "Auto:\nEnabled" : "Auto:\nDisabled";
+        buttons_load(2, &button_auto_en_dis);
+
+        buttons_load(3, &button_cq_mod);
+        buttons_load(4, &button_time_sync);
     default:
         break;
     }
@@ -775,6 +784,13 @@ static void mode_auto_cb(lv_event_t * e) {
     reload_buttons();
 }
 
+static void hold_tx_freq_cb(lv_event_t * e) {
+    if (disable_buttons) return;
+    bool val = subject_get_int(cfg.ft8_hold_freq.val);
+    subject_set_int(cfg.ft8_hold_freq.val, !val);
+    reload_buttons();
+}
+
 static void tx_cq_en_dis_cb(lv_event_t * e) {
     if (disable_buttons) return;
 
@@ -805,6 +821,7 @@ static void tx_cq_en_dis_cb(lv_event_t * e) {
         }
         tx_msg.repeats = -1;
         ftx_qso_processor_reset(qso_processor);
+        lv_finder_clear_cursor(finder);
     } else {
         if (state == TX_PROCESS) {
             state = RX_PROCESS;
@@ -896,6 +913,10 @@ static void cell_press_cb(lv_event_t * e) {
         } else {
             ftx_qso_processor_start_qso(qso_processor, &cell_data->meta, &tx_msg);
             if (strlen(tx_msg.msg) > 0) {
+                lv_finder_set_cursor(finder, cell_data->meta.freq_hz);
+                if (!subject_get_int(cfg.ft8_hold_freq.val)) {
+                    set_freq(cell_data->meta.freq_hz);
+                }
                 tx_time_slot = !cell_data->odd;
                 tx_enabled = true;
                 reload_buttons();
@@ -1102,13 +1123,19 @@ static void add_tx_text(const char * text) {
 /**
  * Parse and add RX messages to the table
  */
-static void add_rx_text(int16_t snr, const char * text, slot_info_t *s_info) {
+static void add_rx_text(int16_t snr, const char * text, slot_info_t *s_info, float freq_hz, float time_sec) {
 
     ftx_msg_meta_t meta;
+    meta.freq_hz = freq_hz;
+    meta.time_sec = time_sec;
     char * old_msg = strdup(tx_msg.msg);
     ftx_qso_processor_add_rx_text(qso_processor, text, snr, &meta, &tx_msg);
 
     if ((strlen(tx_msg.msg) > 0) && (strcmp(old_msg, tx_msg.msg) != 0)) {
+        lv_finder_set_cursor(finder, meta.freq_hz);
+        if (!subject_get_int(cfg.ft8_hold_freq.val)) {
+            set_freq(freq_hz);
+        }
         tx_time_slot = !s_info->odd;
         msg_schedule_text_fmt("Next TX: %s", tx_msg.msg);
         if (cq_enabled) {
@@ -1158,7 +1185,7 @@ static void add_rx_text(int16_t snr, const char * text, slot_info_t *s_info) {
 
 static void received_message_cb(const char *text, int snr, float freq_hz, float time_sec, void *user_data) {
     slot_info_t *s_info = (slot_info_t *)user_data;
-    add_rx_text(snr, text, s_info);
+    add_rx_text(snr, text, s_info, freq_hz, time_sec);
 }
 
 static void rx_worker(bool new_slot, slot_info_t *s_info) {
