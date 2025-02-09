@@ -89,6 +89,8 @@ static void update_dnf_enabled(Subject *subj, void *user_data);
 static void on_cur_freq_change(Subject *subj, void *user_data);
 
 
+/* Chunked spectrum periodogram class */
+
 ChunkedSpgram::ChunkedSpgram(size_t chunk_size, size_t nfft, size_t buffer_size) {
     this->chunk_size = chunk_size;
     this->nfft = nfft;
@@ -304,7 +306,10 @@ void Anf::update(uint64_t now, bool lower_band) {
             max_pos--;
         }
         int16_t peak_freq = (max_pos - center) * freq_bin;
-        if (max - mean > 6.0f){
+
+        // Set threshold based on freq (6 db for 3000 Hz, ~12 db on 600 Hz)
+        float threshold = 5000.0f / (peak_freq + 2000.0f) * 6.0f;
+        if (max - mean > threshold){
             freq_hist[hist_pos] = peak_freq;
         } else {
             freq_hist[hist_pos] = 0;
