@@ -163,7 +163,7 @@ TEST_CASE("Check fill meta", "[ft8_qso]") {
     SECTION("DXpedition report") {
         meta.to_me = false;
         q.add_rx_text("A2AA RR73; R2RFE <RP79AA> +05", 12, &meta, &tx_msg);
-        REQUIRE_THAT(meta.call_de, Equals("<RP79AA>"));
+        REQUIRE_THAT(meta.call_de, Equals("RP79AA"));
         REQUIRE_THAT(meta.grid, Equals(""));
         REQUIRE(meta.local_snr == 12);
         REQUIRE(meta.remote_snr == 5);
@@ -173,7 +173,7 @@ TEST_CASE("Check fill meta", "[ft8_qso]") {
     SECTION("DXpedition RR73") {
         meta.to_me = false;
         q.add_rx_text("R2RFE RR73; A2AA <RP79AA> +05", 12, &meta, &tx_msg);
-        REQUIRE_THAT(meta.call_de, Equals("<RP79AA>"));
+        REQUIRE_THAT(meta.call_de, Equals("RP79AA"));
         REQUIRE_THAT(meta.grid, Equals(""));
         REQUIRE(meta.local_snr == 12);
         REQUIRE(meta.remote_snr == default_snr);

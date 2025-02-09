@@ -117,6 +117,13 @@ void FTxQsoProcessor::add_rx_text(std::string text, const int snr, ftx_msg_meta_
         tokens = new_tokens;
     }
 
+    for (auto it = tokens.begin(); it != tokens.end(); it++) {
+        if (it->at(0) == '<') {
+            *it = it->substr(1, it->length() - 2);
+        }
+    }
+
+
     if (tokens[0] == "CQ") {
         process_cq(meta, tokens, snr);
     } else if (tokens.size() >= 3) {
