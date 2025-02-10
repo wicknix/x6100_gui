@@ -12,27 +12,32 @@
 
 #include "cat.h"
 
-#include "cfg/cfg.h"
-#include "events.h"
-#include "main_screen.h"
-#include "meter.h"
-#include "params/params.h"
-#include "radio.h"
-#include "scheduler.h"
-#include "spectrum.h"
+#include "cfg/subjects.h"
 #include "util.h"
-#include "waterfall.h"
 
-#include "lvgl/lvgl.h"
-#include <aether_radio/x6100_control/low/gpio.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/poll.h>
-#include <termios.h>
-#include <unistd.h>
+extern "C" {
+    // #include "cfg/cfg.h"
+    #include "events.h"
+    #include "main_screen.h"
+    #include "meter.h"
+    #include "params/params.h"
+    #include "radio.h"
+    #include "scheduler.h"
+    #include "spectrum.h"
+    #include "waterfall.h"
+
+    #include "lvgl/lvgl.h"
+    #include <aether_radio/x6100_control/low/gpio.h>
+    #include <fcntl.h>
+    #include <pthread.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <string.h>
+    #include <sys/poll.h>
+    #include <termios.h>
+    #include <unistd.h>
+}
+
 
 #define FRAME_PRE 0xFE
 #define FRAME_END 0xFD
@@ -164,7 +169,7 @@ static void log_msg(frame_t *frame, uint16_t len) {
 }
 
 static bool frame_get(frame_t *frame_ptr, uint16_t *len) {
-    char *data_ptr = (uint8_t *)frame_ptr;
+    char *data_ptr = reinterpret_cast<char*>(frame_ptr);
     while (true) {
         int res = read(fd, data_ptr + *len, sizeof(*frame_ptr) - *len);
         if ((res <= 0) && (*len == 0))
@@ -360,9 +365,9 @@ static void send_unsupported(frame_t *frame, uint16_t len) {
 
 static void frame_parse(frame_t *frame, uint16_t len) {
     int32_t        new_freq;
-    x6100_vfo_t    cur_vfo    = subject_get_int(cfg_cur.band->vfo.val);
+    x6100_vfo_t    cur_vfo    = (x6100_vfo_t)subject_get_int(cfg_cur.band->vfo.val);
     int32_t        cur_freq   = subject_get_int(cfg_cur.fg_freq);
-    x6100_mode_t   cur_mode   = subject_get_int(cfg_cur.mode);
+    x6100_mode_t   cur_mode   = (x6100_mode_t)subject_get_int(cfg_cur.mode);
     x6100_vfo_t    target_vfo = cur_vfo;
     subj_set_cmd_t set_cmd;
     uint8_t        vfo_id;
@@ -395,11 +400,13 @@ static void frame_parse(frame_t *frame, uint16_t len) {
             send_frame(frame, 6);
             break;
 
-        case C_RD_MODE:;
-            uint8_t v         = x_mode_2_ci_mode(cur_mode);
-            frame->subcommand = v;
-            frame->args[0]    = v;
-            send_frame(frame, 3);
+        case C_RD_MODE:
+            {
+                uint8_t v         = x_mode_2_ci_mode(cur_mode);
+                frame->subcommand = v;
+                frame->args[0]    = v;
+                send_frame(frame, 3);
+            }
             break;
 
         case C_SET_FREQ:
@@ -426,7 +433,7 @@ static void frame_parse(frame_t *frame, uint16_t len) {
                 frame->subcommand = subject_get_int(cfg_cur.att) * 0x20;
                 send_frame(frame, 2);
             } else if (frame->args[0] == FRAME_END) {
-                x6100_att_t new_att = (bool)frame->subcommand;
+                x6100_att_t new_att = (x6100_att_t)frame->subcommand;
                 schedule_change_fg_att(new_att);
                 send_code(frame, CODE_OK);
             } else {
@@ -540,7 +547,7 @@ static void frame_parse(frame_t *frame, uint16_t len) {
         case C_SEND_SEL_MODE:;
             vfo_id = frame->subcommand > 0;
             if (frame->args[0] == FRAME_END) {
-                uint8_t v      = x_mode_2_ci_mode(subject_get_int(vfo_params[vfo_id]->mode.val));
+                uint8_t v      = x_mode_2_ci_mode((x6100_mode_t)subject_get_int(vfo_params[vfo_id]->mode.val));
                 frame->args[0] = v;
                 frame->args[1] = 0;
                 frame->args[2] = 1;
@@ -575,10 +582,12 @@ static void frame_parse(frame_t *frame, uint16_t len) {
                 }
             } else {
                 switch (frame->subcommand) {
-                    case MEM_DM_FG:;
-                        x6100_mode_t new_mode = ci_mode_2_x_mode(frame->args[0], &frame->args[1]);
-                        schedule_change_subj(cfg_cur.mode, new_mode);
-                        send_code(frame, CODE_OK);
+                    case MEM_DM_FG:
+                        {
+                            x6100_mode_t new_mode = ci_mode_2_x_mode(frame->args[0], &frame->args[1]);
+                            schedule_change_subj(cfg_cur.mode, new_mode);
+                            send_code(frame, CODE_OK);
+                        }
                         break;
                     default:
                         send_unsupported(frame, len);
@@ -657,7 +666,7 @@ static void send_waterfall_data() {
         return;
     }
     counter          = 0;
-    uint8_t *data    = malloc(1024);
+    uint8_t *data    = (uint8_t *)malloc(1024);
     frame.dst_addr   = 0x00;
     frame.src_addr   = LOCAL_ADDRESS;
     frame.command    = C_CTL_SCP;

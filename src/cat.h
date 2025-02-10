@@ -8,4 +8,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void cat_init();
+
+#ifdef __cplusplus
+}
+#endif
