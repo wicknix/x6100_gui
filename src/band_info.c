@@ -9,10 +9,11 @@
 #include "band_info.h"
 
 #include "backlight.h"
-#include "bands.h"
 #include "events.h"
 #include "pubsub_ids.h"
 #include "styles.h"
+
+#include <stdlib.h>
 
 #define BANDS_REFRESH_PERIOD_MS 3 * 1000
 
@@ -167,14 +168,6 @@ lv_obj_t *band_info_init(lv_obj_t *parent) {
 }
 
 void band_info_update(int32_t f) {
-    // if (bands != NULL) {
-    //     for (uint16_t i = 0; i < bands_count; i++)
-    //         free(bands[i].name);
-
-    //     free(bands);
-    // }
-
-    // bands = params_bands_find_all(f, width_hz / 2, &bands_count);
     freq  = f;
 
     lv_obj_invalidate(obj);

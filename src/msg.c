@@ -6,11 +6,14 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 
-#include <stdio.h>
 #include "msg.h"
+
 #include "styles.h"
 #include "util.h"
 #include "events.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 #define FADE_TIME 250
 #define DURATION 2000

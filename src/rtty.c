@@ -15,6 +15,7 @@
 #include "lvgl/lvgl.h"
 
 #include <math.h>
+#include <stdlib.h>
 #include <pthread.h>
 
 #define SYMBOL_OVER 8

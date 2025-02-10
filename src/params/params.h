@@ -13,13 +13,10 @@
 
 #include <aether_radio/x6100_control/control.h>
 #include <ft8lib/constants.h>
-#include "../bands.h"
 #include "../radio.h"
 #include "../clock.h"
 #include "../voice.h"
-#include "modulation.h"
 #include "common.h"
-#include "band.h"
 #include "types.h"
 #include "../cfg/cfg.h"
 
@@ -78,10 +75,6 @@ typedef struct {
     uint16_t            brightness_timeout; /* seconds */
     buttons_light_t     brightness_buttons;
 
-    /* band info */
-
-    band_t              current_band;
-
     /* radio */
 
     int16_t             band_id;
@@ -100,25 +93,6 @@ typedef struct {
     int16_t             moni;
     params_bool_t       spmode;
     params_uint8_t      freq_accel;
-
-    /* DSP */
-
-    // bool                dnf;
-    // uint16_t            dnf_center;
-    // uint16_t            dnf_width;
-
-    // bool                nb;
-    // uint8_t             nb_level;
-    // uint8_t             nb_width;
-
-    // bool                nr;
-    // uint8_t             nr_level;
-
-    /* AGC */
-
-    // bool                agc_hang;
-    // int8_t              agc_knee;
-    // uint8_t             agc_slope;
 
     /* VOX */
 
@@ -149,25 +123,6 @@ typedef struct {
     uint8_t             clock_power_timeout;    /* seconds */
     uint8_t             clock_tx_timeout;       /* seconds */
 
-    /* key */
-
-    // uint8_t             key_speed;
-    // x6100_key_mode_t    key_mode;
-    // x6100_iambic_mode_t iambic_mode;
-    // uint16_t            key_vol;
-    // bool                key_train;
-    // uint16_t            qsk_time;
-    // uint8_t             key_ratio;
-
-    // /* CW decoder */
-
-    // bool                cw_decoder;
-    // bool                cw_tune;
-    // float               cw_decoder_snr;
-    // float               cw_decoder_snr_gist;
-    // float               cw_decoder_peak_beta;
-    // float               cw_decoder_noise_beta;
-
     /* Msg */
 
     uint16_t            cw_encoder_period;  /* seconds */
@@ -181,11 +136,6 @@ typedef struct {
     bool                rtty_reverse;
     uint8_t             rtty_bits;
     float               rtty_snr;
-
-    /* SWR Scan */
-
-    // bool                swrscan_linear;
-    // uint32_t            swrscan_span;
 
     /* FT8 */
 
@@ -262,19 +212,6 @@ typedef struct {
         bool    line_out;
         bool    moni;
 
-        // bool    dnf;
-        // bool    dnf_center;
-        // bool    dnf_width;
-        // bool    nb;
-        // bool    nb_level;
-        // bool    nb_width;
-        // bool    nr;
-        // bool    nr_level;
-
-        // bool    agc_hang;
-        // bool    agc_knee;
-        // bool    agc_slope;
-
         bool    vox;
         bool    vox_ag;
         bool    vox_delay;
@@ -290,20 +227,6 @@ typedef struct {
         bool    clock_power_timeout;
         bool    clock_tx_timeout;
 
-        // bool    key_speed;
-        // bool    key_mode;
-        // bool    iambic_mode;
-        // bool    key_vol;
-        // bool    key_train;
-        // bool    qsk_time;
-        // bool    key_ratio;
-
-        // bool    cw_decoder;
-        // bool    cw_tune;
-        // bool    cw_decoder_snr;
-        // bool    cw_decoder_peak_beta;
-        // bool    cw_decoder_noise_beta;
-
         bool    cw_encoder_period;
         bool    voice_msg_period;
 
@@ -311,9 +234,6 @@ typedef struct {
         bool    rtty_shift;
         bool    rtty_rate;
         bool    rtty_reverse;
-
-        // bool    swrscan_linear;
-        // bool    swrscan_span;
 
         bool    ft8_show_all;
         bool    ft8_protocol;
@@ -347,16 +267,10 @@ void params_float_set(params_float_t *var, float x);
 
 uint8_t params_uint8_change(params_uint8_t *var, int16_t df);
 
-// int32_t params_lo_offset_get();
-
 void params_msg_cw_load();
 void params_msg_cw_new(const char *val);
 void params_msg_cw_edit(uint32_t id, const char *val);
 void params_msg_cw_delete(uint32_t id);
-
-band_t * params_bands_find_all(uint64_t freq, int32_t half_width, uint16_t *count);
-bool params_bands_find(uint64_t freq);
-bool params_bands_find_next(uint64_t freq, bool up);
 
 char *params_charger_str_get(radio_charger_t val);
 

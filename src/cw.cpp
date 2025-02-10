@@ -34,6 +34,7 @@ typedef struct {
 #define NUM_STAGES 6
 #define DECIM_FACTOR (1LL << NUM_STAGES)
 #define FFT 128
+#define MAX_CW_BW 500
 
 static bool ready = false;
 

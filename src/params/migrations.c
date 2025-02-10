@@ -12,7 +12,6 @@
 
 #include "db.h"
 #include "../cfg/digital_modes.h"
-// #include "band.h"
 
 #include <stdio.h>
 #include <stdlib.h>

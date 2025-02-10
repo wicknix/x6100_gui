@@ -17,7 +17,6 @@
 #include "msg.h"
 #include "msg_tiny.h"
 #include "dsp.h"
-#include "bands.h"
 #include "clock.h"
 #include "cw_tune_ui.h"
 #include "info.h"
@@ -74,7 +73,6 @@ static lv_obj_t     *tx_info;
 
 static void freq_shift(int16_t diff);
 static void next_freq_step(bool up);
-// static void change_band_setup();
 static void toggle_atu_enabled();
 
 // Observers functions
@@ -87,7 +85,6 @@ void mem_load(uint16_t id) {
     if (!cfg_memory_load(id)) {
         msg_update_text_fmt("Nothing to load for memory %i", id);
     }
-    // change_band_setup();
     if (id != MEM_BACKUP_ID) {
         msg_update_text_fmt("Loaded from memory %i", id);
     }
@@ -101,115 +98,11 @@ void mem_save(uint16_t id) {
     }
 }
 
-// bool digital_load(cfg_digital_type_t type, int8_t dir) {
-//     bool res = cfg_digital_load(dir, type);
-//     if (res) {
-//         // change_band_setup();
-//         msg_update_text_fmt("%s", cfg_digital_label_get());
-//     }
-//     return res;
-// }
-
-// static void change_band_setup() {
-//     if (params_bands_find(params_band_cur_freq_get())) {
-//         if (params.current_band.type != 0) {
-//             params.band_id = params.current_band.id;
-//         } else {
-//             params.band_id = -1;
-//         }
-//     } else {
-//         params.band_id = -1;
-//     }
-
-//     radio_vfo_set();
-//     radio_filters_setup();
-//     spectrum_min_max_reset();
-//     waterfall_min_max_reset();
-
-//     radio_load_atu();
-//
-//     pannel_visible();
-//     spectrum_clear();
-// }
-
 static void toggle_atu_enabled() {
     bool new_atu_enabled = !subject_get_int(cfg.atu_enabled.val);
     subject_set_int(cfg.atu_enabled.val, new_atu_enabled);
     voice_say_text_fmt("Auto tuner %s", new_atu_enabled ? "On" : "Off");
 }
-
-/* * */
-// static void freq_boundaries_update_cb(void *s, lv_msg_t *m) {
-//     x6100_vfo_t vfo = params_band_vfo_get();
-//     uint64_t    f = params_band_vfo_freq_get(vfo);
-//     uint16_t    mhz, khz, hz;
-//     uint32_t    half_width = 50000;
-//     uint32_t    color = subject_get_int(freq_lock) ? 0xBBBBBB : 0xFFFFFF;
-
-//     if (params.waterfall_zoom.x) {
-//         half_width /= params_current_mode_spectrum_factor_get();
-//     }
-
-//     split_freq(f - half_width, &mhz, &khz, &hz);
-//     lv_label_set_text_fmt(freq[0], "#%03X %i.%03i", color, mhz, khz);
-
-//     split_freq(f + half_width, &mhz, &khz, &hz);
-//     lv_label_set_text_fmt(freq[2], "#%03X %i.%03i", color, mhz, khz);
-// }
-
-// static void freq_update() {
-//     uint64_t    f;
-//     x6100_vfo_t vfo = params_band_vfo_get();
-//     uint32_t    color = freq_lock ? 0xBBBBBB : 0xFFFFFF;
-
-//     if (params_band_split_get() && radio_get_state() == RADIO_TX) {
-//         vfo = (vfo == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A;
-//     }
-
-//     f = params_band_vfo_freq_get(vfo);
-
-//     uint16_t    mhz, khz, hz;
-
-//     split_freq(f, &mhz, &khz, &hz);
-
-//     if (params.mag_freq.x) {
-//         if (mhz < 100) {
-//             msg_tiny_set_text_fmt("%i.%03i.%03i", mhz, khz, hz);
-//         } else {
-//             msg_tiny_set_text_fmt("%i.%03i", mhz, khz);
-//         }
-//     }
-
-//     if (params_band_split_get()) {
-//         uint16_t    mhz2, khz2, hz2;
-//         uint64_t    f2 = params_band_vfo_freq_get((vfo == X6100_VFO_A) ? X6100_VFO_B : X6100_VFO_A);
-
-//         split_freq(f2, &mhz2, &khz2, &hz2);
-
-//         lv_label_set_text_fmt(freq[1], "#%03X %i.%03i.%03i / %i.%03i.%03i", color, mhz, khz, hz, mhz2, khz2, hz2);
-//     } else {
-//         lv_label_set_text_fmt(freq[1], "#%03X %i.%03i.%03i", color, mhz, khz, hz);
-//     }
-//     freq_boundaries_update_cb(NULL, NULL);
-//     band_info_update(f);
-// }
-
-// static void check_cross_band(uint64_t freq, uint64_t prev_freq) {
-//     if (params_bands_find(freq)) {
-//         if (params.current_band.type != 0) {
-//             if (params.current_band.id != params.band_id) {
-//                 params_band_cur_freq_set(prev_freq);
-//                 bands_activate(&freq);
-//
-//                 pannel_visible();
-//             }
-//         } else {
-//             params.band_id = -1;
-//         }
-//     } else {
-//         params.band_id = -1;
-//     }
-// }
 
 static void next_freq_step(bool up) {
     uint16_t new_step = cfg_mode_change_freq_step(up);
@@ -461,7 +354,6 @@ static void change_mode(keypad_key_t key, keypad_state_t state) {
         }
     }
     subject_set_int(cfg_cur.mode, next_mode);
-    // main_screen_set_mode(&next_mode);
 }
 
 static void main_screen_keypad_cb(lv_event_t * e) {
@@ -565,7 +457,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                 voice_say_text_fmt("Split %s", new_split ? "On" : "Off");
 
                 spectrum_clear();
-                main_screen_band_set();
 
                 if (params.mag_info.x) {
                     msg_tiny_set_text_fmt("%s", info_params_vfo_label_get());
@@ -725,7 +616,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                     radio_toggle_vfo();
 
                     spectrum_clear();
-                    main_screen_band_set();
 
                     if (params.mag_info.x) {
                         msg_tiny_set_text_fmt("%s", info_params_vfo_label_get());
@@ -844,7 +734,6 @@ static void main_screen_hkey_cb(lv_event_t * e) {
                 radio_toggle_vfo();
 
                 spectrum_clear();
-                main_screen_band_set();
             }
             break;
 
@@ -855,7 +744,7 @@ static void main_screen_hkey_cb(lv_event_t * e) {
                 }
             } else if (hkey->state == HKEY_LONG) {
                 if (!band_lock) {
-                    bands_change(true);
+                    cfg_band_load_next(true);
                     dialog_send(EVENT_FREQ_UPDATE, NULL);
                 }
                 dialog_send(EVENT_BAND_UP, NULL);
@@ -869,7 +758,7 @@ static void main_screen_hkey_cb(lv_event_t * e) {
                 }
             } else if (hkey->state == HKEY_LONG) {
                 if (!band_lock) {
-                    bands_change(false);
+                    cfg_band_load_next(false);
                     dialog_send(EVENT_FREQ_UPDATE, NULL);
                 }
                 dialog_send(EVENT_BAND_DOWN, NULL);
@@ -1053,7 +942,7 @@ static void spectrum_key_cb(lv_event_t * e) {
 
         case KEYBOARD_PGUP:
             if (!band_lock) {
-                bands_change(true);
+                cfg_band_load_next(true);
                 dialog_send(EVENT_FREQ_UPDATE, NULL);
             }
             dialog_send(EVENT_BAND_UP, NULL);
@@ -1061,7 +950,7 @@ static void spectrum_key_cb(lv_event_t * e) {
 
         case KEYBOARD_PGDN:
             if (!band_lock) {
-                bands_change(false);
+                cfg_band_load_next(false);
                 dialog_send(EVENT_FREQ_UPDATE, NULL);
             }
             dialog_send(EVENT_BAND_DOWN, NULL);
@@ -1127,16 +1016,6 @@ void main_screen_lock_ab(bool lock) {
 }
 
 void main_screen_set_freq(uint64_t freq) {
-    if (params_bands_find(freq)) {
-        if (params.current_band.type != 0) {
-            if (params.current_band.id != params.band_id) {
-                // params_band_cur_freq_set(prev_freq);
-                bands_activate(&freq);
-                pannel_visible();
-            }
-        }
-    }
-
     subject_set_int(cfg_cur.fg_freq, freq);
     event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
 }
@@ -1213,8 +1092,6 @@ lv_obj_t * main_screen() {
     meter = meter_init(obj);
     tx_info = tx_info_init(obj);
 
-    main_screen_band_set();
-
     cw_tune_init(obj);
 
     msg_schedule_text_fmt("X6100 de R1CBU " VERSION);
@@ -1244,28 +1121,6 @@ void main_screen_notify_rx()
 {
     event_send(obj, EVENT_RADIO_RX, NULL);
 }
-
-void main_screen_band_set()
-{
-}
-
-
-// void main_screen_set_mode(void * arg) {
-//     if (!arg) {
-//         LV_LOG_WARN("arg is NULL");
-//     }
-//     x6100_mode_t next_mode = * (x6100_mode_t *) arg;
-//     subject_set_int(cfg_cur.mode, next_mode);
-//     // radio_set_mode(params_band_vfo_get(), next_mode);
-//     radio_filters_setup();
-
-//     pannel_visible();
-
-//     if (params.mag_info.x) {
-//         msg_tiny_set_text_fmt("%s", info_params_mode_label_get());
-//     }
-// }
-
 
 static void on_fg_freq_change(Subject *subj, void *user_data) {
     int32_t    f;
@@ -1304,7 +1159,6 @@ static void on_fg_freq_change(Subject *subj, void *user_data) {
     } else {
         lv_label_set_text_fmt(freq[1], "#%03X %i.%03i.%03i", color, mhz, khz, hz);
     }
-    // band_info_update(f);
 }
 
 static void update_freq_boundaries(Subject *subj, void *user_data) {

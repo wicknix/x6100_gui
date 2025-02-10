@@ -15,6 +15,7 @@
 #include "pubsub_ids.h"
 
 #include <errno.h>
+#include <stdlib.h>
 #include <pthread.h>
 
 static struct gps_data_t    gpsdata;

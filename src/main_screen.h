@@ -10,7 +10,6 @@
 
 #include "lvgl/lvgl.h"
 #include "params/params.h"
-#include "params/band.h"
 #include "cfg/digital_modes.h"
 
 #define MEM_HKEY_MAX_ID         9
@@ -25,8 +24,6 @@ lv_obj_t * main_screen();
 
 void main_screen_notify_tx();
 void main_screen_notify_rx();
-// void main_screen_notify_atu_update();
-void main_screen_band_set();
 
 void main_screen_keys_enable(bool value);
 void main_screen_start_app(press_action_t page_app);
@@ -41,8 +38,3 @@ void main_screen_set_freq(uint64_t f);
 
 void mem_load(uint16_t id);
 void mem_save(uint16_t id);
-
-// bool digital_load(cfg_digital_type_t type, int8_t dir);
-
-// Scheduler functions
-// void main_screen_set_mode(void *arg);

@@ -24,7 +24,6 @@
 #include "waterfall.h"
 #include "keypad.h"
 #include "params/params.h"
-#include "bands.h"
 #include "audio.h"
 #include "cw.h"
 #include "pannel.h"

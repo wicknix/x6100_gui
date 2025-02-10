@@ -19,7 +19,6 @@
 #include "util.h"
 #include "keyboard.h"
 #include "params/params.h"
-#include "bands.h"
 #include "info.h"
 #include "pannel.h"
 #include "main_screen.h"

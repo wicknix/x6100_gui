@@ -5,7 +5,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     styles.c spectrum.c radio.c dsp.cpp util.cpp
     waterfall.c rotary.c keyboard.c encoder.c
     events.c msg.c msg_tiny.c keypad.c
-    bands.c hkey.c clock.c info.c
+    hkey.c clock.c info.c
     meter.c band_info.c tx_info.c
     audio.c mfk.cpp cw.cpp cw_decoder.c pannel.c
     rtty.c screenshot.c backlight.c gps.c cat.c
@@ -53,10 +53,3 @@ ft8
 
 # target_compile_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined  -fno-omit-frame-pointer -fno-sanitize-recover)
 # target_link_options(${PROJECT_NAME} PRIVATE -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -fno-sanitize-recover -static-libasan -static-libubsan)
-
-# target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
-# target_link_libraries(${PROJECT_NAME} PRIVATE lvgl lvgl::drivers)
-# target_link_libraries(${PROJECT_NAME} PRIVATE aether_x6100_control)
-# target_link_libraries(${PROJECT_NAME} PRIVATE liquid m)
-# target_link_libraries(${PROJECT_NAME} PRIVATE RHVoice RHVoice_core RHVoice_audio)
-# target_link_libraries(${PROJECT_NAME} PRIVATE ft8)

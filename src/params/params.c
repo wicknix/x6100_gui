@@ -71,38 +71,10 @@ params_t params = {
     .spmode                 = { .x = false,             .name = "spmode",           .voice = "Speaker mode" },
     .freq_accel             = { .x = FREQ_ACCEL_LITE,   .name = "freq_accel",       .voice = "Frequency acceleration" },
 
-    // .dnf                    = false,
-    // .dnf_center             = 1000,
-    // .dnf_width              = 50,
-    // .nb                     = false,
-    // .nb_level               = 10,
-    // .nb_width               = 10,
-    // .nr                     = false,
-    // .nr_level               = 0,
-
-    // .agc_hang               = false,
-    // .agc_knee               = -60,
-    // .agc_slope              = 6,
-
     .vox                    = false,
     .vox_ag                 = 0,
     .vox_delay              = 100,
     .vox_gain               = 50,
-
-    // .key_speed              = 15,
-    // .key_mode               = x6100_key_manual,
-    // .iambic_mode            = x6100_iambic_a,
-    // .key_vol                = 10,
-    // .key_train              = false,
-    // .qsk_time               = 100,
-    // .key_ratio              = 30,
-
-    // .cw_decoder             = true,
-    // .cw_tune                = false,
-    // .cw_decoder_snr         = 5.0f,
-    // .cw_decoder_snr_gist    = 1.0f,
-    // .cw_decoder_peak_beta   = 0.10f,
-    // .cw_decoder_noise_beta  = 0.80f,
 
     .cw_encoder_period      = 10,
     .voice_msg_period       = 10,
@@ -113,9 +85,6 @@ params_t params = {
     .rtty_reverse           = false,
     .rtty_bits              = 5,
     .rtty_snr               = 3.0f,
-
-    // .swrscan_linear         = true,
-    // .swrscan_span           = 200000,
 
     .ft8_show_all           = true,
     .ft8_protocol           = FTX_PROTOCOL_FT8,
@@ -151,8 +120,6 @@ params_t params = {
     .wifi_enabled           = { .x = false, .name="wifi_enabled" },
 
     .theme                  = { .x = THEME_SIMPLE, .name="theme"},
-
-    .current_band           = { .id = BAND_NOT_LOADED },
 };
 
 static sqlite3_stmt     *write_mode_stmt;
@@ -224,11 +191,7 @@ static bool params_load() {
         const int64_t   l = sqlite3_column_int64(stmt, 1);
         const char      *t = sqlite3_column_text(stmt, 1);
 
-        if (false) {
-        // if (strcmp(name, "band") == 0) {
-        //     params.band_id = i;
-        //     // params_band_load(i);
-        } else if (strcmp(name, "sql") == 0) {
+        if (strcmp(name, "sql") == 0) {
             params.sql = i;
         } else if (strcmp(name, "pwr") == 0) {
             params.pwr = i * 0.1f;
@@ -242,20 +205,6 @@ static bool params_load() {
             params.spectrum_peak_hold = i;
         } else if (strcmp(name, "spectrum_peak_speed") == 0) {
             params.spectrum_peak_speed = i * 0.1f;
-        // } else if (strcmp(name, "key_speed") == 0) {
-        //     params.key_speed = i;
-        // } else if (strcmp(name, "key_mode") == 0) {
-        //     params.key_mode = i;
-        // } else if (strcmp(name, "iambic_mode") == 0) {
-        //     params.iambic_mode = i;
-        // } else if (strcmp(name, "key_vol") == 0) {
-        //     params.key_vol = i;
-        // } else if (strcmp(name, "key_train") == 0) {
-        //     params.key_train = i;
-        // } else if (strcmp(name, "qsk_time") == 0) {
-        //     params.qsk_time = i;
-        // } else if (strcmp(name, "key_ratio") == 0) {
-        //     params.key_ratio = i;
         } else if (strcmp(name, "mic") == 0) {
             params.mic = i;
         } else if (strcmp(name, "hmic") == 0) {
@@ -264,38 +213,6 @@ static bool params_load() {
             params.imic = i;
         } else if (strcmp(name, "charger") == 0) {
             params.charger = i;
-        // } else if (strcmp(name, "dnf") == 0) {
-        //     params.dnf = i;
-        // } else if (strcmp(name, "dnf_center") == 0) {
-        //     params.dnf_center = i;
-        // } else if (strcmp(name, "dnf_width") == 0) {
-        //     params.dnf_width = i;
-        // } else if (strcmp(name, "nb") == 0) {
-        //     params.nb = i;
-        // } else if (strcmp(name, "nb_level") == 0) {
-        //     params.nb_level = i;
-        // } else if (strcmp(name, "nb_width") == 0) {
-        //     params.nb_width = i;
-        // } else if (strcmp(name, "nr") == 0) {
-        //     params.nr = i;
-        // } else if (strcmp(name, "nr_level") == 0) {
-        //     params.nr_level = i;
-        // } else if (strcmp(name, "agc_hang") == 0) {
-        //     params.agc_hang = i;
-        // } else if (strcmp(name, "agc_knee") == 0) {
-        //     params.agc_knee = i;
-        // } else if (strcmp(name, "agc_slope") == 0) {
-        //     params.agc_slope = i;
-        // } else if (strcmp(name, "cw_decoder") == 0) {
-        //     params.cw_decoder = i;
-        // } else if (strcmp(name, "cw_tune") == 0) {
-        //     params.cw_tune = i;
-        // } else if (strcmp(name, "cw_decoder_snr_2") == 0) {
-        //     params.cw_decoder_snr = i * 0.1f;
-        // } else if (strcmp(name, "cw_decoder_peak_beta") == 0) {
-        //     params.cw_decoder_peak_beta = i * 0.01f;
-        // } else if (strcmp(name, "cw_decoder_noise_beta") == 0) {
-        //     params.cw_decoder_noise_beta = i * 0.01f;
         } else if (strcmp(name, "cw_encoder_period") == 0) {
             params.cw_encoder_period = i;
         } else if (strcmp(name, "voice_msg_period") == 0) {
@@ -338,10 +255,6 @@ static bool params_load() {
             params.clock_power_timeout = i;
         } else if (strcmp(name, "clock_tx_timeout") == 0) {
             params.clock_tx_timeout = i;
-        // } else if (strcmp(name, "swrscan_linear") == 0) {
-        //     params.swrscan_linear = i;
-        // } else if (strcmp(name, "swrscan_span") == 0) {
-        //     params.swrscan_span = i;
         } else if (strcmp(name, "ft8_show_all") == 0) {
             params.ft8_show_all = i;
         } else if (strcmp(name, "ft8_protocol") == 0) {
@@ -451,38 +364,11 @@ static void params_save() {
     if (params.dirty.spectrum_peak_hold)    params_write_int("spectrum_peak_hold", params.spectrum_peak_hold, &params.dirty.spectrum_peak_hold);
     if (params.dirty.spectrum_peak_speed)   params_write_int("spectrum_peak_speed", params.spectrum_peak_speed * 10, &params.dirty.spectrum_peak_speed);
 
-    // if (params.dirty.key_speed)             params_write_int("key_speed", params.key_speed, &params.dirty.key_speed);
-    // if (params.dirty.key_mode)              params_write_int("key_mode", params.key_mode, &params.dirty.key_mode);
-    // if (params.dirty.iambic_mode)           params_write_int("iambic_mode", params.iambic_mode, &params.dirty.iambic_mode);
-    // if (params.dirty.key_vol)               params_write_int("key_vol", params.key_vol, &params.dirty.key_vol);
-    // if (params.dirty.key_train)             params_write_int("key_train", params.key_train, &params.dirty.key_train);
-    // if (params.dirty.qsk_time)              params_write_int("qsk_time", params.qsk_time, &params.dirty.qsk_time);
-    // if (params.dirty.key_ratio)             params_write_int("key_ratio", params.key_ratio, &params.dirty.key_ratio);
-
     if (params.dirty.mic)                   params_write_int("mic", params.mic, &params.dirty.mic);
     if (params.dirty.hmic)                  params_write_int("hmic", params.hmic, &params.dirty.hmic);
     if (params.dirty.imic)                  params_write_int("imic", params.imic, &params.dirty.imic);
 
     if (params.dirty.charger)               params_write_int("charger", params.charger, &params.dirty.charger);
-
-    // if (params.dirty.dnf)                   params_write_int("dnf", params.dnf, &params.dirty.dnf);
-    // if (params.dirty.dnf_center)            params_write_int("dnf_center", params.dnf_center, &params.dirty.dnf_center);
-    // if (params.dirty.dnf_width)             params_write_int("dnf_width", params.dnf_width, &params.dirty.dnf_width);
-    // if (params.dirty.nb)                    params_write_int("nb", params.nb, &params.dirty.nb);
-    // if (params.dirty.nb_level)              params_write_int("nb_level", params.nb_level, &params.dirty.nb_level);
-    // if (params.dirty.nb_width)              params_write_int("nb_width", params.nb_width, &params.dirty.nb_width);
-    // if (params.dirty.nr)                    params_write_int("nr", params.nr, &params.dirty.nr);
-    // if (params.dirty.nr_level)              params_write_int("nr_level", params.nr_level, &params.dirty.nr_level);
-
-    // if (params.dirty.agc_hang)              params_write_int("agc_hang", params.agc_hang, &params.dirty.agc_hang);
-    // if (params.dirty.agc_knee)              params_write_int("agc_knee", params.agc_knee, &params.dirty.agc_knee);
-    // if (params.dirty.agc_slope)             params_write_int("agc_slope", params.agc_slope, &params.dirty.agc_slope);
-
-    // if (params.dirty.cw_decoder)            params_write_int("cw_decoder", params.cw_decoder, &params.dirty.cw_decoder);
-    // if (params.dirty.cw_tune)               params_write_int("cw_tune", params.cw_tune, &params.dirty.cw_tune);
-    // if (params.dirty.cw_decoder_snr)        params_write_int("cw_decoder_snr_2", params.cw_decoder_snr * 10, &params.dirty.cw_decoder_snr);
-    // if (params.dirty.cw_decoder_peak_beta)  params_write_int("cw_decoder_peak_beta", params.cw_decoder_peak_beta * 100, &params.dirty.cw_decoder_peak_beta);
-    // if (params.dirty.cw_decoder_noise_beta) params_write_int("cw_decoder_noise_beta", params.cw_decoder_noise_beta * 100, &params.dirty.cw_decoder_noise_beta);
 
     if (params.dirty.cw_encoder_period)     params_write_int("cw_encoder_period", params.cw_encoder_period, &params.dirty.cw_encoder_period);
     if (params.dirty.voice_msg_period)      params_write_int("voice_msg_period", params.voice_msg_period, &params.dirty.voice_msg_period);
@@ -512,9 +398,6 @@ static void params_save() {
     if (params.dirty.clock_time_timeout)    params_write_int("clock_time_timeout", params.clock_time_timeout, &params.dirty.clock_time_timeout);
     if (params.dirty.clock_power_timeout)   params_write_int("clock_power_timeout", params.clock_power_timeout, &params.dirty.clock_power_timeout);
     if (params.dirty.clock_tx_timeout)      params_write_int("clock_tx_timeout", params.clock_tx_timeout, &params.dirty.clock_tx_timeout);
-
-    // if (params.dirty.swrscan_linear)        params_write_int("swrscan_linear", params.swrscan_linear, &params.dirty.swrscan_linear);
-    // if (params.dirty.swrscan_span)          params_write_int("swrscan_span", params.swrscan_span, &params.dirty.swrscan_span);
 
     if (params.dirty.ft8_show_all)          params_write_int("ft8_show_all", params.ft8_show_all, &params.dirty.ft8_show_all);
     if (params.dirty.ft8_protocol)          params_write_int("ft8_protocol", params.ft8_protocol, &params.dirty.ft8_protocol);
@@ -626,20 +509,6 @@ void params_init() {
 
     pthread_create(&thread, NULL, params_thread, NULL);
     pthread_detach(thread);
-    // params_modulation_setup(&params_lo_offset_get);
-}
-
-int32_t params_lo_offset_get() {
-    // x6100_mode_t mode = radio_current_mode();
-    // int32_t key_tone = subject_get_int(cfg.key_tone.val);
-    // switch (mode) {
-    //     case x6100_mode_cw:
-    //         return -key_tone;
-    //     case x6100_mode_cwr:
-    //         return key_tone;
-    //     default:
-    //         return 0;
-    // }
 }
 
 void params_msg_cw_load() {
@@ -708,101 +577,6 @@ void params_msg_cw_delete(uint32_t id) {
     sqlite3_bind_int(stmt, 1, id);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
-}
-
-band_t * params_bands_find_all(uint64_t freq, int32_t half_width, uint16_t *count) {
-    uint64_t    left = freq - half_width;
-    uint64_t    right = freq + half_width;
-    band_t      *res = NULL;
-    uint16_t    n = 0;
-
-    sqlite3_bind_int64(bands_find_all_stmt, 1, left);
-    sqlite3_bind_int64(bands_find_all_stmt, 2, right);
-    sqlite3_bind_int64(bands_find_all_stmt, 3, left);
-    sqlite3_bind_int64(bands_find_all_stmt, 4, right);
-    sqlite3_bind_int64(bands_find_all_stmt, 5, left);
-    sqlite3_bind_int64(bands_find_all_stmt, 6, right);
-
-    while (sqlite3_step(bands_find_all_stmt) != SQLITE_DONE) {
-        n++;
-        res = realloc(res, sizeof(band_t) * n);
-
-        band_t *current = &res[n - 1];
-
-        current->id = sqlite3_column_int(bands_find_all_stmt, 0);
-        current->name = strdup(sqlite3_column_text(bands_find_all_stmt, 1));
-        current->start_freq = sqlite3_column_int64(bands_find_all_stmt, 2);
-        current->stop_freq = sqlite3_column_int64(bands_find_all_stmt, 3);
-        current->type = sqlite3_column_int(bands_find_all_stmt, 4);
-    }
-
-    sqlite3_reset(bands_find_all_stmt);
-    sqlite3_clear_bindings(bands_find_all_stmt);
-
-    *count = n;
-    return res;
-}
-
-bool params_bands_find(uint64_t freq) {
-    if ((params.current_band.id != BAND_NOT_LOADED) && (params.current_band.start_freq <= freq) && (params.current_band.stop_freq >= freq)) {
-        return false;
-    }
-    bool res = false;
-
-    sqlite3_bind_int64(bands_find_stmt, 1, freq);
-
-    if (sqlite3_step(bands_find_stmt) == SQLITE_ROW) {
-        if (params.current_band.name)
-            free(params.current_band.name);
-
-        params.current_band.id = sqlite3_column_int(bands_find_stmt, 0);
-        params.current_band.name = strdup(sqlite3_column_text(bands_find_stmt, 1));
-        params.current_band.start_freq = sqlite3_column_int64(bands_find_stmt, 2);
-        params.current_band.stop_freq = sqlite3_column_int64(bands_find_stmt, 3);
-        params.current_band.type = sqlite3_column_int(bands_find_stmt, 4);
-
-        res = true;
-    }
-
-    sqlite3_reset(bands_find_stmt);
-    sqlite3_clear_bindings(bands_find_stmt);
-
-    return res;
-}
-
-bool params_bands_find_next(uint64_t freq, bool up) {
-    bool            res = false;
-    sqlite3_stmt    *stmt;
-    int             rc;
-
-    if (up) {
-        rc = sqlite3_prepare_v2(db, "SELECT id,name,start_freq,stop_freq,type FROM bands WHERE (? < start_freq AND type != 0) ORDER BY start_freq ASC", -1, &stmt, 0);
-    } else {
-        rc = sqlite3_prepare_v2(db, "SELECT id,name,start_freq,stop_freq,type FROM bands WHERE (? > stop_freq AND type != 0) ORDER BY start_freq DESC", -1, &stmt, 0);
-    }
-
-    if (rc != SQLITE_OK) {
-        return false;
-    }
-
-    sqlite3_bind_int64(stmt, 1, freq);
-
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        if (params.current_band.name)
-            free(params.current_band.name);
-
-        params.current_band.id = sqlite3_column_int(stmt, 0);
-        params.current_band.name = strdup(sqlite3_column_text(stmt, 1));
-        params.current_band.start_freq = sqlite3_column_int64(stmt, 2);
-        params.current_band.stop_freq = sqlite3_column_int64(stmt, 3);
-        params.current_band.type = sqlite3_column_int(stmt, 4);
-
-        res = true;
-    }
-
-    sqlite3_finalize(stmt);
-
-    return res;
 }
 
 void params_bool_set(params_bool_t *var, bool x) {
