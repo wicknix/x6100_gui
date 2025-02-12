@@ -28,6 +28,7 @@ extern "C" {
     #include "scheduler.h"
     #include "spectrum.h"
     #include "waterfall.h"
+    #include "tx_info.h"
 
     #include "lvgl/lvgl.h"
     #include <aether_radio/x6100_control/low/gpio.h>
@@ -630,16 +631,43 @@ static Frame *process_req(const Frame *req) {
             break;
 
         case C_RD_SQSM:
-            if ((data_size == 1) && (req->data[0] == 2)) {
+            if (data_size == 1) {
+                static float alc, pwr, swr;
+                static uint8_t msg_id;
+                tx_info_refresh(&msg_id, &alc, &pwr, &swr);
                 uint8_t val;
-                int16_t db = meter_get_raw_db();
-                if (db < S9) {
-                    val = (db - S9) * 2.1f + 120;
-                } else {
-                    val = (db - S9) * 2 + 120;
+                switch (req->data[0]) {
+                    case 0x02: // S-meter
+                        {
+                            int16_t db = meter_get_raw_db();
+                            if (db < S9) {
+                                val = (db - S9) * 2.1f + 120;
+                            } else {
+                                val = (db - S9) * 2 + 120;
+                            }
+                            resp->set_payload_len(4);
+                            to_bcd_be(&resp->data[1], val, 3);
+                        }
+                        break;
+                    case 0x11:  // Power
+                        val = -pwr * pwr + 35 * pwr;
+                        resp->set_payload_len(4);
+                        to_bcd_be(&resp->data[1], val, 3);
+                        break;
+                    case 0x12:  // SWR
+                        val = -21 * swr * swr + 134 * swr - 122;
+                        resp->set_payload_len(4);
+                        to_bcd_be(&resp->data[1], val, 3);
+                        break;
+                    case 0x13:  // ALC
+                        val = alc * 120 / 10;
+                        resp->set_payload_len(4);
+                        to_bcd_be(&resp->data[1], val, 3);
+                        break;
+                    default:
+                        resp->set_code(CODE_NG);
+                        break;
                 }
-                resp->set_payload_len(4);
-                to_bcd_be(&resp->data[1], val, 3);
             } else {
                 resp->set_code(CODE_NG);
             }
