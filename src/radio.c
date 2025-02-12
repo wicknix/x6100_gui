@@ -79,7 +79,7 @@ static void recover_processing_audio_inputs() {
     x6100_control_modem_set(true);
     usleep(50000);
     x6100_control_modem_set(false);
-    x6100_control_txpwr_set(params.pwr);
+    x6100_control_txpwr_set(subject_get_float(cfg.pwr.val));
     x6100_control_vfo_mode_set(vfo, subject_get_int(cfg_cur.mode));
     radio_unlock();
 }
@@ -397,6 +397,8 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
     subject_add_observer_and_call(cfg_cur.filter.high, on_high_filter_change, NULL);
 
     subject_add_observer_and_call(cfg.vol.val, on_change_uint8, x6100_control_rxvol_set);
+    subject_add_observer_and_call(cfg.sql.val, on_change_uint8, x6100_control_sql_set);
+    subject_add_observer_and_call(cfg.pwr.val, on_change_float, x6100_control_txpwr_set);
     subject_add_observer_and_call(cfg.key_tone.val, on_change_uint16, x6100_control_key_tone_set);
     subject_add_observer_and_call(cfg.atu_enabled.val, on_change_uint8, x6100_control_atu_set);
     subject_add_observer_and_call(cfg_cur.atu->network, on_atu_network_change, NULL);
@@ -422,8 +424,6 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
     subject_add_observer_and_call(cfg.nr.val, on_change_uint8, x6100_control_nr_set);
     subject_add_observer_and_call(cfg.nr_level.val, on_change_uint8, x6100_control_nr_level_set);
 
-    x6100_control_sql_set(params.sql);
-    x6100_control_txpwr_set(params.pwr);
     x6100_control_charger_set(params.charger == RADIO_CHARGER_ON);
     x6100_control_bias_drive_set(params.bias_drive);
     x6100_control_bias_final_set(params.bias_final);
@@ -528,18 +528,6 @@ bool radio_change_spmode(int16_t df) {
     return params.spmode.x;
 }
 
-uint16_t radio_change_sql(int16_t df) {
-    if (df == 0) {
-        return params.sql;
-    }
-
-    uint8_t new_val = limit(params.sql + df, 0, 100);
-
-    CHANGE_PARAM(new_val, params.sql, params.dirty.sql, x6100_control_sql_set);
-
-    return params.sql;
-}
-
 void radio_start_atu() {
     if (state == RADIO_RX) {
         state = RADIO_ATU_START;
@@ -564,27 +552,13 @@ bool radio_start_swrscan() {
 void radio_stop_swrscan() {
     if (state == RADIO_SWRSCAN) {
         x6100_control_swrscan_set(false);
-        x6100_control_txpwr_set(params.pwr);
+        x6100_control_txpwr_set(subject_get_float(cfg.pwr.val));
         state = RADIO_RX;
     }
 }
 
 void radio_set_pwr(float d) {
     WITH_RADIO_LOCK(x6100_control_txpwr_set(d));
-}
-
-float radio_change_pwr(int16_t d) {
-    if (d == 0) {
-        return params.pwr;
-    }
-
-    float new_val = params.pwr + d * 0.1f;
-    new_val = LV_MIN(10.0f, new_val);
-    new_val = LV_MAX(0.1f, new_val);
-
-    CHANGE_PARAM(new_val, params.pwr, params.dirty.pwr, x6100_control_txpwr_set);
-
-    return params.pwr;
 }
 
 x6100_mic_sel_t radio_change_mic(int16_t d) {

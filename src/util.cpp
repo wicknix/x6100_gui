@@ -139,6 +139,25 @@ uint64_t from_bcd(const uint8_t bcd_data[], uint8_t len) {
     return data;
 }
 
+uint64_t from_bcd_be(const uint8_t bcd_data[], uint8_t len) {
+    int16_t     i = 0;
+    uint64_t    data = 0;
+
+    if (len & 1) {
+        data = bcd_data[0] & 0x0F;
+        i++;
+    }
+
+    for (; i <= (len / 2); i++) {
+        data *= 10;
+        data += bcd_data[i] >> 4;
+        data *= 10;
+        data += bcd_data[i] & 0x0F;
+    }
+
+    return data;
+}
+
 
 int loop_modes(int16_t dir, int mode, uint64_t modes, int max_val) {
     while (1) {

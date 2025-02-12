@@ -219,8 +219,11 @@ static int init_params_cfg(sqlite3 *db) {
     cfg_params_init(db);
 
     /* Fill configuration */
-    cfg.key_tone    = (cfg_item_t){.val = subject_create_int(700), .db_name = "key_tone"};
     cfg.vol         = (cfg_item_t){.val = subject_create_int(20), .db_name = "vol"};
+    cfg.sql         = (cfg_item_t){.val = subject_create_int(0), .db_name = "sql"};
+    cfg.pwr         = (cfg_item_t){.val = subject_create_float(5.0f), .db_scale=0.1f, .db_name = "pwr"};
+
+    cfg.key_tone    = (cfg_item_t){.val = subject_create_int(700), .db_name = "key_tone"};
     cfg.band_id     = (cfg_item_t){.val = subject_create_int(5), .db_name = "band"};
     cfg.ant_id      = (cfg_item_t){.val = subject_create_int(1), .db_name = "ant"};
     cfg.atu_enabled = (cfg_item_t){.val = subject_create_int(false), .db_name = "atu"};

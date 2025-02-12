@@ -495,6 +495,8 @@ static struct {
 void buttons_init(lv_obj_t *parent) {
 
     btn_vol.subj = cfg.vol.val;
+    btn_sql.subj = cfg.sql.val;
+    btn_tx_pwr.subj = cfg.pwr.val;
     btn_rfg.subj = cfg_cur.band->rfg.val;
 
     btn_flt_low.subj  = cfg_cur.filter.low;
@@ -776,7 +778,7 @@ static char * vol_label_getter() {
 
 static char * sql_label_getter() {
     static char buf[16];
-    sprintf(buf, "Squelch:\n%zu", params.sql);
+    sprintf(buf, "Squelch:\n%zu", subject_get_int(cfg.sql.val));
     return buf;
 }
 
@@ -788,7 +790,7 @@ static char * rfg_label_getter() {
 
 static char * tx_power_label_getter() {
     static char buf[20];
-    sprintf(buf, "TX power:\n%0.1f W", params.pwr);
+    sprintf(buf, "TX power:\n%0.1f W", subject_get_float(cfg.pwr.val));
     return buf;
 }
 

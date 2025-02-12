@@ -56,7 +56,6 @@ params_t params = {
     .clock_power_timeout    = 3,
     .clock_tx_timeout       = 1,
 
-    .pwr                    = 5.0f,
     .mic                    = x6100_mic_auto,
     .hmic                   = 20,
     .imic                   = 30,
@@ -191,11 +190,7 @@ static bool params_load() {
         const int64_t   l = sqlite3_column_int64(stmt, 1);
         const char      *t = sqlite3_column_text(stmt, 1);
 
-        if (strcmp(name, "sql") == 0) {
-            params.sql = i;
-        } else if (strcmp(name, "pwr") == 0) {
-            params.pwr = i * 0.1f;
-        } else if (strcmp(name, "spectrum_beta") == 0) {
+        if (strcmp(name, "spectrum_beta") == 0) {
             params.spectrum_beta = i;
         } else if (strcmp(name, "spectrum_filled") == 0) {
             params.spectrum_filled = i;
@@ -355,8 +350,6 @@ static void params_save() {
     }
 
     if (params.dirty.band)                  params_write_int("band", params.band_id, &params.dirty.band);
-    if (params.dirty.sql)                   params_write_int("sql", params.sql, &params.dirty.sql);
-    if (params.dirty.pwr)                   params_write_int("pwr", params.pwr * 10, &params.dirty.pwr);
 
     if (params.dirty.spectrum_beta)         params_write_int("spectrum_beta", params.spectrum_beta, &params.dirty.spectrum_beta);
     if (params.dirty.spectrum_filled)       params_write_int("spectrum_filled", params.spectrum_filled, &params.dirty.spectrum_filled);

@@ -10,8 +10,11 @@
 
 /* configuration structs. Should contain same types (for correct initialization) */
 typedef struct {
-    cfg_item_t key_tone;
     cfg_item_t vol;
+    cfg_item_t sql;
+    cfg_item_t pwr;
+
+    cfg_item_t key_tone;
     cfg_item_t band_id;
     cfg_item_t ant_id;
     cfg_item_t atu_enabled;

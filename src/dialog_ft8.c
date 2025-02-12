@@ -485,7 +485,7 @@ static void destruct_cb() {
     main_screen_lock_freq(false);
     main_screen_lock_band(false);
 
-    radio_set_pwr(params.pwr);
+    radio_set_pwr(subject_get_float(cfg.pwr.val));
     adif_log_close(ft8_log);
 }
 
@@ -702,13 +702,13 @@ static void construct_cb(lv_obj_t *parent) {
     /* Logger */
     ft8_log = adif_log_init("/mnt/ft_log.adi");
 
-    if (params.pwr > MAX_PWR) {
+    if (subject_get_float(cfg.pwr.val) > MAX_PWR) {
         radio_set_pwr(MAX_PWR);
         msg_schedule_text_fmt("Power was limited to %0.0fW", MAX_PWR);
     }
 
     // setup gain offset
-    float target_pwr = LV_MIN(params.pwr, MAX_PWR);
+    float target_pwr = LV_MIN(subject_get_float(cfg.pwr.val), MAX_PWR);
     base_gain_offset = -16.4f + log10f(target_pwr) * 10.0f;
 }
 
@@ -1019,7 +1019,7 @@ static float get_correction() {
     float pwr, alc;
 
     if (tx_info_refresh(&msg_id, &alc, &pwr, NULL)) {
-        float target_pwr = LV_MIN(params.pwr, MAX_PWR);
+        float target_pwr = LV_MIN(subject_get_float(cfg.pwr.val), MAX_PWR);
         if (alc > 0.5f) {
             correction = log10f(log10f(11.1f - alc)) * 20.0f - 0.38f;
         } else if (target_pwr - pwr > 0.5f) {

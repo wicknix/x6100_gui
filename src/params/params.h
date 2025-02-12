@@ -78,8 +78,6 @@ typedef struct {
     /* radio */
 
     int16_t             band_id;
-    uint8_t             sql;
-    float               pwr;
     x6100_mic_sel_t     mic;
     uint8_t             hmic;
     uint8_t             imic;
@@ -200,8 +198,6 @@ typedef struct {
         bool    brightness_buttons;
 
         bool    band;
-        bool    sql;
-        bool    pwr;
         bool    mic;
         bool    hmic;
         bool    imic;

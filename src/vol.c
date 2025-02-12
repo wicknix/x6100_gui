@@ -53,7 +53,9 @@ void vol_update(int16_t diff, bool voice) {
             break;
 
         case VOL_SQL:
-            x = radio_change_sql(diff);
+            x = subject_get_int(cfg.sql.val);
+            x = limit(x + diff, 0, 100);
+            subject_set_int(cfg.sql.val, x);
             msg_update_text_fmt("#%3X Voice SQL: %i", color, x);
 
             if (diff) {
@@ -123,7 +125,11 @@ void vol_update(int16_t diff, bool voice) {
             break;
 
         case VOL_PWR:
-            f = radio_change_pwr(diff);
+            f = subject_get_float(cfg.pwr.val);
+            f += diff * 0.1f;
+            f = LV_MIN(10.0f, f);
+            f = LV_MAX(0.1f, f);
+            subject_set_float(cfg.pwr.val, f);
             msg_update_text_fmt("#%3X Power: %0.1f W", color, f);
 
             if (diff) {

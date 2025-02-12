@@ -15,6 +15,9 @@
 #include "cfg/subjects.h"
 #include "util.h"
 
+#include <mutex>
+#include <vector>
+
 extern "C" {
     // #include "cfg/cfg.h"
     #include "events.h"
@@ -117,12 +120,179 @@ extern "C" {
 
 #define FRAME_ADD_LEN 5 /* Header and end len */
 
-typedef struct {
-    Subject *subj;
-    int32_t   val;
-} subj_set_cmd_t;
+struct VFOData {
+    int32_t      freq;
+    x6100_mode_t mode;
+    x6100_agc_t  agc;
+    x6100_pre_t  pre;
+    x6100_att_t  att;
+};
 
-static int fd;
+struct RemoteState {
+    VFOData A;
+    VFOData B;
+    VFOData *fg = &A;
+    VFOData *bg = &B;
+    x6100_vfo_t vfo;
+
+    VFOData *get_for_vfo(x6100_vfo_t vfo) {
+        if (vfo == X6100_VFO_A) return &A;
+        else return &B;
+    };
+    void change_vfo() {
+        VFOData *temp;
+        if (vfo == X6100_VFO_A) {
+            vfo = X6100_VFO_B;
+        } else {
+            vfo = X6100_VFO_A;
+        }
+        temp = fg;
+        fg = bg;
+        bg = temp;
+    };
+};
+
+
+struct Frame {
+    uint8_t dst_addr;
+    uint8_t src_addr;
+    uint8_t command;
+    std::vector<uint8_t> data;
+
+    Frame(uint8_t dst, uint8_t src, uint8_t command): dst_addr(dst), src_addr(src), command(command) {};
+
+    Frame(const char * data, const uint16_t len): data(len - FRAME_ADD_LEN - 1) {
+        dst_addr = data[2];
+        src_addr = data[3];
+        command = data[4];
+        std::copy(&data[5], &data[len - 1], this->data.begin());
+    };
+
+    Frame(const Frame *req) {
+        // Swap address
+        dst_addr = req->src_addr;
+        src_addr = LOCAL_ADDRESS;
+        command  = req->command;
+        data = req->data;
+    }
+
+    void log(const char *prefix=nullptr) const {
+        char buf[512];
+        char *buf_ptr = buf;
+        buf_ptr += sprintf(buf_ptr, "[%02X:%02X:", FRAME_PRE, FRAME_PRE);
+        buf_ptr += sprintf(buf_ptr, "%02X:", dst_addr);
+        buf_ptr += sprintf(buf_ptr, "%02X]-", src_addr);
+        buf_ptr += sprintf(buf_ptr, "[%02X:", command);
+        uint16_t remain_len = data.size();
+        size_t i = 0;
+        while (remain_len) {
+            buf_ptr += sprintf(buf_ptr, "%02X:", data[i++]);
+            remain_len--;
+        }
+        buf_ptr += sprintf(buf_ptr - 1, "]-[%02X]", FRAME_END);
+        *(buf_ptr - 1) = '\0';
+        if (prefix) {
+            LV_LOG_USER("%s\t: %s\t(Len %i)", prefix, buf, data.size() + FRAME_ADD_LEN + 1);
+        } else {
+            LV_LOG_USER("%s\t(Len %i)", buf, data.size() + FRAME_ADD_LEN + 1);
+        }
+    }
+
+    void set_code(uint8_t code) {
+        set_payload_len(1);
+        command = code;
+    }
+
+    void set_payload_len(size_t len) {
+        data.resize(len - 1);
+    }
+
+    size_t get_len() const {
+        return data.size() + 1 + FRAME_ADD_LEN;
+    }
+
+    std::vector<char> dump() const {
+        std::vector<char> buf(data.size() + 1 + FRAME_ADD_LEN);
+        buf[0] = FRAME_PRE;
+        buf[1] = FRAME_PRE;
+        buf[2] = dst_addr;
+        buf[3] = src_addr;
+        buf[4] = command;
+        std::copy(data.begin(), data.end(), buf.begin() + 5);
+        *--buf.end() = FRAME_END;
+        return buf;
+    }
+};
+
+
+class Connection {
+    int        fd;
+    char       buf[1024];
+    const char header[2] = {FRAME_PRE, FRAME_PRE};
+    size_t     start;
+    size_t     end;
+
+  protected:
+    void write_buf(const char *buf, size_t len) {
+        ssize_t l;
+        while (len) {
+            l = write(fd, buf, len);
+            if (l < 0) {
+                perror("Error during writing message");
+                return;
+            }
+            len -= l;
+        }
+    }
+
+  public:
+    Connection(int fd) : fd(fd) {}
+    Frame *feed() {
+        if (start) {
+            end -= start;
+            memmove(buf, buf + start, end);
+            start = 0;
+        }
+        while (1) {
+            int res = read(fd, buf + end, sizeof(buf) - end);
+            if (res < 0) {
+                return nullptr;
+            }
+            if (res > 0) {
+                end += res;
+            }
+            char *frame_start = (char *)memmem(buf, end, header, sizeof(header));
+            if (frame_start == NULL) {
+                // Move last byte to begin
+                buf[0] = buf[end - 1];
+                end    = 1;
+                return nullptr;
+            }
+            if (frame_start != buf) {
+                end = end + buf - frame_start;
+                memmove(buf, frame_start, end);
+            }
+            if (end >= FRAME_ADD_LEN) {
+                char *end_pos = (char *)memchr(buf + FRAME_ADD_LEN, FRAME_END, end - FRAME_ADD_LEN);
+                if (end_pos) {
+                    size_t frame_len = end_pos - buf + 1;
+                    start            = frame_len;
+                    return new Frame(buf, frame_len);
+                }
+            }
+        }
+    }
+
+    void send(const char * data, size_t len) {
+        write_buf(data, len);
+    }
+    void send(const Frame * frame) {
+        auto data = frame->dump();
+        write_buf(data.data(), frame->get_len());
+    }
+};
+
+static Connection *conn;
 
 typedef struct {
     uint8_t start[2];
@@ -133,139 +303,12 @@ typedef struct {
     uint8_t args[1500];
 } frame_t;
 
-static pthread_mutex_t uart_mutex = PTHREAD_MUTEX_INITIALIZER;
+static std::mutex uart_mutex;
+static RemoteState * remote_state;
 
-static int32_t fg_freq;
-
-static void schedule_change_fg_freq(int32_t freq);
 static void send_waterfall_data();
 
 static void on_fg_freq_change(Subject *s, void *user_data);
-
-static void frame_repr(frame_t *frame, uint16_t len, char *buf_ptr) {
-    buf_ptr += sprintf(buf_ptr, "[%02X:", frame->start[0]);
-    buf_ptr += sprintf(buf_ptr, "%02X:", frame->start[1]);
-    buf_ptr += sprintf(buf_ptr, "%02X:", frame->dst_addr);
-    buf_ptr += sprintf(buf_ptr, "%02X]-", frame->src_addr);
-    buf_ptr += sprintf(buf_ptr, "[%02X:", frame->command);
-    uint16_t remain_len = len - 1;
-    if (remain_len) {
-        buf_ptr += sprintf(buf_ptr, "%02X:", frame->subcommand);
-        remain_len--;
-    }
-    size_t i = 0;
-    while (remain_len) {
-        buf_ptr += sprintf(buf_ptr, "%02X:", frame->args[i++]);
-        remain_len--;
-    }
-    buf_ptr += sprintf(buf_ptr - 1, "]-[%02X]", FRAME_END);
-    *(buf_ptr - 1) = '\0';
-}
-
-static void log_msg(frame_t *frame, uint16_t len) {
-    char buf[512];
-    frame_repr(frame, len, buf);
-    LV_LOG_USER("Cmd %s (Len %i)", buf, len);
-}
-
-static bool frame_get(frame_t *frame_ptr, uint16_t *len) {
-    char *data_ptr = reinterpret_cast<char*>(frame_ptr);
-    while (true) {
-        int res = read(fd, data_ptr + *len, sizeof(*frame_ptr) - *len);
-        if ((res <= 0) && (*len == 0))
-            return false;
-
-        if (res > 0)
-            *len += res;
-        char *frame_start = strchr(data_ptr, FRAME_PRE);
-        if (frame_start == NULL) {
-            *len = 0;
-            return false;
-        }
-        if (frame_start != data_ptr) {
-            *len = *len + data_ptr - frame_start;
-            memmove(data_ptr, frame_start, *len);
-        }
-
-        if (*len >= 2) {
-            if (frame_ptr->start[1] != FRAME_PRE) {
-                *len -= 2;
-                continue;
-            }
-            if (*len <= FRAME_ADD_LEN) {
-                continue;
-            }
-            for (size_t i = FRAME_ADD_LEN; i < *len; i++) {
-                if (data_ptr[i] == FRAME_END) {
-                    *len = i;
-                    return true;
-                }
-            }
-        }
-    }
-}
-
-static void swap_addresses(frame_t *frame) {
-    // set dst address from sender, src address is fixed - 0xA4
-    frame->dst_addr = frame->src_addr;
-    frame->src_addr = LOCAL_ADDRESS;
-}
-
-static void send_frame(frame_t *frame, uint16_t len) {
-    char   *frame_ptr;
-    ssize_t l;
-    frame_ptr = (char *)frame;
-    len += FRAME_ADD_LEN;
-    frame_ptr[len - 1] = FRAME_END;
-    while (len) {
-        l = write(fd, (const char *)frame_ptr, len);
-        if (l < 0) {
-            perror("Error during writing message");
-            return;
-        }
-        len -= l;
-    }
-}
-
-static void send_code(frame_t *frame, uint8_t code) {
-    frame->command = code;
-    send_frame(frame, 1);
-}
-
-static void set_subject_value(void *arg) {
-    subj_set_cmd_t *set_cmd = (subj_set_cmd_t *)arg;
-    subject_set_int(set_cmd->subj, set_cmd->val);
-}
-
-static void schedule_change_fg_freq(int32_t new_freq) {
-    if (new_freq != subject_get_int(cfg_cur.fg_freq)) {
-        fg_freq                = new_freq;
-        subj_set_cmd_t set_cmd = {.subj = cfg_cur.fg_freq, .val = new_freq};
-        scheduler_put(set_subject_value, &set_cmd, sizeof(set_cmd));
-        // scheduler_put(set_freq, &new_freq, sizeof(new_freq));
-    }
-}
-
-static void schedule_change_fg_mode(x6100_mode_t mode) {
-    if (mode != subject_get_int(cfg_cur.mode)) {
-        subj_set_cmd_t set_cmd = {.subj = cfg_cur.mode, .val = mode};
-        scheduler_put(set_subject_value, &set_cmd, sizeof(set_cmd));
-    }
-}
-
-static void schedule_change_fg_att(x6100_att_t att) {
-    if (att != subject_get_int(cfg_cur.att)) {
-        subj_set_cmd_t set_cmd = {.subj = cfg_cur.att, .val = att};
-        scheduler_put(set_subject_value, &set_cmd, sizeof(set_cmd));
-    }
-}
-
-static void schedule_change_subj(Subject *subj, int32_t val) {
-    if (val != subject_get_int(subj)) {
-        subj_set_cmd_t set_cmd = {.subj = subj, .val = val};
-        scheduler_put(set_subject_value, &set_cmd, sizeof(set_cmd));
-    }
-}
 
 static void set_vfo(void *arg) {
     if (!arg) {
@@ -273,12 +316,11 @@ static void set_vfo(void *arg) {
     }
     x6100_vfo_t vfo = *(x6100_vfo_t *)arg;
     subject_set_int(cfg_cur.band->vfo.val, vfo);
-    // lv_event_send(lv_scr_act(), EVENT_SCREEN_UPDATE, NULL);
 }
 
-static x6100_mode_t ci_mode_2_x_mode(uint8_t mode, uint8_t *dig_mode) {
+static x6100_mode_t ci_mode_2_x_mode(uint8_t mode, bool data_mode=false) {
     x6100_mode_t r_mode;
-    bool         data_mode = (dig_mode != NULL) && *dig_mode;
+
     switch (mode) {
         case M_LSB:
             r_mode = data_mode ? x6100_mode_lsb_dig : x6100_mode_lsb;
@@ -356,21 +398,55 @@ static uint8_t get_if_bandwidth() {
     }
 }
 
-static void send_unsupported(frame_t *frame, uint16_t len) {
-    char buf[512];
-    frame_repr(frame, len, buf);
-    LV_LOG_WARN("Unsupported %s (Len %i)", buf, len);
-    send_code(frame, CODE_NG);
+static int32_t freq_step_from_ci(uint8_t val) {
+    switch (val) {
+        case 0x00:
+            return 10;
+        case 0x01:
+            return 100;
+        case 0x02:
+            return 500;
+        case 0x03:
+            return 1000;
+        case 0x04:
+            return 5000;
+    }
+    return 500;
+
 }
 
-static void frame_parse(frame_t *frame, uint16_t len) {
+static uint8_t freq_step_to_ci(int32_t val) {
+    switch (val) {
+        case 1 ... 10:
+            return 0x00;
+        case 100:
+            return 0x01;
+        case 500:
+            return 0x02;
+        case 1000:
+            return 0x03;
+        case 5000:
+            return 0x04;
+    }
+    return 0x02;
+}
+
+static void set_unsupported(const Frame *req, Frame *resp) {
+    req->log("unsupported");
+    resp->set_code(CODE_NG);
+}
+
+static Frame *process_req(const Frame *req) {
+    auto resp = new Frame(req);
+
     int32_t        new_freq;
     x6100_vfo_t    cur_vfo    = (x6100_vfo_t)subject_get_int(cfg_cur.band->vfo.val);
     int32_t        cur_freq   = subject_get_int(cfg_cur.fg_freq);
     x6100_mode_t   cur_mode   = (x6100_mode_t)subject_get_int(cfg_cur.mode);
     x6100_vfo_t    target_vfo = cur_vfo;
-    subj_set_cmd_t set_cmd;
     uint8_t        vfo_id;
+
+    size_t data_size = req->data.size();
 
     struct vfo_params *vfo_params[2];
     if (cur_vfo == X6100_VFO_A) {
@@ -381,100 +457,319 @@ static void frame_parse(frame_t *frame, uint16_t len) {
         vfo_params[1] = &cfg_cur.band->vfo_a;
     }
 
-#if 1
-    log_msg(frame, len);
+#if 0
+    req->log("req");
 #endif
 
-    // echo input frame
-    send_frame(frame, len);
-    swap_addresses(frame);
-
-    switch (frame->command) {
+    switch (req->command) {
         case C_SND_FREQ:
-            schedule_change_fg_freq(from_bcd(&frame->subcommand, 10));
-            send_code(frame, CODE_OK);
+            if (data_size == 5) {
+                remote_state->fg->freq = from_bcd(req->data.data(), 10);
+                subject_set_int(cfg_cur.fg_freq, remote_state->fg->freq);
+                resp->set_code(CODE_OK);
+            } else {
+                set_unsupported(req, resp);
+            }
             break;
+
         case C_RD_FREQ:
-            to_bcd(&frame->subcommand, cur_freq, 10);
+            resp->set_payload_len(6);
             // bcd len - 5 bytes
-            send_frame(frame, 6);
+            to_bcd(resp->data.data(), cur_freq, 10);
             break;
 
         case C_RD_MODE:
             {
-                uint8_t v         = x_mode_2_ci_mode(cur_mode);
-                frame->subcommand = v;
-                frame->args[0]    = v;
-                send_frame(frame, 3);
+                uint8_t v = x_mode_2_ci_mode(cur_mode);
+                resp->set_payload_len(3);
+                resp->data[0] = v;
+                resp->data[1] = v;
             }
             break;
 
         case C_SET_FREQ:
-            schedule_change_fg_freq(from_bcd(&frame->subcommand, 10));
-            send_code(frame, CODE_OK);
+            if (data_size == 5) {
+                remote_state->fg->freq = from_bcd(req->data.data(), 10);
+                subject_set_int(cfg_cur.fg_freq, remote_state->fg->freq);
+                resp->set_code(CODE_OK);
+            } else {
+                set_unsupported(req, resp);
+            }
             break;
 
-        case C_SET_MODE:;
-            schedule_change_fg_mode(ci_mode_2_x_mode(frame->subcommand, NULL));
-            send_code(frame, CODE_OK);
+        case C_SET_MODE:
+            if (data_size == 1) {
+                remote_state->fg->mode = ci_mode_2_x_mode(req->data[0]);
+                subject_set_int(cfg_cur.mode, remote_state->fg->mode);
+                resp->set_code(CODE_OK);
+            } else {
+                set_unsupported(req, resp);
+            }
+            break;
+
+        case C_SET_VFO:
+            if (data_size == 1) {
+                x6100_vfo_t new_vfo;
+                switch (req->data[0]) {
+                    case S_VFOA:
+                        if (cur_vfo != X6100_VFO_A) {
+                            new_vfo           = X6100_VFO_A;
+                            remote_state->vfo = new_vfo;
+                            subject_set_int(cfg_cur.band->vfo.val, new_vfo);
+                        }
+
+                        resp->set_code(CODE_OK);
+                        break;
+
+                    case S_VFOB:
+                        if (cur_vfo != X6100_VFO_B) {
+                            new_vfo           = X6100_VFO_B;
+                            remote_state->vfo = new_vfo;
+                            subject_set_int(cfg_cur.band->vfo.val, new_vfo);
+                        }
+                        resp->set_code(CODE_OK);
+                        break;
+
+                    default:
+                        set_unsupported(req, resp);
+                        break;
+                }
+            } else {
+                set_unsupported(req, resp);
+            }
             break;
 
         case C_CTL_SPLT:
-            if (frame->subcommand == FRAME_END) {
-                frame->subcommand = subject_get_int(cfg_cur.band->split.val);
-                send_frame(frame, 2);
+            if (data_size == 0) {
+                resp->set_payload_len(2);
+                resp->data[0] = subject_get_int(cfg_cur.band->split.val);
+            } else if (data_size == 1) {
+                subject_set_int(cfg_cur.band->split.val, req->data[0]);
+                resp->set_code(CODE_OK);
             } else {
-                send_unsupported(frame, len);
+                set_unsupported(req, resp);
+            }
+            break;
+
+        case C_SET_TS:
+            if (data_size == 0) {
+                resp->set_payload_len(2);
+                resp->data[0] = freq_step_to_ci(subject_get_int(cfg_cur.freq_step));
+            } else if (data_size == 1) {
+                subject_set_int(cfg_cur.freq_step, freq_step_from_ci(resp->data[0]));
+                resp->set_code(CODE_OK);
+            } else {
+                set_unsupported(req, resp);
             }
             break;
 
         case C_CTL_ATT:
-            if (frame->subcommand == FRAME_END) {
-                frame->subcommand = subject_get_int(cfg_cur.att) * 0x20;
-                send_frame(frame, 2);
-            } else if (frame->args[0] == FRAME_END) {
-                x6100_att_t new_att = (x6100_att_t)frame->subcommand;
-                schedule_change_fg_att(new_att);
-                send_code(frame, CODE_OK);
+            if (data_size == 0) {
+                resp->set_payload_len(2);
+                resp->data[0] = subject_get_int(cfg_cur.att) * 0x20;
+            } else if (data_size == 1) {
+                remote_state->fg->att = (x6100_att_t)req->data[0];
+                subject_set_int(cfg_cur.att, remote_state->fg->att);
+                resp->set_code(CODE_OK);
             } else {
-                send_unsupported(frame, len);
+                set_unsupported(req, resp);
             }
             break;
 
         case C_CTL_LVL:
-            if (frame->subcommand == 1) {
-                to_bcd_be(frame->args, subject_get_int(cfg.vol.val) * 255 / 55, 3);
-                send_frame(frame, 4);
-            } else if (frame->subcommand == 2) {
-                to_bcd_be(frame->args, subject_get_int(cfg_cur.band->rfg.val) * 255 / 100, 3);
-                send_frame(frame, 4);
-            } else if (frame->subcommand == 3) {
-                to_bcd_be(frame->args, params.sql * 255 / 100, 3);
-                send_frame(frame, 4);
-            } else if (frame->subcommand == 0x0a) {
-                to_bcd_be(frame->args, params.pwr * 255 / 10, 3);
-                send_frame(frame, 4);
+            if (data_size >= 1) {
+                switch(req->data[0]) {
+                    case 0x01:
+                        // VOL
+                        if (data_size == 1) {
+                            resp->set_payload_len(4);
+                            to_bcd_be(&resp->data[1], subject_get_int(cfg.vol.val) * 255 / 55, 3);
+                        } else if (data_size == 3) {
+                            subject_set_int(cfg.vol.val, from_bcd_be(&req->data[1], 3) * 55 / 255);
+                        }
+                        break;
+                    case 0x02:
+                        // RFG
+                        if (data_size == 1) {
+                            resp->set_payload_len(4);
+                            to_bcd_be(&resp->data[1], subject_get_int(cfg_cur.band->rfg.val) * 255 / 100, 3);
+                        } else if (data_size == 3) {
+                            subject_set_int(cfg_cur.band->rfg.val, from_bcd_be(&req->data[1], 3) * 100 / 255);
+                        }
+                        break;
+                    case 0x03:
+                        // Squelch
+                        if (data_size == 1) {
+                            resp->set_payload_len(4);
+                            to_bcd_be(&resp->data[1], subject_get_int(cfg.sql.val) * 255 / 100, 3);
+                        } else if (data_size == 3) {
+                            subject_set_int(cfg.sql.val, from_bcd_be(&req->data[1], 3) * 100 / 255);
+                        }
+                        break;
+                    case 0x0a:
+                        // PWR
+                        if (data_size == 1) {
+                            resp->set_payload_len(4);
+                            to_bcd_be(&resp->data[1], subject_get_float(cfg.pwr.val) * 255 / 10, 3);
+                        } else if (data_size == 3) {
+                            subject_set_float(cfg.pwr.val, (from_bcd_be(&req->data[1], 3) * 100 / 255) / 10.0f);
+                        }
+                        break;
+                    case 0x15:
+                        // Monitor level
+                        resp->set_payload_len(4);
+                        to_bcd_be(&resp->data[1], params.moni * 255 / 100, 3);
+                        break;
+                    default:
+                        set_unsupported(req, resp);
+                        break;
+                }
             } else {
-                send_unsupported(frame, len);
+                set_unsupported(req, resp);
+            }
+            break;
+
+        case C_RD_SQSM:
+            if ((data_size == 1) && (req->data[0] == 2)) {
+                uint8_t val;
+                int16_t db = meter_get_raw_db();
+                if (db < S9) {
+                    val = (db - S9) * 2.1f + 120;
+                } else {
+                    val = (db - S9) * 2 + 120;
+                }
+                resp->set_payload_len(4);
+                to_bcd_be(&resp->data[1], val, 3);
+            } else {
+                resp->set_code(CODE_NG);
             }
             break;
 
         case C_CTL_FUNC:
-            if (frame->subcommand == 2) {
-                frame->args[0] = subject_get_int(cfg_cur.pre);
-                send_frame(frame, 3);
+            if ((data_size == 1) || (data_size == 2)) {
+                switch (req->data[0]) {
+                    case 0x02:
+                        // PRE
+                        if (data_size == 1) {
+                            resp->set_payload_len(3);
+                            resp->data[1] = subject_get_int(cfg_cur.pre);
+                        } else {
+                            subject_set_int(cfg_cur.pre, req->data[1] > 0);
+                            resp->set_code(CODE_OK);
+                        }
+                        break;
+                    case 0x22:
+                        // NB
+                        if (data_size == 1) {
+                            resp->set_payload_len(3);
+                            resp->data[1] = subject_get_int(cfg.nb.val);
+                        } else {
+                            subject_set_int(cfg.nb.val, req->data[1]);
+                            resp->set_code(CODE_OK);
+                        }
+                        break;
+                    case 0x40:
+                        // NR
+                        if (data_size == 1) {
+                            resp->set_payload_len(3);
+                            resp->data[1] = subject_get_int(cfg.nr.val);
+                        } else {
+                            subject_set_int(cfg.nr.val, req->data[1]);
+                            resp->set_code(CODE_OK);
+                        }
+                        break;
+                    case 0x44:
+                        // COMP
+                        if (data_size == 1) {
+                            resp->set_payload_len(3);
+                            resp->data[1] = 0x00;
+                        } else {
+                            // COMP set is not suported yet
+                            resp->set_code(CODE_OK);
+                        }
+                        break;
+                    case 0x45:
+                        // Monitor [MONI] On/off
+                        resp->set_code(CODE_NG);
+                        break;
+                    case 0x46:
+                        // VOX
+                        if (data_size == 1) {
+                            resp->set_payload_len(3);
+                            resp->data[1] = 0x00;
+                        } else {
+                            // VOX set is not suported yet
+                            resp->set_code(CODE_OK);
+                        }
+                        break;
+                    case 0x5D:
+                        // Tone squelch function
+                        resp->set_code(CODE_NG);
+                        break;
+                    default:
+                        set_unsupported(req, resp);
+                }
             } else {
-                send_unsupported(frame, len);
+                set_unsupported(req, resp);
+            }
+            break;
+
+        case C_RD_TRXID:
+            if ((data_size == 1) && (req->data[0] == 0)) {
+                resp->set_payload_len(3);
+                resp->data[1] = 0xA4;
+            }
+            break;
+
+        case C_CTL_MEM:
+            // TODO: Implement another options
+            if (data_size == 1) {
+                switch (req->data[0]) {
+                    case MEM_IF_FW:
+                        resp->set_payload_len(3);
+                        resp->data[1] = get_if_bandwidth();
+                        break;
+
+                    case MEM_DM_FG:
+                        resp->set_payload_len(5);
+                        resp->data[1] = x_mode_2_ci_mode(cur_mode);
+                        // data mode
+                        resp->data[2] = (cur_mode == x6100_mode_lsb_dig) || (cur_mode == x6100_mode_usb_dig);
+                        // filter group
+                        resp->data[3] = 0;
+                        break;
+
+                    default:
+                        set_unsupported(req, resp);
+                        break;
+                }
+            } else {
+                switch (req->data[0]) {
+                    case MEM_LOCK:  // Various controls for icom, unsupported
+                        resp->set_code(CODE_NG);
+                        break;
+                    case MEM_DM_FG:
+                        {
+                            x6100_mode_t new_mode  = ci_mode_2_x_mode(req->data[1], req->data[2]);
+                            remote_state->fg->mode = new_mode;
+                            subject_set_int(cfg_cur.mode, new_mode);
+                            resp->set_code(CODE_OK);
+                        }
+                        break;
+                    default:
+                        set_unsupported(req, resp);
+                        break;
+                }
             }
             break;
 
         case C_CTL_PTT:
-            if (frame->subcommand == 0x00) {
-                if (frame->args[0] == FRAME_END) {
-                    frame->args[0] = (radio_get_state() == RADIO_RX) ? 0 : 1;
-                    send_frame(frame, 3);
+            if ((data_size >= 1) && (req->data[0] == 0x00)) {
+                if (data_size == 1) {
+                    resp->set_payload_len(3);
+                    resp->data[1] = (radio_get_state() == RADIO_RX) ? 0 : 1;
                 } else {
-                    switch (frame->args[0]) {
+                    switch (req->data[1]) {
                         case 0:
                             radio_set_ptt(false);
                             break;
@@ -483,233 +778,178 @@ static void frame_parse(frame_t *frame, uint16_t len) {
                             radio_set_ptt(true);
                             break;
                     }
-                    frame->args[0] = CODE_OK;
-                    send_frame(frame, 3);
+                    resp->set_payload_len(3);
+                    resp->data[1] = CODE_OK;
                 }
             }
             break;
 
-        case C_SET_VFO:;
-            x6100_vfo_t new_vfo;
-            switch (frame->subcommand) {
-                case S_VFOA:
-                    if (cur_vfo != X6100_VFO_A) {
-                        new_vfo = X6100_VFO_A;
-                        scheduler_put(set_vfo, &new_vfo, sizeof(new_vfo));
-                    }
-
-                    send_code(frame, CODE_OK);
-                    break;
-
-                case S_VFOB:
-                    if (cur_vfo != X6100_VFO_B) {
-                        new_vfo = X6100_VFO_A;
-                        scheduler_put(set_vfo, &new_vfo, sizeof(new_vfo));
-                    }
-                    send_code(frame, CODE_OK);
-                    break;
-
-                default:
-                    send_unsupported(frame, len);
-                    break;
-            }
-            break;
-
-        case C_RD_SQSM:
-            if (frame->subcommand == 2) {
-                uint8_t val;
-                int16_t db = meter_get_raw_db();
-                if (db < S9) {
-                    val = (db - S9) * 2.1f + 120;
-                } else {
-                    val = (db - S9) * 2 + 120;
-                }
-                to_bcd_be(frame->args, val, 3);
-                send_frame(frame, 4);
-            } else {
-                send_code(frame, CODE_NG);
-            }
-            break;
-
-        case C_SEND_SEL_FREQ:;
-            vfo_id = frame->subcommand > 0;
-            if (frame->args[0] == FRAME_END) {
+        case C_SEND_SEL_FREQ:
+            if (data_size == 1) {
+                vfo_id = req->data[0] > 0;
                 int32_t freq = subject_get_int(vfo_params[vfo_id]->freq.val);
-                to_bcd(frame->args, freq, 10);
-                send_frame(frame, 7);
+                resp->set_payload_len(7);
+                to_bcd(&resp->data[1], freq, 10);
+            } else if (data_size == 6) {
+                vfo_id = req->data[0] > 0;
+                int32_t freq                                         = from_bcd(&req->data[1], 10);
+                remote_state->get_for_vfo((x6100_vfo_t)vfo_id)->freq = freq;
+                subject_set_int(vfo_params[vfo_id]->freq.val, freq);
+                resp->set_code(CODE_OK);
             } else {
-                int32_t freq = from_bcd(frame->args, 10);
-                schedule_change_subj(vfo_params[vfo_id]->freq.val, freq);
-                send_code(frame, CODE_OK);
+                set_unsupported(req, resp);
             }
             break;
 
-        case C_SEND_SEL_MODE:;
-            vfo_id = frame->subcommand > 0;
-            if (frame->args[0] == FRAME_END) {
-                uint8_t v      = x_mode_2_ci_mode((x6100_mode_t)subject_get_int(vfo_params[vfo_id]->mode.val));
-                frame->args[0] = v;
-                frame->args[1] = 0;
-                frame->args[2] = 1;
-                send_frame(frame, 5);
+        case C_SEND_SEL_MODE:
+            if (data_size == 1) {
+                vfo_id = req->data[0] > 0;
+                uint8_t v = x_mode_2_ci_mode((x6100_mode_t)subject_get_int(vfo_params[vfo_id]->mode.val));
+                resp->set_payload_len(5);
+                resp->data[1] = v;
+                resp->data[2] = 0;
+                resp->data[3] = 1;
+            } else if (data_size == 3) {
+                vfo_id = req->data[0] > 0;
+                x6100_mode_t new_mode                                = ci_mode_2_x_mode(req->data[1], req->data[2]);
+                remote_state->get_for_vfo((x6100_vfo_t)vfo_id)->mode = new_mode;
+                subject_set_int(vfo_params[vfo_id]->mode.val, new_mode);
+                resp->set_code(CODE_OK);
             } else {
-                x6100_mode_t new_mode = ci_mode_2_x_mode(frame->args[0], &frame->args[1]);
-                schedule_change_subj(vfo_params[vfo_id]->mode.val, new_mode);
-                send_code(frame, CODE_OK);
-            }
-            break;
-
-        case C_CTL_MEM:
-            // TODO: Implement another options
-            if (frame->args[0] == FRAME_END) {
-                switch (frame->subcommand) {
-                    case MEM_IF_FW:
-                        frame->args[0] = get_if_bandwidth();
-                        send_frame(frame, 3);
-                        break;
-
-                    case MEM_DM_FG:
-                        frame->args[0] = x_mode_2_ci_mode(cur_mode);
-                        // data mode
-                        frame->args[1] = (cur_mode == x6100_mode_lsb_dig) || (cur_mode == x6100_mode_usb_dig);
-                        // filter group
-                        frame->args[2] = 0;
-                        send_frame(frame, 5);
-                        break;
-                    default:
-                        send_unsupported(frame, len);
-                        break;
-                }
-            } else {
-                switch (frame->subcommand) {
-                    case MEM_DM_FG:
-                        {
-                            x6100_mode_t new_mode = ci_mode_2_x_mode(frame->args[0], &frame->args[1]);
-                            schedule_change_subj(cfg_cur.mode, new_mode);
-                            send_code(frame, CODE_OK);
-                        }
-                        break;
-                    default:
-                        send_unsupported(frame, len);
-                        break;
-                }
-            }
-            break;
-
-        case C_RD_TRXID:
-            if (frame->subcommand == 0) {
-                frame->args[0] = 0xA4;
-                send_frame(frame, 3);
+                set_unsupported(req, resp);
             }
             break;
 
         case C_CTL_SCP:
-            if (frame->subcommand == 0x10) {
-                // Send/read the Scope ON/OFF status
-                if (frame->args[0] == FRAME_END) {
-                    frame->args[0] = 1;
-                    send_frame(frame, 3);
-                } else {
-                    send_frame(frame, 2);
+            if (data_size >= 1) {
+                switch (req->data[0]) {
+                    case 0x10:  // Send/read the Scope ON/OFF status
+                        if (data_size == 1) {
+                            resp->set_payload_len(3);
+                            resp->data[1] = 1;
+                        } else {
+                            resp->set_payload_len(2);
+                        }
+                        break;
+                    case 0x11:  // Send/read the Scope wave data output*4
+                        if (data_size == 1) {
+                            resp->set_payload_len(3);
+                            resp->data[1] = 1;
+                        } else {
+                            resp->set_payload_len(2);
+                        }
+                        break;
+                    case 0x13:  // Single/Dual scope setting
+                        resp->set_code(CODE_NG);
+                        break;
+                    case 0x14:  // Send/read the Scope Center mode or Fixed mode setting
+                        if (data_size == 1) {
+                            // Report center mode
+                            resp->set_payload_len(4);
+                            resp->data[1] = 0;
+                            resp->data[2] = 0;
+                        } else {
+                            resp->set_payload_len(2);
+                        }
+                        break;
+                    case 0x15:  // Scope span settings
+                        if (req->data[2] == FRAME_END) {
+                            // Span +- 50kHz
+                            resp->set_payload_len(8);
+                            to_bcd(&resp->data[1] + 1, 50000, 10);
+                        } else {
+                            resp->set_payload_len(2);
+                        }
+                        break;
+                    case 0x17:  // Scope hold function
+                        resp->set_code(CODE_NG);
+                        break;
+                    case 0x19:
+                        resp->set_payload_len(6);
+                        resp->data[1] = 0;
+                        resp->data[2] = 0;
+                        resp->data[3] = 0;
+                        resp->data[4] = 0;
+                        break;
+                    case 0x1A:
+                        // Sweep speed setting
+                        resp->set_code(CODE_NG);
+                        break;
+                    default:
+                        set_unsupported(req, resp);
+                        break;
                 }
-            } else if (frame->subcommand == 0x11) {
-                // Send/read the Scope wave data output*4
-                if (frame->args[0] == FRAME_END) {
-                    frame->args[0] = 1;
-                    send_frame(frame, 3);
-                } else {
-                    send_frame(frame, 2);
-                }
-            } else if (frame->subcommand == 0x14) {
-                // Send/read the Scope Center mode or Fixed mode setting
-                if (frame->args[0] == FRAME_END) {
-                    // Report center mode
-                    frame->args[0] = 0;
-                    frame->args[1] = 0;
-                    send_frame(frame, 4);
-                } else {
-                    send_frame(frame, 2);
-                }
-            } else if (frame->subcommand == 0x15) {
-                // Scope span settings
-                if (frame->args[1] == FRAME_END) {
-                    // Span +- 50kHz
-                    to_bcd(frame->args + 1, 50000, 10);
-                    send_frame(frame, 8);
-                } else {
-                    send_frame(frame, 2);
-                }
-            } else if (frame->subcommand == 0x19) {
-                frame->args[0] = 0;
-                frame->args[1] = 0;
-                frame->args[2] = 0;
-                frame->args[3] = 0;
-                send_frame(frame, 6);
             } else {
-                send_unsupported(frame, len);
+                set_unsupported(req, resp);
             }
             break;
 
         default:
-            send_unsupported(frame, len);
+            set_unsupported(req, resp);
             break;
     }
     // send_waterfall_data();
+    return resp;
 }
 
 static uint8_t counter = 0;
 
-static void send_waterfall_data() {
-    frame_t frame;
-    counter++;
-    if (counter < 10) {
-        return;
-    }
-    counter          = 0;
-    uint8_t *data    = (uint8_t *)malloc(1024);
-    frame.dst_addr   = 0x00;
-    frame.src_addr   = LOCAL_ADDRESS;
-    frame.command    = C_CTL_SCP;
-    frame.subcommand = 0;
-    uint8_t i        = 0;
-    // main
-    frame.args[i++] = 0;
-    // SequenceNumber[01-11]
-    frame.args[i++] = 1;
-    // TotalSeqneuceSize[01=LAN, 11=USB]
-    frame.args[i++] = 1;
-    // Center/Fixed (for lan radio)  [00=cent, 01=fixed]
-    frame.args[i++] = 0;
-    // Center freq
-    to_bcd(frame.args + i, subject_get_int(cfg_cur.fg_freq), 10);
-    i += 5;
-    // Span
-    to_bcd(frame.args + i, 50000, 10);
-    i += 5;
-    // Range information 00 = In range, 01 = Out of range
-    frame.args[i++] = 0;
-    // FFT data
-    // printf("%u\n", i);
-    size_t c;
-    for (c = 0; c < 300; c++) {
-        frame.args[i + c] = c % 160;
-    }
-    // printf("%u, %u\n", i, c);
-    send_frame(&frame, i + c + 3);
-    // printf("len: %u\n", i+c);
-    free(data);
-}
+// static void send_waterfall_data() {
+//     frame_t frame;
+//     counter++;
+//     if (counter < 10) {
+//         return;
+//     }
+//     counter          = 0;
+//     uint8_t *data    = (uint8_t *)malloc(1024);
+//     frame.dst_addr   = 0x00;
+//     frame.src_addr   = LOCAL_ADDRESS;
+//     frame.command    = C_CTL_SCP;
+//     frame.subcommand = 0;
+//     uint8_t i        = 0;
+//     // main
+//     frame.args[i++] = 0;
+//     // SequenceNumber[01-11]
+//     frame.args[i++] = 1;
+//     // TotalSeqneuceSize[01=LAN, 11=USB]
+//     frame.args[i++] = 1;
+//     // Center/Fixed (for lan radio)  [00=cent, 01=fixed]
+//     frame.args[i++] = 0;
+//     // Center freq
+//     to_bcd(frame.args + i, subject_get_int(cfg_cur.fg_freq), 10);
+//     i += 5;
+//     // Span
+//     to_bcd(frame.args + i, 50000, 10);
+//     i += 5;
+//     // Range information 00 = In range, 01 = Out of range
+//     frame.args[i++] = 0;
+//     // FFT data
+//     // printf("%u\n", i);
+//     size_t c;
+//     for (c = 0; c < 300; c++) {
+//         frame.args[i + c] = c % 160;
+//     }
+//     // printf("%u, %u\n", i, c);
+//     send_frame(&frame, i + c + 3);
+//     // printf("len: %u\n", i+c);
+//     free(data);
+// }
 
 static void *cat_thread(void *arg) {
-    frame_t frame;
     while (true) {
-        uint16_t len = 0;
-        pthread_mutex_lock(&uart_mutex);
-        if (frame_get(&frame, &len)) {
-            frame_parse(&frame, len - FRAME_ADD_LEN + 1);
-            pthread_mutex_unlock(&uart_mutex);
-        } else {
-            pthread_mutex_unlock(&uart_mutex);
+        bool new_frame = false;
+        {
+            const std::lock_guard<std::mutex> lock(uart_mutex);
+            const Frame *req = conn->feed();
+            if (req) {
+                new_frame = true;
+                conn->send(req);
+                auto resp = process_req(req);
+                // resp->log("resp");
+                conn->send(resp);
+            }
+        }
+        if (!new_frame) {
             sleep_usec(100000);
         }
     }
@@ -720,17 +960,17 @@ void cat_init() {
 
     x6100_gpio_set(x6100_pin_usb, 1); /* USB -> CAT */
 
-    fd = open("/dev/ttyS2", O_RDWR | O_NONBLOCK | O_NOCTTY);
+    int fd = open("/dev/ttyS2", O_RDWR | O_NONBLOCK | O_NOCTTY);
 
     if (fd > 0) {
         struct termios attr;
 
         tcgetattr(fd, &attr);
 
-        cfsetispeed(&attr, B19200);
-        cfsetospeed(&attr, B19200);
-        // cfsetispeed(&attr, B115200);
-        // cfsetospeed(&attr, B115200);
+        // cfsetispeed(&attr, B19200);
+        // cfsetospeed(&attr, B19200);
+        cfsetispeed(&attr, B115200);
+        cfsetospeed(&attr, B115200);
         cfmakeraw(&attr);
 
         if (tcsetattr(fd, 0, &attr) < 0) {
@@ -740,37 +980,31 @@ void cat_init() {
     } else {
         LV_LOG_ERROR("UART open");
     }
-    printf("cat initialized, %i\n", fd);
 
-    fg_freq = subject_get_int(cfg_cur.fg_freq);
+    conn = new Connection(fd);
+
+    remote_state = new RemoteState();
+
     subject_add_observer(cfg_cur.fg_freq, on_fg_freq_change, NULL);
 
     /* * */
-
     pthread_t thread;
 
     pthread_create(&thread, NULL, cat_thread, NULL);
     pthread_detach(thread);
 }
 
-static void init_egress_frame(frame_t *frame) {
-    frame->start[0] = FRAME_PRE;
-    frame->start[1] = FRAME_PRE;
-    frame->dst_addr = '\0';
-    frame->src_addr = LOCAL_ADDRESS;
-}
-
 static void on_fg_freq_change(Subject *s, void *user_data) {
     int32_t new_freq = subject_get_int(s);
-    if (new_freq != fg_freq) {
-        fg_freq = new_freq;
-        pthread_mutex_lock(&uart_mutex);
-        frame_t frame;
-        init_egress_frame(&frame);
-        frame.command = C_SND_FREQ;
-        to_bcd(&frame.subcommand, subject_get_int(s), 10);
-        // bcd len - 5 bytes
-        send_frame(&frame, 6);
-        pthread_mutex_unlock(&uart_mutex);
+    if (new_freq != remote_state->fg->freq) {
+        remote_state->fg->freq = new_freq;
+        {
+            const std::lock_guard<std::mutex> lock(uart_mutex);
+            Frame frame{0, LOCAL_ADDRESS, C_SND_FREQ};
+            frame.set_payload_len(6);
+            to_bcd(frame.data.data(), new_freq, 10);
+            // bcd len - 5 bytes
+            conn->send(&frame);
+        }
     }
 }

@@ -93,14 +93,26 @@ float subject_get_float(Subject *subj) {
 }
 
 void subject_set_int(Subject *subj, int32_t val) {
-    static_cast<SubjectT<int32_t>*>(subj)->set(val);
+    if (subj->dtype() == DTYPE_INT) {
+        static_cast<SubjectT<int32_t>*>(subj)->set(val);
+    } else {
+        LV_LOG_ERROR("Expected dtype int, got %u\n", subj->dtype());
+    }
 }
 void subject_set_uint64(Subject *subj, uint64_t val) {
-    static_cast<SubjectT<uint64_t>*>(subj)->set(val);
+    if (subj->dtype() == DTYPE_UINT64) {
+        static_cast<SubjectT<uint64_t>*>(subj)->set(val);
+    } else {
+        LV_LOG_ERROR("Expected dtype uint64, got %u\n", subj->dtype());
+    }
 }
 
 void subject_set_float(Subject *subj, float val) {
-    static_cast<SubjectT<float>*>(subj)->set(val);
+    if (subj->dtype() == DTYPE_FLOAT) {
+        static_cast<SubjectT<float>*>(subj)->set(val);
+    } else {
+        LV_LOG_ERROR("Expected dtype float, got %u\n", subj->dtype());
+    }
 }
 
 Observer *subject_add_observer(Subject *subj, void (*fn)(Subject *, void *), void *user_data) {
