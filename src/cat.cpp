@@ -16,6 +16,7 @@
 #include "util.h"
 
 #include <mutex>
+#include <thread>
 #include <vector>
 
 extern "C" {
@@ -33,7 +34,6 @@ extern "C" {
     #include "lvgl/lvgl.h"
     #include <aether_radio/x6100_control/low/gpio.h>
     #include <fcntl.h>
-    #include <pthread.h>
     #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
@@ -230,8 +230,8 @@ class Connection {
     int        fd;
     char       buf[1024];
     const char header[2] = {FRAME_PRE, FRAME_PRE};
-    size_t     start;
-    size_t     end;
+    size_t     start=0;
+    size_t     end=0;
 
   protected:
     void write_buf(const char *buf, size_t len) {
@@ -272,12 +272,14 @@ class Connection {
             if (frame_start != buf) {
                 end = end + buf - frame_start;
                 memmove(buf, frame_start, end);
+                start = 0;
             }
             if (end >= FRAME_ADD_LEN) {
                 char *end_pos = (char *)memchr(buf + FRAME_ADD_LEN, FRAME_END, end - FRAME_ADD_LEN);
                 if (end_pos) {
                     size_t frame_len = end_pos - buf + 1;
                     start            = frame_len;
+                    end              = start;
                     return new Frame(buf, frame_len);
                 }
             }
@@ -963,7 +965,7 @@ static uint8_t counter = 0;
 //     free(data);
 // }
 
-static void *cat_thread(void *arg) {
+static void cat_thread() {
     while (true) {
         bool new_frame = false;
         {
@@ -985,7 +987,6 @@ static void *cat_thread(void *arg) {
 
 void cat_init() {
     /* UART */
-
     x6100_gpio_set(x6100_pin_usb, 1); /* USB -> CAT */
 
     int fd = open("/dev/ttyS2", O_RDWR | O_NONBLOCK | O_NOCTTY);
@@ -1016,10 +1017,8 @@ void cat_init() {
     subject_add_observer(cfg_cur.fg_freq, on_fg_freq_change, NULL);
 
     /* * */
-    pthread_t thread;
-
-    pthread_create(&thread, NULL, cat_thread, NULL);
-    pthread_detach(thread);
+    std::thread thread(cat_thread);
+    thread.detach();
 }
 
 static void on_fg_freq_change(Subject *s, void *user_data) {
