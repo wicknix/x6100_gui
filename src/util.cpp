@@ -6,6 +6,7 @@
  *  Copyright (c) 2022-2023 Belousov Oleg aka R1CBU
  */
 #include "util.h"
+#include "util.hpp"
 
 extern "C" {
     #include <complex.h>

@@ -7,7 +7,7 @@
  */
 #include "mfk.h"
 
-#include "util.h"
+#include "util.hpp"
 #include "cw.h"
 #include "voice.h"
 #include "cfg/cfg.h"
@@ -15,6 +15,7 @@
 #include <vector>
 
 extern "C" {
+    #include "util.h"
     #include "params/params.h"
     #include "spectrum.h"
     #include "waterfall.h"

@@ -13,6 +13,7 @@
 #include "cat.h"
 
 #include "cfg/subjects.h"
+#include "util.hpp"
 #include "util.h"
 
 #include <mutex>
@@ -121,38 +122,12 @@ extern "C" {
 
 #define FRAME_ADD_LEN 5 /* Header and end len */
 
-struct VFOData {
-    int32_t      freq;
-    x6100_mode_t mode;
-    x6100_agc_t  agc;
-    x6100_pre_t  pre;
-    x6100_att_t  att;
-};
+static std::mutex uart_mutex;
+static TSQueue<std::vector<char>> send_queue;
 
-struct RemoteState {
-    VFOData A;
-    VFOData B;
-    VFOData *fg = &A;
-    VFOData *bg = &B;
-    x6100_vfo_t vfo;
+static void send_waterfall_data();
 
-    VFOData *get_for_vfo(x6100_vfo_t vfo) {
-        if (vfo == X6100_VFO_A) return &A;
-        else return &B;
-    };
-    void change_vfo() {
-        VFOData *temp;
-        if (vfo == X6100_VFO_A) {
-            vfo = X6100_VFO_B;
-        } else {
-            vfo = X6100_VFO_A;
-        }
-        temp = fg;
-        fg = bg;
-        bg = temp;
-    };
-};
-
+static void on_fg_freq_change(Subject *s, void *user_data);
 
 struct Frame {
     uint8_t dst_addr;
@@ -305,13 +280,6 @@ typedef struct {
     uint8_t subcommand;
     uint8_t args[1500];
 } frame_t;
-
-static std::mutex uart_mutex;
-static RemoteState * remote_state;
-
-static void send_waterfall_data();
-
-static void on_fg_freq_change(Subject *s, void *user_data);
 
 static void set_vfo(void *arg) {
     if (!arg) {
@@ -467,8 +435,7 @@ static Frame *process_req(const Frame *req) {
     switch (req->command) {
         case C_SND_FREQ:
             if (data_size == 5) {
-                remote_state->fg->freq = from_bcd(req->data.data(), 10);
-                subject_set_int(cfg_cur.fg_freq, remote_state->fg->freq);
+                subject_set_int(cfg_cur.fg_freq, from_bcd(req->data.data(), 10));
                 resp->set_code(CODE_OK);
             } else {
                 set_unsupported(req, resp);
@@ -492,8 +459,7 @@ static Frame *process_req(const Frame *req) {
 
         case C_SET_FREQ:
             if (data_size == 5) {
-                remote_state->fg->freq = from_bcd(req->data.data(), 10);
-                subject_set_int(cfg_cur.fg_freq, remote_state->fg->freq);
+                subject_set_int(cfg_cur.fg_freq, from_bcd(req->data.data(), 10));
                 resp->set_code(CODE_OK);
             } else {
                 set_unsupported(req, resp);
@@ -502,8 +468,7 @@ static Frame *process_req(const Frame *req) {
 
         case C_SET_MODE:
             if (data_size == 1) {
-                remote_state->fg->mode = ci_mode_2_x_mode(req->data[0]);
-                subject_set_int(cfg_cur.mode, remote_state->fg->mode);
+                subject_set_int(cfg_cur.mode, ci_mode_2_x_mode(req->data[0]));
                 resp->set_code(CODE_OK);
             } else {
                 set_unsupported(req, resp);
@@ -517,7 +482,6 @@ static Frame *process_req(const Frame *req) {
                     case S_VFOA:
                         if (cur_vfo != X6100_VFO_A) {
                             new_vfo           = X6100_VFO_A;
-                            remote_state->vfo = new_vfo;
                             subject_set_int(cfg_cur.band->vfo.val, new_vfo);
                         }
 
@@ -527,7 +491,6 @@ static Frame *process_req(const Frame *req) {
                     case S_VFOB:
                         if (cur_vfo != X6100_VFO_B) {
                             new_vfo           = X6100_VFO_B;
-                            remote_state->vfo = new_vfo;
                             subject_set_int(cfg_cur.band->vfo.val, new_vfo);
                         }
                         resp->set_code(CODE_OK);
@@ -571,8 +534,7 @@ static Frame *process_req(const Frame *req) {
                 resp->set_payload_len(2);
                 resp->data[0] = subject_get_int(cfg_cur.att) * 0x20;
             } else if (data_size == 1) {
-                remote_state->fg->att = (x6100_att_t)req->data[0];
-                subject_set_int(cfg_cur.att, remote_state->fg->att);
+                subject_set_int(cfg_cur.att, req->data[0]);
                 resp->set_code(CODE_OK);
             } else {
                 set_unsupported(req, resp);
@@ -781,7 +743,6 @@ static Frame *process_req(const Frame *req) {
                     case MEM_DM_FG:
                         {
                             x6100_mode_t new_mode  = ci_mode_2_x_mode(req->data[1], req->data[2]);
-                            remote_state->fg->mode = new_mode;
                             subject_set_int(cfg_cur.mode, new_mode);
                             resp->set_code(CODE_OK);
                         }
@@ -816,14 +777,13 @@ static Frame *process_req(const Frame *req) {
 
         case C_SEND_SEL_FREQ:
             if (data_size == 1) {
-                vfo_id = req->data[0] > 0;
+                vfo_id       = req->data[0] > 0;
                 int32_t freq = subject_get_int(vfo_params[vfo_id]->freq.val);
                 resp->set_payload_len(7);
                 to_bcd(&resp->data[1], freq, 10);
             } else if (data_size == 6) {
-                vfo_id = req->data[0] > 0;
-                int32_t freq                                         = from_bcd(&req->data[1], 10);
-                remote_state->get_for_vfo((x6100_vfo_t)vfo_id)->freq = freq;
+                vfo_id       = req->data[0] > 0;
+                int32_t freq = from_bcd(&req->data[1], 10);
                 subject_set_int(vfo_params[vfo_id]->freq.val, freq);
                 resp->set_code(CODE_OK);
             } else {
@@ -833,16 +793,15 @@ static Frame *process_req(const Frame *req) {
 
         case C_SEND_SEL_MODE:
             if (data_size == 1) {
-                vfo_id = req->data[0] > 0;
+                vfo_id    = req->data[0] > 0;
                 uint8_t v = x_mode_2_ci_mode((x6100_mode_t)subject_get_int(vfo_params[vfo_id]->mode.val));
                 resp->set_payload_len(5);
                 resp->data[1] = v;
                 resp->data[2] = 0;
                 resp->data[3] = 1;
             } else if (data_size == 3) {
-                vfo_id = req->data[0] > 0;
-                x6100_mode_t new_mode                                = ci_mode_2_x_mode(req->data[1], req->data[2]);
-                remote_state->get_for_vfo((x6100_vfo_t)vfo_id)->mode = new_mode;
+                vfo_id                = req->data[0] > 0;
+                x6100_mode_t new_mode = ci_mode_2_x_mode(req->data[1], req->data[2]);
                 subject_set_int(vfo_params[vfo_id]->mode.val, new_mode);
                 resp->set_code(CODE_OK);
             } else {
@@ -967,19 +926,25 @@ static uint8_t counter = 0;
 
 static void cat_thread() {
     while (true) {
-        bool new_frame = false;
+        bool sleep = true;
         {
             const std::lock_guard<std::mutex> lock(uart_mutex);
             const Frame *req = conn->feed();
             if (req) {
-                new_frame = true;
+                sleep = false;
                 conn->send(req);
                 auto resp = process_req(req);
                 // resp->log("resp");
                 conn->send(resp);
             }
         }
-        if (!new_frame) {
+        while (!send_queue.empty()) {
+            const std::lock_guard<std::mutex> lock(uart_mutex);
+            sleep = false;
+            auto data = send_queue.pop();
+            conn->send(data.data(), data.size());
+        }
+        if (!sleep) {
             sleep_usec(100000);
         }
     }
@@ -1012,8 +977,6 @@ void cat_init() {
 
     conn = new Connection(fd);
 
-    remote_state = new RemoteState();
-
     subject_add_observer(cfg_cur.fg_freq, on_fg_freq_change, NULL);
 
     /* * */
@@ -1023,15 +986,9 @@ void cat_init() {
 
 static void on_fg_freq_change(Subject *s, void *user_data) {
     int32_t new_freq = subject_get_int(s);
-    if (new_freq != remote_state->fg->freq) {
-        remote_state->fg->freq = new_freq;
-        {
-            const std::lock_guard<std::mutex> lock(uart_mutex);
-            Frame frame{0, LOCAL_ADDRESS, C_SND_FREQ};
-            frame.set_payload_len(6);
-            to_bcd(frame.data.data(), new_freq, 10);
-            // bcd len - 5 bytes
-            conn->send(&frame);
-        }
-    }
+    Frame frame{0, LOCAL_ADDRESS, C_SND_FREQ};
+    // bcd len - 5 bytes
+    frame.set_payload_len(6);
+    to_bcd(frame.data.data(), new_freq, 10);
+    send_queue.push(frame.dump());
 }

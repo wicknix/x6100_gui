@@ -12,16 +12,6 @@
 
 #ifdef __cplusplus
 
-template <typename T> inline T clip(T x, T min, T max) {
-    if (x < min) {
-        return min;
-    } else if (x > max) {
-        return max;
-    }
-
-    return x;
-}
-
 extern "C" {
 #endif
 
