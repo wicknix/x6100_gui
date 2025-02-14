@@ -573,6 +573,7 @@ static void rotary_cb(int32_t diff) {
         diff *= (abs_diff < 6) ? 5 : 10;
     }
     uint32_t f = params.ft8_tx_freq.x + diff;
+    f = limit(f, filter_low, filter_high - (params.ft8_protocol == FTX_PROTOCOL_FT8 ? FT8_WIDTH_HZ : FT4_WIDTH_HZ));
 
     set_freq(f);
 
