@@ -142,7 +142,6 @@ static button_item_t make_action_btn(const char *name, press_action_t data) {
 }
 
 static button_item_t make_page_btn(const char *name, const char *voice) {
-    printf("%s\n", name);
     return button_item_t{
         .type = BTN_TEXT, .label = name, .press = button_next_page_cb, .hold = button_prev_page_cb, .voice = voice};
 }
