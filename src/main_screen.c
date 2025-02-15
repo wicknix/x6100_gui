@@ -528,7 +528,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
                 buttons_load_page_group(buttons_group_gen);
-                voice_say_text_fmt("General menu keys");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_gen);
             }
@@ -538,7 +537,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
                 buttons_load_page_group(buttons_group_app);
-                voice_say_text_fmt("Application menu keys");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_app);
             }
@@ -548,7 +546,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
                 buttons_load_page_group(buttons_group_key);
-                voice_say_text_fmt("CW parameters");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_key);
             }
@@ -594,7 +591,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
                 buttons_load_page_group(buttons_group_dfn);
-                voice_say_text_fmt("DNF parameters");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_dfn);
             }
@@ -604,7 +600,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 apps_disable();
                 buttons_load_page_group(buttons_group_dfl);
-                voice_say_text_fmt("DNL parameters");
+                voice_say_text_fmt("DFL parameters");
             } else if (keypad->state == KEYPAD_LONG) {
                 main_screen_action(params.long_dfl);
             }

@@ -423,7 +423,7 @@ static buttons_page_t page_dfl_1 = {
 /* App pages */
 static button_item_t btn_app_p1 = make_page_btn("(APP 1:3)", "Application|page 1");
 static button_item_t btn_app_p2 = make_page_btn("(APP 2:3)", "Application|page 2");
-static button_item_t btn_app_p3 = make_page_btn("(APP 3:3)", "Application|page 2");
+static button_item_t btn_app_p3 = make_page_btn("(APP 3:3)", "Application|page 3");
 
 static buttons_page_t page_app_1 = {
     {&btn_app_p1, &btn_rtty, &btn_ft8, &btn_swr, &btn_gps}
@@ -619,6 +619,9 @@ void buttons_load_page(buttons_page_t *page) {
     for (uint8_t i = 0; i < BUTTONS; i++) {
         buttons_load(i, page->items[i]);
     }
+    if (page->items[0]->voice) {
+        voice_say_text_fmt("%s", page->items[0]->voice);
+    }
 }
 
 void buttons_unload_page() {
@@ -641,21 +644,11 @@ void buttons_unload_page() {
 void button_next_page_cb(button_item_t *item) {
     buttons_unload_page();
     buttons_load_page(item->next);
-
-    const char *voice = item->next->items[0]->voice;
-    if (voice) {
-        voice_say_text_fmt("%s", voice);
-    }
 }
 
 void button_prev_page_cb(button_item_t *item) {
     buttons_unload_page();
     buttons_load_page(item->prev);
-
-    const char *voice = item->prev->items[0]->voice;
-    if (voice) {
-        voice_say_text_fmt("%s", voice);
-    }
 }
 
 static void button_app_page_cb(button_item_t *item) {
