@@ -961,10 +961,10 @@ void cat_init() {
 
         tcgetattr(fd, &attr);
 
-        // cfsetispeed(&attr, B19200);
-        // cfsetospeed(&attr, B19200);
-        cfsetispeed(&attr, B115200);
-        cfsetospeed(&attr, B115200);
+        cfsetispeed(&attr, B19200);
+        cfsetospeed(&attr, B19200);
+        // cfsetispeed(&attr, B115200);
+        // cfsetospeed(&attr, B115200);
         cfmakeraw(&attr);
 
         if (tcsetattr(fd, 0, &attr) < 0) {
