@@ -219,6 +219,7 @@ static void save_qso(const char *remote_callsign, const char *remote_grid, const
     qso_log_record_save(qso);
 
     msg_schedule_text_fmt("QSO saved");
+    lv_finder_clear_cursor(finder);
 }
 
 static void worker_init() {
