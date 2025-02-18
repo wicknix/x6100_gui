@@ -122,7 +122,6 @@ extern "C" {
 
 #define FRAME_ADD_LEN 5 /* Header and end len */
 
-static std::mutex uart_mutex;
 static TSQueue<std::vector<char>> send_queue;
 
 static void send_waterfall_data();
@@ -928,25 +927,23 @@ static uint8_t counter = 0;
 static void cat_thread() {
     while (true) {
         bool sleep = true;
-        {
-            const std::lock_guard<std::mutex> lock(uart_mutex);
-            const Frame *req = conn->feed();
-            if (req) {
-                sleep = false;
-                conn->send(req);
-                auto resp = process_req(req);
-                // resp->log("resp");
-                conn->send(resp);
-            }
+
+        const Frame *req = conn->feed();
+        if (req) {
+            sleep = false;
+            conn->send(req);
+            auto resp = process_req(req);
+            // resp->log("resp");
+            conn->send(resp);
         }
+
         while (!send_queue.empty()) {
-            const std::lock_guard<std::mutex> lock(uart_mutex);
             sleep = false;
             auto data = send_queue.pop();
             conn->send(data.data(), data.size());
         }
-        if (!sleep) {
-            sleep_usec(100000);
+        if (sleep) {
+            sleep_usec(10000);
         }
     }
 }
