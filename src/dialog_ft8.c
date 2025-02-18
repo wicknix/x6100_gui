@@ -150,16 +150,16 @@ static void audio_cb(unsigned int n, float complex *samples);
 static void rotary_cb(int32_t diff);
 static void * decode_thread(void *arg);
 
-static void show_cq_all_cb(lv_event_t * e);
-static void mode_ft4_ft8_cb(lv_event_t * e);
-static void tx_cq_en_dis_cb(lv_event_t * e);
-static void tx_call_en_dis_cb(lv_event_t * e);
+static void show_cq_all_cb(struct button_item_t *btn);
+static void mode_ft4_ft8_cb(struct button_item_t *btn);
+static void tx_cq_en_dis_cb(struct button_item_t *btn);
+static void tx_call_en_dis_cb(struct button_item_t *btn);
 
-static void hold_tx_freq_cb(lv_event_t * e);
-static void mode_auto_cb(lv_event_t * e);
-static void cq_modifier_cb(lv_event_t * e);
-static void load_page(lv_event_t *e);
-static void time_sync(lv_event_t * e);
+static void hold_tx_freq_cb(struct button_item_t *btn);
+static void mode_auto_cb(struct button_item_t *btn);
+static void cq_modifier_cb(struct button_item_t *btn);
+static void load_page(struct button_item_t *btn);
+static void time_sync(struct button_item_t *btn);
 
 static void reload_buttons();
 
@@ -752,7 +752,7 @@ static void reload_buttons() {
     }
 }
 
-static void show_cq_all_cb(lv_event_t * e) {
+static void show_cq_all_cb(struct button_item_t *btn) {
     if (disable_buttons) return;
     params_lock();
     params.ft8_show_all = !params.ft8_show_all;
@@ -760,7 +760,7 @@ static void show_cq_all_cb(lv_event_t * e) {
     reload_buttons();
 }
 
-static void mode_ft4_ft8_cb(lv_event_t * e) {
+static void mode_ft4_ft8_cb(struct button_item_t *btn) {
     if (disable_buttons) return;
 
     params_lock();
@@ -779,21 +779,21 @@ static void mode_ft4_ft8_cb(lv_event_t * e) {
     load_band(0);
 }
 
-static void mode_auto_cb(lv_event_t * e) {
+static void mode_auto_cb(struct button_item_t *btn) {
     if (disable_buttons) return;
     params_bool_set(&params.ft8_auto, !params.ft8_auto.x);
     ftx_qso_processor_set_auto(qso_processor, params.ft8_auto.x);
     reload_buttons();
 }
 
-static void hold_tx_freq_cb(lv_event_t * e) {
+static void hold_tx_freq_cb(struct button_item_t *btn) {
     if (disable_buttons) return;
     bool val = subject_get_int(cfg.ft8_hold_freq.val);
     subject_set_int(cfg.ft8_hold_freq.val, !val);
     reload_buttons();
 }
 
-static void tx_cq_en_dis_cb(lv_event_t * e) {
+static void tx_cq_en_dis_cb(struct button_item_t *btn) {
     if (disable_buttons) return;
 
     if (!cq_enabled){
@@ -835,7 +835,7 @@ static void tx_cq_en_dis_cb(lv_event_t * e) {
 }
 
 
-static void tx_call_en_dis_cb(lv_event_t * e) {
+static void tx_call_en_dis_cb(struct button_item_t *btn) {
     if (disable_buttons) return;
     if (!tx_enabled) {
         if (strlen(params.callsign.x) == 0) {
@@ -858,12 +858,12 @@ static void tx_call_off() {
     reload_buttons();
 }
 
-static void cq_modifier_cb(lv_event_t * e) {
+static void cq_modifier_cb(struct button_item_t *btn) {
     if (disable_buttons) return;
     keyboard_open();
 }
 
-static void time_sync(lv_event_t * e) {
+static void time_sync(struct button_item_t *btn) {
     time_t now = time(NULL);
     uint8_t sec = now % 60;
     float drift, slot_time;
@@ -891,7 +891,7 @@ static void time_sync(lv_event_t * e) {
     }
 }
 
-static void load_page(lv_event_t *e) {
+static void load_page(struct button_item_t *btn) {
     button_page = (button_page + 1) % 2;
     reload_buttons();
 }
