@@ -42,6 +42,7 @@ static uint32_t             freq_stop;
 static bool    linear;
 static int32_t span;
 
+static Observer *freq_obs;
 static Observer *linear_obs;
 static Observer *span_obs;
 
@@ -240,7 +241,7 @@ static void draw_cb(lv_event_t * e) {
     }
 }
 
-static void freq_update_cb(lv_event_t * e) {
+static void freq_update_cb(Subject *subj, void *user_data) {
     do_init();
     lv_obj_invalidate(chart);
 }
@@ -255,7 +256,7 @@ static void construct_cb(lv_obj_t *parent) {
     buttons_unload_page();
     buttons_load_page(&btn_page);
 
-    lv_obj_add_event_cb(dialog.obj, freq_update_cb, EVENT_FREQ_UPDATE, NULL);
+    freq_obs = subject_add_delayed_observer(cfg_cur.fg_freq, freq_update_cb, NULL);
 
     chart  = lv_obj_create(dialog.obj);
 
@@ -276,6 +277,14 @@ static void construct_cb(lv_obj_t *parent) {
 }
 
 static void destruct_cb() {
+    if (run) {
+        // Stop
+        dialog_swrscan_run_cb(NULL);
+    }
+    if (freq_obs) {
+        observer_del(freq_obs);
+        freq_obs = NULL;
+    }
     if (linear_obs) {
         observer_del(linear_obs);
         linear_obs = NULL;
@@ -284,6 +293,7 @@ static void destruct_cb() {
         observer_del(span_obs);
         span_obs = NULL;
     }
+    radio_set_freq(subject_get_int(cfg_cur.fg_freq));
 }
 
 static void key_cb(lv_event_t * e) {
@@ -310,6 +320,7 @@ void dialog_swrscan_run_cb(button_item_t *item) {
     if (run) {
         radio_stop_swrscan();
         run = false;
+        radio_set_freq(freq_center);
         mem_load(MEM_BACKUP_ID);
     } else {
         mem_save(MEM_BACKUP_ID);
