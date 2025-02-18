@@ -21,7 +21,6 @@ uint32_t        EVENT_RADIO_TX;
 uint32_t        EVENT_RADIO_RX;
 uint32_t        EVENT_SCREEN_UPDATE;
 uint32_t        EVENT_MSG_UPDATE;
-uint32_t        EVENT_FREQ_UPDATE;
 uint32_t        EVENT_GPS;
 uint32_t        EVENT_BAND_UP;
 uint32_t        EVENT_BAND_DOWN;
@@ -45,7 +44,6 @@ void event_init() {
     EVENT_RADIO_RX = lv_event_register_id();
     EVENT_SCREEN_UPDATE = lv_event_register_id();
     EVENT_MSG_UPDATE = lv_event_register_id();
-    EVENT_FREQ_UPDATE = lv_event_register_id();
     EVENT_GPS = lv_event_register_id();
     EVENT_BAND_UP = lv_event_register_id();
     EVENT_BAND_DOWN = lv_event_register_id();

@@ -396,7 +396,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 if (!band_lock) {
                     cfg_band_load_next(true);
-                    dialog_send(EVENT_FREQ_UPDATE, NULL);
                 }
                 dialog_send(EVENT_BAND_UP, NULL);
             }
@@ -406,7 +405,6 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             if (keypad->state == KEYPAD_RELEASE) {
                 if (!band_lock) {
                     cfg_band_load_next(false);
-                    dialog_send(EVENT_FREQ_UPDATE, NULL);
                 }
                 dialog_send(EVENT_BAND_DOWN, NULL);
             }
@@ -741,7 +739,6 @@ static void main_screen_hkey_cb(lv_event_t * e) {
             } else if (hkey->state == HKEY_LONG) {
                 if (!band_lock) {
                     cfg_band_load_next(true);
-                    dialog_send(EVENT_FREQ_UPDATE, NULL);
                 }
                 dialog_send(EVENT_BAND_UP, NULL);
             }
@@ -755,7 +752,6 @@ static void main_screen_hkey_cb(lv_event_t * e) {
             } else if (hkey->state == HKEY_LONG) {
                 if (!band_lock) {
                     cfg_band_load_next(false);
-                    dialog_send(EVENT_FREQ_UPDATE, NULL);
                 }
                 dialog_send(EVENT_BAND_DOWN, NULL);
             }
@@ -826,7 +822,6 @@ static void freq_shift(int16_t diff) {
     freq = align_int(freq + df, abs(df));
     subject_set_int(cfg_cur.fg_freq, freq);
 
-    dialog_send(EVENT_FREQ_UPDATE, NULL);
     voice_say_freq(freq);
 }
 
@@ -939,7 +934,6 @@ static void spectrum_key_cb(lv_event_t * e) {
         case KEYBOARD_PGUP:
             if (!band_lock) {
                 cfg_band_load_next(true);
-                dialog_send(EVENT_FREQ_UPDATE, NULL);
             }
             dialog_send(EVENT_BAND_UP, NULL);
             break;
@@ -947,7 +941,6 @@ static void spectrum_key_cb(lv_event_t * e) {
         case KEYBOARD_PGDN:
             if (!band_lock) {
                 cfg_band_load_next(false);
-                dialog_send(EVENT_FREQ_UPDATE, NULL);
             }
             dialog_send(EVENT_BAND_DOWN, NULL);
             break;
