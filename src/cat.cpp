@@ -481,7 +481,7 @@ static Frame *process_req(const Frame *req) {
                 switch (req->data[0]) {
                     case S_VFOA:
                         if (cur_vfo != X6100_VFO_A) {
-                            new_vfo           = X6100_VFO_A;
+                            new_vfo = X6100_VFO_A;
                             subject_set_int(cfg_cur.band->vfo.val, new_vfo);
                         }
 
@@ -490,9 +490,24 @@ static Frame *process_req(const Frame *req) {
 
                     case S_VFOB:
                         if (cur_vfo != X6100_VFO_B) {
-                            new_vfo           = X6100_VFO_B;
+                            new_vfo = X6100_VFO_B;
                             subject_set_int(cfg_cur.band->vfo.val, new_vfo);
                         }
+                        resp->set_code(CODE_OK);
+                        break;
+
+                    case S_XCHNG:
+                        if (cur_vfo == X6100_VFO_A) {
+                            new_vfo = X6100_VFO_B;
+                        } else {
+                            new_vfo = X6100_VFO_A;
+                        }
+                        subject_set_int(cfg_cur.band->vfo.val, new_vfo);
+                        resp->set_code(CODE_OK);
+                        break;
+
+                    case S_BTOA:
+                        cfg_band_vfo_copy();
                         resp->set_code(CODE_OK);
                         break;
 
@@ -500,6 +515,9 @@ static Frame *process_req(const Frame *req) {
                         set_unsupported(req, resp);
                         break;
                 }
+            } else if (data_size == 0) {
+                resp->set_payload_len(2);
+                resp->data[0] = cur_vfo == X6100_VFO_A ? S_VFOA : S_VFOB;
             } else {
                 set_unsupported(req, resp);
             }
