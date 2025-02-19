@@ -78,10 +78,21 @@ static int _1_create_ftx_table() {
     return 0;
 }
 
+static int _2_update_atu_freq() {
+    int rc;
+    rc = sqlite3_exec(db, "UPDATE atu SET freq=freq * 50000 + 25000 WHERE freq < 500000", NULL, NULL, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Cannot update ATU frequencies: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+    return 0;
+}
+
 /* Migrations array */
 static int (*migrations[])() = {
     _0_init_migrations,
     _1_create_ftx_table,
+    _2_update_atu_freq,
 };
 
 int migrations_apply(void) {
