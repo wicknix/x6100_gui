@@ -42,9 +42,9 @@ static uint32_t             freq_stop;
 static bool    linear;
 static int32_t span;
 
-static Observer *freq_obs;
-static Observer *linear_obs;
-static Observer *span_obs;
+static ObserverDelayed *freq_obs;
+static ObserverDelayed *linear_obs;
+static ObserverDelayed *span_obs;
 
 static void construct_cb(lv_obj_t *parent);
 static void destruct_cb();
@@ -250,8 +250,8 @@ static void construct_cb(lv_obj_t *parent) {
     dialog.obj = dialog_init(parent);
     btn_scale.subj = cfg.swrscan_linear.val;
     btn_span.subj = cfg.swrscan_span.val;
-    linear_obs = subject_add_observer_and_call(cfg.swrscan_linear.val, set_linear, NULL);
-    span_obs = subject_add_observer_and_call(cfg.swrscan_span.val, set_span, NULL);
+    linear_obs = subject_add_delayed_observer_and_call(cfg.swrscan_linear.val, set_linear, NULL);
+    span_obs = subject_add_delayed_observer_and_call(cfg.swrscan_span.val, set_span, NULL);
 
     buttons_unload_page();
     buttons_load_page(&btn_page);
@@ -282,15 +282,15 @@ static void destruct_cb() {
         dialog_swrscan_run_cb(NULL);
     }
     if (freq_obs) {
-        observer_del(freq_obs);
+        observer_delayed_del(freq_obs);
         freq_obs = NULL;
     }
     if (linear_obs) {
-        observer_del(linear_obs);
+        observer_delayed_del(linear_obs);
         linear_obs = NULL;
     }
     if (span_obs) {
-        observer_del(span_obs);
+        observer_delayed_del(span_obs);
         span_obs = NULL;
     }
     radio_set_freq(subject_get_int(cfg_cur.fg_freq));
@@ -390,5 +390,7 @@ char *span_label_fn() {
 }
 
 void dialog_swrscan_update(float vswr) {
-    do_step(vswr);
+    if (run) {
+        do_step(vswr);
+    }
 }
