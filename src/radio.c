@@ -539,13 +539,12 @@ bool radio_start_swrscan() {
         return false;
     }
 
+    subject_set_int(cfg_cur.mode, x6100_mode_am);
     radio_lock();
-    x6100_control_vfo_mode_set(subject_get_int(cfg_cur.band->vfo.val), x6100_mode_am);
     x6100_control_txpwr_set(5.0f);
     x6100_control_swrscan_set(true);
     radio_unlock();
     state = RADIO_SWRSCAN;
-    lv_msg_send(MSG_RADIO_MODE_CHANGED, NULL);
 
     return true;
 }
@@ -556,7 +555,6 @@ void radio_stop_swrscan() {
         radio_lock();
         x6100_control_swrscan_set(false);
         x6100_control_txpwr_set(subject_get_float(cfg.pwr.val));
-        x6100_control_vfo_mode_set(subject_get_int(cfg_cur.band->vfo.val), subject_get_int(cfg_cur.mode));
         radio_unlock();
     }
 }
