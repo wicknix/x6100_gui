@@ -316,14 +316,16 @@ static x6100_mode_t ci_mode_2_x_mode(uint8_t mode, bool data_mode=false) {
     return r_mode;
 }
 
-static uint8_t x_mode_2_ci_mode(x6100_mode_t mode) {
+static uint8_t x_mode_2_ci_mode(x6100_mode_t mode, bool *data_mode=nullptr) {
     switch (mode) {
-        case x6100_mode_lsb:
         case x6100_mode_lsb_dig:
+            if (data_mode) *data_mode = true;
+        case x6100_mode_lsb:
             return M_LSB;
             break;
-        case x6100_mode_usb:
         case x6100_mode_usb_dig:
+            if (data_mode) *data_mode = true;
+        case x6100_mode_usb:
             return M_USB;
             break;
         case x6100_mode_cw:
@@ -810,20 +812,38 @@ static Frame *process_req(const Frame *req) {
             break;
 
         case C_SEND_SEL_MODE:
-            if (data_size == 1) {
-                vfo_id    = req->data[0] > 0;
-                uint8_t v = x_mode_2_ci_mode((x6100_mode_t)subject_get_int(vfo_params[vfo_id]->mode.val));
-                resp->set_payload_len(5);
-                resp->data[1] = v;
-                resp->data[2] = 0;
-                resp->data[3] = 1;
-            } else if (data_size == 3) {
-                vfo_id                = req->data[0] > 0;
-                x6100_mode_t new_mode = ci_mode_2_x_mode(req->data[1], req->data[2]);
-                subject_set_int(vfo_params[vfo_id]->mode.val, new_mode);
-                resp->set_code(CODE_OK);
-            } else {
-                set_unsupported(req, resp);
+            {
+                uint8_t v;
+                x6100_mode_t new_mode;
+                bool data_mode = false;
+                switch (data_size) {
+                    case 1:
+                        vfo_id    = req->data[0] > 0;
+                        v = x_mode_2_ci_mode((x6100_mode_t)subject_get_int(vfo_params[vfo_id]->mode.val), &data_mode);
+                        resp->set_payload_len(5);
+                        resp->data[1] = v;
+                        resp->data[2] = data_mode;
+                        // filter
+                        resp->data[3] = 1;
+                        break;
+
+                    case 4:
+                        // get filter
+                    case 3:
+                        // get data
+                        data_mode = req->data[2];
+                    case 2:
+                        // get mode
+                        vfo_id                = req->data[0] > 0;
+                        new_mode = ci_mode_2_x_mode(req->data[1], data_mode);
+                        subject_set_int(vfo_params[vfo_id]->mode.val, new_mode);
+                        resp->set_code(CODE_OK);
+                        break;
+                    default:
+                        set_unsupported(req, resp);
+                        break;
+                }
+
             }
             break;
 
