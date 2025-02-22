@@ -533,7 +533,7 @@ void buttons_init(lv_obj_t *parent) {
     /* Fill prev/next pointers */
     for (size_t i = 0; i < ARRAY_SIZE(groups); i++) {
         buttons_page_t **group = groups[i].group;
-        for (ssize_t j = 0; j < groups[i].size; j++) {
+        for (size_t j = 0; j < groups[i].size; j++) {
             if (group[j]->items[0]->press == button_next_page_cb) {
                 uint16_t next_id = (j + 1) % groups[i].size;
                 group[j]->items[0]->next = group[next_id];
@@ -541,7 +541,7 @@ void buttons_init(lv_obj_t *parent) {
                 LV_LOG_USER("First button in page=%u, group=%u press cb is not next", j, i);
             }
             if (group[j]->items[0]->hold == button_prev_page_cb) {
-                uint16_t prev_id = (j - 1) % groups[i].size;
+                uint16_t prev_id = (groups[i].size + j - 1) % groups[i].size;
                 group[j]->items[0]->prev = group[prev_id];
             } else {
                 LV_LOG_USER("First button in page=%u, group=%u hold cb is not prev", j, i);
