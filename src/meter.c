@@ -86,7 +86,7 @@ static void meter_draw_cb(lv_event_t * e) {
 
     for (uint16_t i = 0; i < count; i++) {
         if (db <= noise_level) {
-            rect_dsc.bg_color = lv_color_hex(0x777777);
+            rect_dsc.bg_color = lv_color_hex(0x00CC00);
         } else if (db <= -73) {
             rect_dsc.bg_color = lv_color_hex(0x00CC00);
         } else if (db <= -53) {
