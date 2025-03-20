@@ -287,7 +287,7 @@ void styles_set_theme(themes_t theme) {
 }
 
 static void setup_theme_legacy() {
-    wf_palette = wf_palette_legacy;
+    wf_palette = wf_palette_gauss;
 
     bg_color = lv_color_hex(0x0040A0);
     lv_style_set_bg_color(&background_style, bg_color);
