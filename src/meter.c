@@ -107,7 +107,7 @@ static void meter_draw_cb(lv_event_t * e) {
         area.x1 = x1 + 30  - slice_w / 2 + slice_w * ((meter_peak - min_db) / slice_db);
         area.x2 = area.x1 + slice_w - slice_spacing;
         rect_dsc.bg_opa = LV_OPA_50;
-        rect_dsc.bg_color = lv_color_hex(0x00CC00);
+        rect_dsc.bg_color = lv_color_hex(0xED3434);
         lv_draw_rect(draw_ctx, &rect_dsc, &area);
     }
 
