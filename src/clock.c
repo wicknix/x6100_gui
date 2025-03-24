@@ -55,7 +55,7 @@ static void set_state(clock_state_t new_state) {
             break;
 
         case CLOCK_POWER:
-            lv_obj_set_style_text_font(obj, &lv_font_montserrat_30, 0);
+            lv_obj_set_style_text_font(obj, &lv_font_montserrat_24, 0);
             lv_obj_set_style_pad_ver(obj, 5, 0);
             break;
     }
