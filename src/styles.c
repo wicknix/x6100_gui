@@ -344,9 +344,22 @@ static void setup_theme_nofi() {
     lv_style_set_width(&meter_style, 377);
     lv_style_set_height(&meter_style, 61);
 
+    /* Overrides for NoFi / robwasteground */
+
     /* frequency labels */
     lv_style_set_text_font(&freq_style, &lv_font_montserrat_24);
     lv_style_set_text_font(&freq_main_style, &lv_font_montserrat_28);
+
+    /* buttons */
+    lv_style_set_text_font(&btn_style, &lv_font_montserrat_24);
+
+    /* clock */
+    lv_style_set_text_font(&clock_style, &lv_font_montserrat_10);
+
+    /* left info */
+    lv_style_set_text_font(&info_item_style, &lv_font_montserrat_16);
+
+    /* end overrides */
 
     lv_style_set_bg_img_src(&pannel_style, PATH "images/panel.bin");
     lv_style_set_bg_img_src(&msg_tiny_style, PATH "images/msg_tiny.bin");
