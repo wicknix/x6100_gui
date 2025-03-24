@@ -201,7 +201,7 @@ void styles_init(themes_t theme) {
 
     lv_style_init(&dialog_style);
     lv_style_set_text_color(&dialog_style, lv_color_white());
-    lv_style_set_text_font(&dialog_style, &lv_font_montserrat_36);
+    lv_style_set_text_font(&dialog_style, &lv_font_montserrat_24);
     lv_style_set_width(&dialog_style, 796);
     lv_style_set_height(&dialog_style, 348);
     lv_style_set_x(&dialog_style, 800 / 2 - (796 / 2));
@@ -354,7 +354,7 @@ static void setup_theme_nofi() {
     lv_style_set_text_font(&btn_style, &lv_font_montserrat_24);
 
     /* clock */
-    lv_style_set_text_font(&clock_style, &lv_font_montserrat_30);
+    lv_style_set_text_font(&clock_style, &lv_font_montserrat_24);
 
     /* left info */
     lv_style_set_text_font(&info_item_style, &lv_font_montserrat_16);
