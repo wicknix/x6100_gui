@@ -166,7 +166,7 @@ void styles_init(themes_t theme) {
     /* Message style */
     lv_style_init(&msg_style);
     lv_style_set_text_color(&msg_style, lv_color_white());
-    lv_style_set_text_font(&msg_style, &lv_font_montserrat_24);
+    lv_style_set_text_font(&msg_style, &lv_font_montserrat_30);
     lv_style_set_width(&msg_style, 603);
     lv_style_set_height(&msg_style, 66);
     lv_style_set_x(&msg_style, 800 / 2 - (603 / 2));
@@ -178,7 +178,7 @@ void styles_init(themes_t theme) {
     lv_style_init(&msg_tiny_style);
     lv_style_set_text_color(&msg_tiny_style, lv_color_white());
     // note - was originally sony_60 - lv_font_monterrat_40 might be too small?
-    lv_style_set_text_font(&msg_tiny_style, &lv_font_montserrat_40);
+    lv_style_set_text_font(&msg_tiny_style, &lv_font_montserrat_24);
     lv_style_set_width(&msg_tiny_style, 324);
     lv_style_set_height(&msg_tiny_style, 66);
     lv_style_set_x(&msg_tiny_style, 800 / 2 - (324 / 2));
