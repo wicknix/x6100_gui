@@ -60,7 +60,7 @@ static item_t pwr_items[NUM_PWR_ITEMS] = {
     {.label = "10",  .val = 10.0f}
 };
 
-static item_t pwr_items[NUM_ALC_ITEMS] = {
+static item_t alc_items[NUM_ALC_ITEMS] = {
     {.label = "ALC", .val = 0.0f },
     {.label = "2",   .val = 2.0f },
     {.label = "4",   .val = 4.0f },
