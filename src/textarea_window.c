@@ -119,7 +119,7 @@ lv_obj_t * textarea_window_open(textarea_window_cb_t ok, textarea_window_cb_t ca
     lv_obj_set_size(item_wrapper, LV_SIZE_CONTENT, LV_PCT(100));
 
     label = lv_label_create(item_wrapper);
-    lv_obj_set_style_text_font(label, &sony_36, 0);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_36, 0);
     lv_label_set_text(label, "");
     lv_obj_align_to(label, item_wrapper, LV_ALIGN_LEFT_MID, 0, 0);
 
@@ -136,7 +136,7 @@ lv_obj_t * textarea_window_open(textarea_window_cb_t ok, textarea_window_cb_t ca
     lv_textarea_set_max_length(text, 64);
 
     lv_obj_clear_flag(text, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_text_font(text, &sony_44, 0);
+    lv_obj_set_style_text_font(text, &lv_font_montserrat_44, 0);
     lv_obj_set_flex_grow(text, 1);
 
     if (ok || cancel) {
