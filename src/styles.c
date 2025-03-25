@@ -367,7 +367,9 @@ static void setup_theme_nofi() {
     /* TX info */
     lv_style_set_bg_img_src(&tx_info_style, PATH "images/top_big_dark.bin");
     lv_style_set_width(&tx_info_style, 380);
-    lv_style_set_height(&tx_info_style, 185); /* was 123 */
+    lv_style_set_height(&tx_info_style, 123)
+
+    
 
     lv_obj_invalidate(lv_scr_act());
 }

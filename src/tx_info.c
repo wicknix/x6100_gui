@@ -165,7 +165,7 @@ static void tx_info_draw_cb(lv_event_t *e) {
     slices_total            = (max_alc - min_alc) / slice_alc_step;
     uint8_t slice_alc_width = w / slices_total;
 
-    count = (pwr - min_alc + slice_alc_step) / slice_alc_step;
+    count = (alc - min_alc + slice_alc_step) / slice_alc_step;
     count = LV_MIN(count, slices_total);
 
     area.y1 = y1 - 5 + 108;
@@ -253,6 +253,16 @@ static void tx_cb(lv_event_t *e) {
     vswr = 0.0f;
     alc  = 0.0f;
 
+    /* if the user has selected ALC MAG then tweak the bar area height as appropriate */
+    if (params.mag_alc.x) {
+        lv_style_set_height(&tx_info_style, 123); /* was 123 */
+        lv_obj_clear_flag(alc_label, LV_OBJ_FLAG_HIDDEN);
+    } else {
+    /* otherwise, show the bar and hide the small label */
+        lv_style_set_height(&tx_info_style, 185); /* was 123 */
+        lv_obj_add_flag(alc_label, LV_OBJ_FLAG_HIDDEN);
+    }
+
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(obj);
 }
@@ -267,7 +277,7 @@ static void update_tx_info(void *arg) {
     }
     lv_obj_invalidate(obj);
     if (params.mag_alc.x) {
-        msg_tiny_set_text_fmt("ALC: %.1f", alc);
+        /* msg_tiny_set_text_fmt("ALC: %.1f", alc); hide this while we work on the bar graph */
     }
     if (dialog_is_run() || !params.mag_alc.x) {
         lv_label_set_text_fmt(alc_label, "ALC: %1.1f", alc);
