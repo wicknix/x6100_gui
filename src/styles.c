@@ -318,13 +318,13 @@ static void setup_theme_legacy() {
     /* TX info */
     lv_style_set_bg_img_src(&tx_info_style, PATH "images/top_big.bin");
     lv_style_set_width(&tx_info_style, 377);
-    lv_style_set_height(&tx_info_style, 123); 
+    lv_style_set_height(&tx_info_style, 123);
 
     lv_obj_invalidate(lv_scr_act());
 }
 
 static void setup_theme_nofi() {
-    wf_palette = wf_palette_gauss;
+    wf_palette = wf_palette_legacy;
 
     bg_color = lv_color_hex(0x27313a);
     lv_style_set_bg_color(&background_style, bg_color);
