@@ -164,7 +164,7 @@ static void spectrum_draw_cb(lv_event_t *e) {
 
     lv_draw_rect_dsc_init(&rect_dsc);
 
-    rect_dsc.bg_color = bg_color;
+    rect_dsc.bg_color = lv_color_hex(0xFFEA00);
     rect_dsc.bg_opa   = LV_OPA_50;
 
     int32_t w_hz = width_hz / zoom_factor;
