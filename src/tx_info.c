@@ -186,7 +186,7 @@ static void tx_info_draw_cb(lv_event_t *e) {
     lv_draw_label_dsc_init(&label_dsc);
 
     label_dsc.color = lv_color_white();
-    label_dsc.font  = &lv_font_montserrat_22;
+    label_dsc.font  = &sony_22;
 
     area.x1 = x1;
     area.x2 = x1 + 20;
@@ -312,7 +312,7 @@ lv_obj_t *tx_info_init(lv_obj_t *parent) {
 
     // Small alc indicator
     alc_label = lv_label_create(obj);
-    lv_obj_set_style_text_font(alc_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(alc_label, &sony_20, 0);
     lv_obj_align(alc_label, LV_ALIGN_BOTTOM_RIGHT, -10, 13);
     lv_obj_set_style_text_color(alc_label, lv_color_white(), 0);
     lv_label_set_text(alc_label, "");
