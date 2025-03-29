@@ -1049,7 +1049,7 @@ lv_obj_t * main_screen() {
 
     f = lv_label_create(obj);
     lv_obj_add_style(f, &freq_main_style, 0);
-    lv_obj_set_pos(f, 800/2 - 500/2, y);
+    lv_obj_set_pos(f, 800/2 - 500/2, y - 1);
     lv_label_set_recolor(f, true);
     freq[1] = f;
 
