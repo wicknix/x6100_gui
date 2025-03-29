@@ -70,8 +70,8 @@ static void pannel_update_cb(const char *text) {
             check_lines();
         }
     } else {
-        lv_txt_get_size(&line_size, last_line, &lv_font_montserrat_38, 0, 0, LV_COORD_MAX, 0);
-        lv_txt_get_size(&text_size, text, &lv_font_montserrat_38, 0, 0, LV_COORD_MAX, 0);
+        lv_txt_get_size(&line_size, last_line, &sony_38, 0, 0, LV_COORD_MAX, 0);
+        lv_txt_get_size(&text_size, text, &sony_38, 0, 0, LV_COORD_MAX, 0);
 
         if (line_size.x + text_size.x > (lv_obj_get_width(obj) - 40)) {
             strcat(last_line, "\n");
