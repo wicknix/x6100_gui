@@ -113,7 +113,7 @@ lv_color_t  bg_color;
 
 static void setup_theme_legacy();
 static void setup_theme_simple();
-static void setup_theme_nofi();
+static void setup_theme_h2ored();
 
 void styles_init(themes_t theme) {
     /* * */
@@ -131,7 +131,7 @@ void styles_init(themes_t theme) {
 
     lv_style_init(&freq_style);
     lv_style_set_text_color(&freq_style, lv_color_white());
-    lv_style_set_text_font(&freq_style, &lv_font_montserrat_30);
+    lv_style_set_text_font(&freq_style, &sony_30);
     lv_style_set_pad_ver(&freq_style, 7);
     lv_style_set_width(&freq_style, 150);
     lv_style_set_height(&freq_style, 36);
@@ -139,7 +139,7 @@ void styles_init(themes_t theme) {
 
     lv_style_init(&freq_main_style);
     lv_style_set_text_color(&freq_main_style, lv_color_white());
-    lv_style_set_text_font(&freq_main_style, &lv_font_montserrat_38);
+    lv_style_set_text_font(&freq_main_style, &sony_38);
     lv_style_set_pad_ver(&freq_main_style, 5);
     lv_style_set_width(&freq_main_style, 500);
     lv_style_set_height(&freq_main_style, 36);
@@ -156,7 +156,7 @@ void styles_init(themes_t theme) {
 
     /* Buttons */
     lv_style_init(&btn_style);
-    lv_style_set_text_font(&btn_style, &lv_font_montserrat_30);
+    lv_style_set_text_font(&btn_style, &sony_30);
     lv_style_set_text_color(&btn_style, lv_color_white());
     lv_style_set_bg_img_opa(&btn_style, LV_OPA_COVER);
     lv_style_set_border_width(&btn_style, 0);
@@ -166,7 +166,7 @@ void styles_init(themes_t theme) {
     /* Message style */
     lv_style_init(&msg_style);
     lv_style_set_text_color(&msg_style, lv_color_white());
-    lv_style_set_text_font(&msg_style, &lv_font_montserrat_30);
+    lv_style_set_text_font(&msg_style, &sony_30);
     lv_style_set_width(&msg_style, 603);
     lv_style_set_height(&msg_style, 66);
     lv_style_set_x(&msg_style, 800 / 2 - (603 / 2));
@@ -178,7 +178,7 @@ void styles_init(themes_t theme) {
     lv_style_init(&msg_tiny_style);
     lv_style_set_text_color(&msg_tiny_style, lv_color_white());
     // note - was originally sony_60 - lv_font_monterrat_40 might be too small?
-    lv_style_set_text_font(&msg_tiny_style, &lv_font_montserrat_24);
+    lv_style_set_text_font(&msg_tiny_style, &sony_60);
     lv_style_set_width(&msg_tiny_style, 324);
     lv_style_set_height(&msg_tiny_style, 66);
     lv_style_set_x(&msg_tiny_style, 800 / 2 - (324 / 2));
@@ -189,7 +189,7 @@ void styles_init(themes_t theme) {
     /* Panel */
     lv_style_init(&pannel_style);
     lv_style_set_text_color(&pannel_style, lv_color_white());
-    lv_style_set_text_font(&pannel_style, &lv_font_montserrat_38);
+    lv_style_set_text_font(&pannel_style, &sony_38);
     lv_style_set_width(&pannel_style, 795);
     lv_style_set_height(&pannel_style, 182);
     lv_style_set_x(&pannel_style, 800 / 2 - (795 / 2));
@@ -201,7 +201,7 @@ void styles_init(themes_t theme) {
 
     lv_style_init(&dialog_style);
     lv_style_set_text_color(&dialog_style, lv_color_white());
-    lv_style_set_text_font(&dialog_style, &lv_font_montserrat_24);
+    lv_style_set_text_font(&dialog_style, &sony_36);
     lv_style_set_width(&dialog_style, 796);
     lv_style_set_height(&dialog_style, 348);
     lv_style_set_x(&dialog_style, 800 / 2 - (796 / 2));
@@ -226,7 +226,7 @@ void styles_init(themes_t theme) {
     lv_style_set_text_color(&dialog_item_edited_style, lv_color_black());
 
     lv_style_init(&dialog_dropdown_list_style);
-    lv_style_set_text_font(&dialog_dropdown_list_style, &lv_font_montserrat_30);
+    lv_style_set_text_font(&dialog_dropdown_list_style, &sony_30);
 
     /* Clock */
     lv_style_init(&clock_style);
@@ -245,7 +245,7 @@ void styles_init(themes_t theme) {
     lv_style_set_bg_opa(&info_style, LV_OPA_0);
 
     lv_style_init(&info_item_style);
-    lv_style_set_text_font(&info_item_style, &lv_font_montserrat_20);
+    lv_style_set_text_font(&info_item_style, &sony_20);
     lv_style_set_pad_ver(&info_item_style, 5);
     lv_style_set_radius(&info_item_style, 0);
 
@@ -281,8 +281,8 @@ void styles_set_theme(themes_t theme) {
         case THEME_LEGACY:
             setup_theme_legacy();
             break;
-        case THEME_NOFI:
-            setup_theme_nofi();
+        case THEME_H2ORED:
+            setup_theme_h2ored();
             break;
         case THEME_SIMPLE:
         default:
@@ -323,7 +323,7 @@ static void setup_theme_legacy() {
     lv_obj_invalidate(lv_scr_act());
 }
 
-static void setup_theme_nofi() {
+static void setup_theme_h2ored() {
     wf_palette = wf_palette_legacy;
 
     bg_color = lv_color_hex(0x27313a);
@@ -333,31 +333,31 @@ static void setup_theme_nofi() {
     lv_style_set_bg_img_src(&msg_style, PATH "images/msg_dark.bin");
     /* Clock */
     lv_style_set_bg_img_src(&clock_style, PATH "images/top_short_dark.bin");
-    lv_style_set_width(&clock_style, 209);
+    lv_style_set_width(&clock_style, 206);
     lv_style_set_height(&clock_style, 61);
     /* Info */
     lv_style_set_bg_img_src(&info_style, PATH "images/top_short_dark.bin");
-    lv_style_set_width(&info_style, 209);
+    lv_style_set_width(&info_style, 206);
     lv_style_set_height(&info_style, 61);
     /* Meter */
     lv_style_set_bg_img_src(&meter_style, PATH "images/top_long_dark.bin");
-    lv_style_set_width(&meter_style, 380);
+    lv_style_set_width(&meter_style, 377);
     lv_style_set_height(&meter_style, 61);
 
     /* Overrides for NoFi / robwasteground */
 
     /* frequency labels */
-    lv_style_set_text_font(&freq_style, &lv_font_montserrat_24);
-    lv_style_set_text_font(&freq_main_style, &lv_font_montserrat_30);
+    /*lv_style_set_text_font(&freq_style, &lv_font_montserrat_24);
+    /*lv_style_set_text_font(&freq_main_style, &lv_font_montserrat_30);
 
     /* buttons */
-    lv_style_set_text_font(&btn_style, &lv_font_montserrat_24);
+    /*lv_style_set_text_font(&btn_style, &lv_font_montserrat_24);
 
     /* clock */
-    lv_style_set_text_font(&clock_style, &lv_font_montserrat_24);
+    /*lv_style_set_text_font(&clock_style, &lv_font_montserrat_24);
 
     /* left info */
-    lv_style_set_text_font(&info_item_style, &lv_font_montserrat_16);
+    /*lv_style_set_text_font(&info_item_style, &lv_font_montserrat_16);
 
     /* end overrides */
 
