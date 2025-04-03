@@ -113,7 +113,7 @@ lv_color_t  bg_color;
 
 static void setup_theme_legacy();
 static void setup_theme_simple();
-static void setup_theme_h2ored();
+static void setup_theme_h2odark();
 
 void styles_init(themes_t theme) {
     /* * */
@@ -281,8 +281,8 @@ void styles_set_theme(themes_t theme) {
         case THEME_LEGACY:
             setup_theme_legacy();
             break;
-        case THEME_H2ORED:
-            setup_theme_h2ored();
+        case THEME_H2ODARK:
+            setup_theme_h2odark();
             break;
         case THEME_SIMPLE:
         default:
@@ -323,10 +323,10 @@ static void setup_theme_legacy() {
     lv_obj_invalidate(lv_scr_act());
 }
 
-static void setup_theme_h2ored() {
+static void setup_theme_h2odark() {
     wf_palette = wf_palette_legacy;
 
-    bg_color = lv_color_hex(0x27313a);
+    bg_color = lv_color_hex(0x000000);
     lv_style_set_bg_color(&background_style, bg_color);
 
     lv_style_set_bg_img_src(&btn_style, PATH "images/btn_dark.bin");
