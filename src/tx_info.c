@@ -277,7 +277,7 @@ static void update_tx_info(void *arg) {
     }
     lv_obj_invalidate(obj);
     if (params.mag_alc.x) {
-        /* msg_tiny_set_text_fmt("ALC: %.1f", alc); hide this while we work on the bar graph */
+        msg_tiny_set_text_fmt("ALC: %.1f", alc); /* maybe hide this while we work on the bar graph? */
     }
     if (dialog_is_run() || !params.mag_alc.x) {
         lv_label_set_text_fmt(alc_label, "ALC: %1.1f", alc);
