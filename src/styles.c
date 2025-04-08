@@ -7,6 +7,7 @@
  */
 
 #include "styles.h"
+#include "styles_custom.h"
 
 #define PATH "A:/dev/shm/"
 
@@ -274,6 +275,8 @@ void styles_init(themes_t theme) {
     lv_style_set_y(&cw_tune_style, 70);
 
     styles_set_theme(theme);
+
+    styles_customize_theme();
 }
 
 void styles_set_theme(themes_t theme) {
