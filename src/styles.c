@@ -327,7 +327,7 @@ static void setup_theme_legacy() {
 }
 
 static void setup_theme_h2odark() {
-    wf_palette = wf_palette_legacy;
+    wf_palette = wf_palette_gauss;
 
     bg_color = lv_color_hex(0x000000);
     lv_style_set_bg_color(&background_style, bg_color);
