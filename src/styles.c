@@ -114,7 +114,7 @@ lv_color_t  bg_color;
 
 static void setup_theme_legacy();
 static void setup_theme_simple();
-static void setup_theme_h2odark();
+static void setup_theme_naked();
 
 void styles_init(themes_t theme) {
     /* * */
@@ -284,8 +284,8 @@ void styles_set_theme(themes_t theme) {
         case THEME_LEGACY:
             setup_theme_legacy();
             break;
-        case THEME_H2ODARK:
-            setup_theme_h2odark();
+        case THEME_NAKED:
+            setup_theme_naked();
             break;
         case THEME_SIMPLE:
         default:
@@ -326,13 +326,13 @@ static void setup_theme_legacy() {
     lv_obj_invalidate(lv_scr_act());
 }
 
-static void setup_theme_h2odark() {
+static void setup_theme_naked() {
     wf_palette = wf_palette_gauss;
 
     bg_color = lv_color_hex(0x000000);
     lv_style_set_bg_color(&background_style, bg_color);
 
-    lv_style_set_bg_img_src(&btn_style, PATH "images/btn_dark.bin");
+    /* lv_style_set_bg_img_src(&btn_style, PATH "images/btn_dark.bin"); */
     lv_style_set_bg_img_src(&msg_style, PATH "images/msg_dark.bin");
     /* Clock */
     /* lv_style_set_bg_img_src(&clock_style, PATH "images/top_short_dark.bin"); */
@@ -347,11 +347,11 @@ static void setup_theme_h2odark() {
     lv_style_set_width(&meter_style, 377);
     lv_style_set_height(&meter_style, 61);
 
-    lv_style_set_bg_img_src(&pannel_style, PATH "images/panel_dark.bin");
-    lv_style_set_bg_img_src(&msg_tiny_style, PATH "images/msg_tiny_dark.bin");
-    lv_style_set_bg_img_src(&dialog_style, PATH "images/dialog_dark.bin");
+    lv_style_set_bg_img_src(&pannel_style, PATH "images/panel.bin");
+    lv_style_set_bg_img_src(&msg_tiny_style, PATH "images/msg_tiny.bin");
+    lv_style_set_bg_img_src(&dialog_style, PATH "images/dialog.bin");
     /* TX info */
-    lv_style_set_bg_img_src(&tx_info_style, PATH "images/top_big_dark.bin");
+    /* lv_style_set_bg_img_src(&tx_info_style, PATH "images/top_big_dark.bin"); */
     lv_style_set_width(&tx_info_style, 380);
     lv_style_set_height(&tx_info_style, 123);
 
