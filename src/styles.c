@@ -332,8 +332,10 @@ static void setup_theme_naked() {
     bg_color = lv_color_hex(0x000000);
     lv_style_set_bg_color(&background_style, bg_color);
 
-    /* lv_style_set_bg_img_src(&btn_style, PATH "images/btn_dark.bin"); */
+    lv_style_set_bg_img_src(&btn_style, PATH "images/top_short_dark.bin");
     lv_style_set_bg_img_src(&msg_style, PATH "images/msg_dark.bin");
+    lv_style_set_width(&btn_style, 159);
+    lv_style_set_height(&btn_style, 61);
     /* Clock */
     /* lv_style_set_bg_img_src(&clock_style, PATH "images/top_short_dark.bin"); */
     lv_style_set_width(&clock_style, 206);
@@ -347,9 +349,9 @@ static void setup_theme_naked() {
     lv_style_set_width(&meter_style, 377);
     lv_style_set_height(&meter_style, 61);
 
-    lv_style_set_bg_img_src(&pannel_style, PATH "images/panel.bin");
-    lv_style_set_bg_img_src(&msg_tiny_style, PATH "images/msg_tiny.bin");
-    lv_style_set_bg_img_src(&dialog_style, PATH "images/dialog.bin");
+    lv_style_set_bg_img_src(&pannel_style, PATH "images/panel_dark.bin");
+    lv_style_set_bg_img_src(&msg_tiny_style, PATH "images/msg_tiny_dark.bin");
+    lv_style_set_bg_img_src(&dialog_style, PATH "images/dialog_dark.bin");
     /* TX info */
     /* lv_style_set_bg_img_src(&tx_info_style, PATH "images/top_big_dark.bin"); */
     lv_style_set_width(&tx_info_style, 380);
