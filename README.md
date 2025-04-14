@@ -37,7 +37,9 @@ git clone https://github.com/gdyuldin/x6100_gui
 
 ```
 cd AetherX6100Buildroot
-./br_build.sh
+git submodule init
+git submodule update
+./br_config.sh
 cd ..
 ```
 
