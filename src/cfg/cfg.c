@@ -283,6 +283,7 @@ static int init_params_cfg(sqlite3 *db) {
 
     // FT8
     fill_cfg_item(&cfg.ft8_hold_freq, subject_create_int(true), "ft8_hold_freq");
+    fill_cfg_item(&cfg.ft8_max_repeats, subject_create_int(6), "ft8_max_repeats");
 
     /* Bind callbacks */
     // subject_add_observer(cfg.band_id.val, on_band_id_change, NULL);

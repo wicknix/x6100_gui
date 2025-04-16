@@ -67,7 +67,7 @@ class Candidate {
 
 class FTxQsoProcessor {
   public:
-    FTxQsoProcessor(std::string local_callsign, std::string local_qth, save_qso_cb_t save_qso_cb);
+    FTxQsoProcessor(std::string local_callsign, std::string local_qth, save_qso_cb_t save_qso_cb, int max_repeats);
     ~FTxQsoProcessor();
 
     /// @brief Pass an RXed text, update internal state and meta
@@ -88,15 +88,16 @@ class FTxQsoProcessor {
     void start_qso(ftx_msg_meta_t *meta, ftx_tx_msg_t *tx_msg);
 
   private:
-    bool          _auto = true;
+    bool          _auto    = true;
     bool          _have_tx = false;
     std::string   _local_callsign;
     std::string   _local_qth;
     save_qso_cb_t _save_qso_cb;
+    int           _max_repeats = -1;
 
     ftx_msg_type_t _last_rx_type;
     Candidate     *_next_candidate = NULL;
-    Candidate     *_cur_candidate = NULL;
+    Candidate     *_cur_candidate  = NULL;
 
     Candidate **get_candidate_to_update(std::string call_de);
     Candidate  *get_or_create_cur_candidate(std::string remote_callsign);
@@ -109,7 +110,7 @@ typedef struct FTxQsoProcessor FTxQsoProcessor;
 extern "C" {
 #endif
 
-extern FTxQsoProcessor *ftx_qso_processor_init(const char *local_callsign, const char *qth, save_qso_cb_t save_qso_cb);
+extern FTxQsoProcessor *ftx_qso_processor_init(const char *local_callsign, const char *qth, save_qso_cb_t save_qso_cb, int max_repeats);
 extern void             ftx_qso_processor_delete(FTxQsoProcessor *p);
 extern void ftx_qso_processor_add_rx_text(FTxQsoProcessor *p, const char *text, const int snr, ftx_msg_meta_t *meta,
                                           ftx_tx_msg_t *tx_msg);

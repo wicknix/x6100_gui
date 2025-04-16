@@ -4,9 +4,9 @@
 #define DEFAULT_SNR 100
 
 extern "C" {
-#include "../qth/qth.h"
-#include "string.h"
-#include "utils.h"
+    #include "../qth/qth.h"
+    #include "string.h"
+    #include "utils.h"
 }
 
 static std::string make_answer_text(ftx_msg_type_t last_rx_type, std::string remote_callsign,
@@ -77,7 +77,7 @@ void Candidate::save_qso(save_qso_cb_t save_qso_cb) {
         _saved = true;
 }
 
-FTxQsoProcessor::FTxQsoProcessor(std::string local_callsign, std::string local_qth, save_qso_cb_t save_qso_cb) {
+FTxQsoProcessor::FTxQsoProcessor(std::string local_callsign, std::string local_qth, save_qso_cb_t save_qso_cb, int max_repeats) {
     _local_callsign = local_callsign;
     if (local_qth.size() > 4) {
         _local_qth = local_qth.substr(0, 4);
@@ -85,6 +85,7 @@ FTxQsoProcessor::FTxQsoProcessor(std::string local_callsign, std::string local_q
         _local_qth = local_qth;
     }
     _save_qso_cb = save_qso_cb;
+    _max_repeats = max_repeats;
 }
 
 FTxQsoProcessor::~FTxQsoProcessor() {
@@ -157,7 +158,7 @@ void FTxQsoProcessor::process_grid(ftx_msg_meta_t *meta, std::vector<std::string
             (*candidate_to_update)->set_local_snr(snr);
             (*candidate_to_update)->set_grid(grid);
             if ((*candidate_to_update == _cur_candidate) && _auto) {
-                tx_msg.repeats = -1;
+                tx_msg.repeats = _max_repeats;
                 strcpy(tx_msg.msg, _cur_candidate->get_tx_text(_local_callsign, _local_qth).c_str());
             }
         }
@@ -180,7 +181,7 @@ void FTxQsoProcessor::process_report(ftx_msg_meta_t *meta, std::vector<std::stri
             (*candidate_to_update)->set_local_snr(snr);
             (*candidate_to_update)->set_rcvd_snr(rcvd_snr);
             if ((*candidate_to_update == _cur_candidate) && _auto) {
-                tx_msg.repeats = -1;
+                tx_msg.repeats = _max_repeats;
                 strcpy(tx_msg.msg, _cur_candidate->get_tx_text(_local_callsign, _local_qth).c_str());
             }
         }
@@ -301,7 +302,7 @@ void FTxQsoProcessor::start_qso(ftx_msg_meta_t *meta, ftx_tx_msg_t *tx_msg) {
     _cur_candidate->set_local_snr(meta->local_snr);
     _cur_candidate->set_msg_type(type);
 
-    tx_msg->repeats = -1;
+    tx_msg->repeats = _max_repeats;
     switch (type) {
     case FTX_MSG_TYPE_CQ:
     case FTX_MSG_TYPE_GRID:
@@ -373,8 +374,9 @@ static std::string make_answer_text(ftx_msg_type_t last_rx_type, std::string rem
     return std::string(answer, len);
 }
 
-FTxQsoProcessor *ftx_qso_processor_init(const char *local_callsign, const char *qth, save_qso_cb_t save_qso_cb) {
-    return new FTxQsoProcessor(local_callsign, qth, save_qso_cb);
+FTxQsoProcessor *ftx_qso_processor_init(const char *local_callsign, const char *qth, save_qso_cb_t save_qso_cb,
+                                        int max_repeats) {
+    return new FTxQsoProcessor(local_callsign, qth, save_qso_cb, max_repeats);
 }
 
 void ftx_qso_processor_delete(FTxQsoProcessor *p) {

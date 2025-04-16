@@ -60,6 +60,7 @@ typedef struct {
 
     // FT8
     cfg_item_t ft8_hold_freq;
+    cfg_item_t ft8_max_repeats;
 } cfg_t;
 extern cfg_t cfg;
 

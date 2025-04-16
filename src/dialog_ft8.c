@@ -225,7 +225,7 @@ static void save_qso(const char *remote_callsign, const char *remote_grid, const
 static void worker_init() {
 
     /* ftx worker */
-    qso_processor = ftx_qso_processor_init(params.callsign.x, params.qth.x, save_qso);
+    qso_processor = ftx_qso_processor_init(params.callsign.x, params.qth.x, save_qso, subject_get_int(cfg.ft8_max_repeats.val));
 
     ftx_worker_init(SAMPLE_RATE, params.ft8_protocol);
     int block_size = ftx_worker_get_block_size();
@@ -821,7 +821,7 @@ static void tx_cq_en_dis_cb(struct button_item_t *btn) {
         } else {
             msg_schedule_text_fmt("Next TX: %s", tx_msg.msg);
         }
-        tx_msg.repeats = -1;
+        tx_msg.repeats = subject_get_int(cfg.ft8_max_repeats.val);
         ftx_qso_processor_reset(qso_processor);
         lv_finder_clear_cursor(finder);
     } else {
@@ -1257,6 +1257,10 @@ static void * decode_thread(void *arg) {
                     tx_msg.repeats--;
                 }
                 if (tx_msg.repeats == 0){
+                    if (strncmp(tx_msg.msg, "CQ", 2) == 0) {
+                        cq_enabled = false;
+                        scheduler_put_noargs(reload_buttons);
+                    }
                     tx_msg.msg[0] = '\0';
                 }
                 continue;
