@@ -38,6 +38,8 @@ static void on_zoom_change(Subject *subj, void *user_data);
 static void update_real_filters(Subject *subj, void *user_data);
 static void update_lo_offset(Subject *subj, void *user_data);
 
+static void fill_mode_cfg_item(cfg_item_t *item, Subject * val, const char * db_name, int pk);
+
 void cfg_mode_params_init(sqlite3 *database) {
     init_db(database);
 
@@ -81,10 +83,10 @@ void cfg_mode_params_init(sqlite3 *database) {
     subject_add_observer(cfg_cur.mode, update_lo_offset, NULL);
     subject_add_observer_and_call(cfg.key_tone.val, update_lo_offset, NULL);
 
-    cfg_mode.filter_low  = (cfg_item_t){.val = subject_create_int(low), .db_name = "filter_low", .pk = db_mode};
-    cfg_mode.filter_high = (cfg_item_t){.val = subject_create_int(high), .db_name = "filter_high", .pk = db_mode};
-    cfg_mode.freq_step   = (cfg_item_t){.val = subject_create_int(step), .db_name = "freq_step", .pk = db_mode};
-    cfg_mode.zoom        = (cfg_item_t){.val = subject_create_int(zoom), .db_name = "spectrum_factor", .pk = db_mode};
+    fill_mode_cfg_item(&cfg_mode.filter_low, subject_create_int(low), "filter_low", db_mode);
+    fill_mode_cfg_item(&cfg_mode.filter_high, subject_create_int(high), "filter_high", db_mode);
+    fill_mode_cfg_item(&cfg_mode.freq_step, subject_create_int(step), "freq_step", db_mode);
+    fill_mode_cfg_item(&cfg_mode.zoom, subject_create_int(zoom), "spectrum_factor", db_mode);
 
     subject_add_observer(cfg_mode.filter_low.val, update_cur_low_filter, &cfg_mode.filter_low);
     subject_add_observer(cfg_cur.mode, update_cur_low_filter, &cfg_mode.filter_low);
@@ -555,4 +557,9 @@ static void update_lo_offset(Subject *subj, void *user_data) {
             lo_offset = 0;
     }
     subject_set_int(cfg_cur.lo_offset, lo_offset);
+}
+
+static void fill_mode_cfg_item(cfg_item_t *item, Subject * val, const char * db_name, int pk) {
+    fill_cfg_item(item, val, db_name);
+    item->pk = pk;
 }

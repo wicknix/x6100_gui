@@ -32,7 +32,7 @@ typedef struct button_item_t {
     btn_type_t type;
     union {
         const char *label;
-        char *(*label_fn)();
+        const char *(*label_fn)();
     };
     void (*press)(struct button_item_t *);
     void (*hold)(struct button_item_t *);
@@ -42,7 +42,7 @@ typedef struct button_item_t {
     struct buttons_page_t *prev;
     int32_t                data;
     lv_obj_t              *label_obj;
-    Subject               *subj;
+    Subject               **subj;
     Observer              *observer;
 } button_item_t;
 

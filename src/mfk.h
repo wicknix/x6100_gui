@@ -49,6 +49,7 @@ typedef enum {
     MFK_AGC_HANG,
     MFK_AGC_KNEE,
     MFK_AGC_SLOPE,
+    MFK_COMP,
 
     MFK_CW_DECODER,
     MFK_CW_TUNE,

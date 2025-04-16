@@ -18,6 +18,7 @@ typedef struct {
     cfg_item_t band_id;
     cfg_item_t ant_id;
     cfg_item_t atu_enabled;
+    cfg_item_t comp;
 
     /* key */
     cfg_item_t key_speed;
