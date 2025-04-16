@@ -14,8 +14,8 @@
 
 static sqlite3        *db;
 static sqlite3_stmt   *insert_stmt;
-static sqlite3_stmt   *update_stmt;
 static sqlite3_stmt   *read_stmt;
+static sqlite3_stmt   *delete_adjacent_stmt;
 static pthread_mutex_t write_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t read_mutex  = PTHREAD_MUTEX_INITIALIZER;
 
@@ -44,16 +44,16 @@ void cfg_atu_init(sqlite3 *database) {
         LV_LOG_ERROR("Failed prepare read statement: %s", sqlite3_errmsg(db));
         exit(1);
     }
-    rc = sqlite3_prepare_v2(db, "UPDATE atu SET freq = :freq, val = :val WHERE ant = :ant AND freq = :prev_freq", -1,
-                            &update_stmt, 0);
-    if (rc != SQLITE_OK) {
-        LV_LOG_ERROR("Failed prepare update statement: %s", sqlite3_errmsg(db));
-        exit(1);
-    }
-    rc = sqlite3_prepare_v2(db, "INSERT OR IGNORE INTO atu(ant, freq, val) VALUES(:ant, :freq, :val);", -1,
+    rc = sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO atu(ant, freq, val) VALUES(:ant, :freq, :val);", -1,
                             &insert_stmt, 0);
     if (rc != SQLITE_OK) {
         LV_LOG_ERROR("Failed prepare insert statement: %s", sqlite3_errmsg(db));
+        exit(1);
+    }
+    rc = sqlite3_prepare_v2(db, "DELETE FROM atu WHERE ant = :ant AND (freq BETWEEN :freq - :step AND :freq + :step) AND (:freq != freq)", -1,
+                            &delete_adjacent_stmt, 0);
+    if (rc != SQLITE_OK) {
+        LV_LOG_ERROR("Failed prepare delete adjacent statement: %s", sqlite3_errmsg(db));
         exit(1);
     }
 
@@ -62,6 +62,9 @@ void cfg_atu_init(sqlite3 *database) {
 
     atu_network.loaded        = subject_create_int(false);
     atu_network.network        = subject_create_int(0);
+
+    ant_id = subject_get_int(cfg.ant_id.val);
+    load_all_atu_for_ant(ant_id);
 
     subject_add_observer(cfg_cur.fg_freq, update_atu_network, NULL);
     subject_add_observer(cfg.atu_enabled.val, update_atu_network, NULL);
@@ -76,21 +79,8 @@ int cfg_atu_save_network(uint32_t network) {
     LV_LOG_INFO("Saving ATU network %u for freq: %i and ant: %i\n", network, freq, ant_id);
 
     sqlite3_stmt *stmt;
-    int32_t       atu_pos = find_atu_for_freq(freq);
     pthread_mutex_lock(&write_mutex);
-    if (atu_pos >= 0) {
-        stmt = update_stmt;
-        rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":prev_freq"), atu_network_cache[atu_pos].freq);
-        if (rc != SQLITE_OK) {
-            LV_LOG_ERROR("Failed to bind prev_freq %i: %s", atu_network_cache[atu_pos].freq, sqlite3_errmsg(db));
-            sqlite3_reset(stmt);
-            sqlite3_clear_bindings(stmt);
-            pthread_mutex_unlock(&write_mutex);
-            return rc;
-        }
-    } else {
-        stmt = insert_stmt;
-    }
+    stmt = insert_stmt;
 
     rc = sqlite3_bind_int(stmt, sqlite3_bind_parameter_index(stmt, ":ant"), ant_id);
     if (rc != SQLITE_OK) {
@@ -118,16 +108,49 @@ int cfg_atu_save_network(uint32_t network) {
     }
 
     rc = sqlite3_step(stmt);
+    sqlite3_reset(stmt);
+    sqlite3_clear_bindings(stmt);
+
     if (rc != SQLITE_DONE) {
         LV_LOG_ERROR("Failed save atu_params: %s", sqlite3_errmsg(db));
     } else {
-        rc = 0;
-        add_atu_net_to_cache(freq, network);
-        subject_set_int(atu_network.loaded, true);
-        subject_set_int(atu_network.network, network);
+        rc = sqlite3_bind_int(delete_adjacent_stmt, sqlite3_bind_parameter_index(delete_adjacent_stmt, ":ant"), ant_id);
+        if (rc != SQLITE_OK) {
+            LV_LOG_ERROR("Failed to bind ant_id to delete adjacent stmt %i: %s", ant_id, sqlite3_errmsg(db));
+            sqlite3_reset(delete_adjacent_stmt);
+            sqlite3_clear_bindings(delete_adjacent_stmt);
+            pthread_mutex_unlock(&write_mutex);
+            return rc;
+        }
+        rc = sqlite3_bind_int(delete_adjacent_stmt, sqlite3_bind_parameter_index(delete_adjacent_stmt, ":freq"), freq);
+        if (rc != SQLITE_OK) {
+            LV_LOG_ERROR("Failed to bind freq to delete adjacent stmt %i: %s", freq, sqlite3_errmsg(db));
+            sqlite3_reset(delete_adjacent_stmt);
+            sqlite3_clear_bindings(delete_adjacent_stmt);
+            pthread_mutex_unlock(&write_mutex);
+            return rc;
+        }
+        rc = sqlite3_bind_int(delete_adjacent_stmt, sqlite3_bind_parameter_index(delete_adjacent_stmt, ":step"), ATU_SAVE_STEP);
+        if (rc != SQLITE_OK) {
+            LV_LOG_ERROR("Failed to bind step to delete adjacent stmt %i: %s", ATU_SAVE_STEP, sqlite3_errmsg(db));
+            sqlite3_reset(delete_adjacent_stmt);
+            sqlite3_clear_bindings(delete_adjacent_stmt);
+            pthread_mutex_unlock(&write_mutex);
+            return rc;
+        }
+        rc = sqlite3_step(delete_adjacent_stmt);
+        sqlite3_reset(delete_adjacent_stmt);
+        sqlite3_clear_bindings(delete_adjacent_stmt);
+        if (rc != SQLITE_DONE) {
+            LV_LOG_ERROR("Failed remove adjacent atu_params: %s", sqlite3_errmsg(db));
+        } else {
+            rc = 0;
+            load_all_atu_for_ant(ant_id);
+            subject_set_int(atu_network.loaded, true);
+            subject_set_int(atu_network.network, network);
+        }
     }
-    sqlite3_reset(stmt);
-    sqlite3_clear_bindings(stmt);
+
     pthread_mutex_unlock(&write_mutex);
     return rc;
 }
