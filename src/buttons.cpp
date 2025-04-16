@@ -738,7 +738,7 @@ void buttons_load_page_group(buttons_group_t group) {
         return;
     }
     for (size_t i = 0; i < group_size; i++) {
-        if (group[i] == cur_page) {
+        if ((group[i] == cur_page) && (cur_page->items[0]->next)) {
             // load next
             cur_page->items[0]->press(cur_page->items[0]);
             return;
