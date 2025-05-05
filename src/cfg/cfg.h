@@ -20,6 +20,9 @@ typedef struct {
     cfg_item_t atu_enabled;
     cfg_item_t comp;
 
+    cfg_item_t tx_i_offset;
+    cfg_item_t tx_q_offset;
+
     /* key */
     cfg_item_t key_speed;
     cfg_item_t key_mode;

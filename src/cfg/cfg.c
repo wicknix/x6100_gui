@@ -244,6 +244,9 @@ static int init_params_cfg(sqlite3 *db) {
     fill_cfg_item(&cfg.atu_enabled, subject_create_int(false), "atu");
     fill_cfg_item(&cfg.comp, subject_create_int(4), "comp");
 
+    fill_cfg_item(&cfg.tx_i_offset, subject_create_int(0), "tx_i_offset");
+    fill_cfg_item(&cfg.tx_q_offset, subject_create_int(0), "tx_q_offset");
+
     fill_cfg_item(&cfg.key_speed, subject_create_int(15), "key_speed");
     fill_cfg_item(&cfg.key_mode, subject_create_int(x6100_key_manual), "key_mode");
     fill_cfg_item(&cfg.iambic_mode, subject_create_int(x6100_iambic_a), "iambic_mode");

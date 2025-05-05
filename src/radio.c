@@ -216,6 +216,12 @@ static void on_change_uint32(Subject *subj, void *user_data) {
     WITH_RADIO_LOCK(fn(new_val));
 }
 
+static void on_change_int32(Subject *subj, void *user_data) {
+    int32_t new_val = subject_get_int(subj);
+    void (*fn)(int32_t) = (void (*)(int32_t))user_data;
+    WITH_RADIO_LOCK(fn(new_val));
+}
+
 static void on_change_float(Subject *subj, void *user_data) {
     float new_val = subject_get_float(subj);
     void (*fn)(float) = (void (*)(float))user_data;
@@ -414,11 +420,14 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
     subject_add_observer_and_call(cfg.vol.val, on_change_uint8, x6100_control_rxvol_set);
     subject_add_observer_and_call(cfg.sql.val, on_change_uint8, x6100_control_sql_set);
     subject_add_observer_and_call(cfg.pwr.val, on_change_float, x6100_control_txpwr_set);
-    subject_add_observer_and_call(cfg.key_tone.val, on_change_uint16, x6100_control_key_tone_set);
     subject_add_observer_and_call(cfg.atu_enabled.val, on_change_uint8, x6100_control_atu_set);
     subject_add_observer_and_call(cfg_cur.atu->network, on_atu_network_change, NULL);
     subject_add_observer_and_call(cfg.comp.val, on_change_comp_ratio, NULL);
 
+    subject_add_observer_and_call(cfg.tx_i_offset.val, on_change_int32, x6100_control_tx_i_offset_set);
+    subject_add_observer_and_call(cfg.tx_q_offset.val, on_change_int32, x6100_control_tx_q_offset_set);
+
+    subject_add_observer_and_call(cfg.key_tone.val, on_change_uint16, x6100_control_key_tone_set);
     subject_add_observer_and_call(cfg.key_speed.val, on_change_uint8, x6100_control_key_speed_set);
     subject_add_observer_and_call(cfg.key_mode.val, on_change_uint8, x6100_control_key_mode_set);
     subject_add_observer_and_call(cfg.iambic_mode.val, on_change_uint8, x6100_control_iambic_mode_set);

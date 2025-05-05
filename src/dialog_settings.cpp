@@ -1294,6 +1294,60 @@ static uint8_t make_sp_mode(uint8_t row) {
     return row + 1;
 }
 
+/* TX offset */
+#define TX_OFFSET_SCALE 50
+
+static void tx_iq_offset_update_cb(lv_event_t * e) {
+    lv_obj_t *obj = lv_event_get_target(e);
+    int32_t val = lv_slider_get_value(obj);
+
+    lv_obj_t *slider_label = (lv_obj_t *)lv_obj_get_user_data(obj);
+    char *fmt = (char *)lv_obj_get_user_data(slider_label);
+    lv_label_set_text_fmt(slider_label, fmt, val);
+    Subject *subj = (Subject *)lv_event_get_user_data(e);
+    subject_set_int(subj, val * TX_OFFSET_SCALE);
+}
+
+
+static uint8_t make_tx_offset(uint8_t row) {
+    lv_obj_t    *obj;
+    lv_obj_t    *cell;
+
+    row_dsc[row] = 54;
+
+    cell = lv_label_create(grid);
+
+    lv_label_set_text(cell, "TX IQ offsets");
+    lv_obj_set_grid_cell(cell, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, row, 1);
+
+    cell = lv_obj_create(grid);
+
+    lv_obj_set_size(cell, SMALL_3, 56);
+    lv_obj_set_grid_cell(cell, LV_GRID_ALIGN_START, 1, 3, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_set_style_bg_opa(cell, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_center(cell);
+
+    slider_with_text(cell, subject_get_int(cfg.tx_i_offset.val) / TX_OFFSET_SCALE,
+        -10000 / TX_OFFSET_SCALE, 10000 / TX_OFFSET_SCALE,
+        SMALL_3 - 30 - 65, "%d", tx_iq_offset_update_cb, (void*)cfg.tx_i_offset.val);
+
+    cell = lv_obj_create(grid);
+
+    lv_obj_set_size(cell, SMALL_3, 56);
+    lv_obj_set_grid_cell(cell, LV_GRID_ALIGN_START, 4, 3, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_set_style_bg_opa(cell, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_center(cell);
+
+    slider_with_text(cell, subject_get_int(cfg.tx_q_offset.val) / TX_OFFSET_SCALE,
+        -10000 / TX_OFFSET_SCALE, 10000 / TX_OFFSET_SCALE,
+        SMALL_3 - 30 - 65, "%d", tx_iq_offset_update_cb, (void*)cfg.tx_i_offset.val);
+
+    return row + 1;
+}
+
+
 static uint8_t make_freq_accel(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
@@ -1399,6 +1453,9 @@ static void construct_cb(lv_obj_t *parent) {
 
     row = make_delimiter(row);
     row = make_sp_mode(row);
+
+    row = make_delimiter(row);
+    row = make_tx_offset(row);
 
     row = make_delimiter(row);
     row = make_freq_accel(row);
