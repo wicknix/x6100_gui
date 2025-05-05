@@ -275,3 +275,4 @@ char *params_mic_str_get(x6100_mic_sel_t val);
 char *params_key_mode_str_get(x6100_key_mode_t val);
 
 char *params_iambic_mode_str_ger(x6100_iambic_mode_t val);
+char *params_comp_str_get(uint8_t comp);

@@ -218,12 +218,7 @@ static button_item_t btn_agc_hang  = {.type     = BTN_TEXT_FN,
                                       .subj     = &cfg.agc_hang.val};
 static button_item_t btn_agc_knee  = make_btn(agc_knee_label_getter, MFK_AGC_KNEE, &cfg.agc_knee.val);
 static button_item_t btn_agc_slope = make_btn(agc_slope_label_getter, MFK_AGC_SLOPE, &cfg.agc_slope.val);
-static button_item_t btn_comp  = {.type     = BTN_TEXT_FN,
-    .label_fn = comp_label_getter,
-    .press    = controls_toggle_comp,
-    .hold     = button_mfk_hold_cb,
-    .data     = MFK_COMP,
-    .subj     = &cfg.comp.val};
+static button_item_t btn_comp      = make_btn(comp_label_getter, MFK_COMP, &cfg.comp.val);
 
 /* MEM page 1 */
 
@@ -548,6 +543,8 @@ void buttons_init(lv_obj_t *parent) {
 
         lv_obj_remove_style_all(f);
         lv_obj_add_style(f, &btn_style, 0);
+        lv_obj_add_style(f, &btn_active_style, LV_STATE_CHECKED);
+        lv_obj_add_style(f, &btn_disabled_style, LV_STATE_DISABLED);
 
         lv_obj_set_pos(f, x, y);
         lv_obj_set_size(f, width, btn_height);
@@ -564,6 +561,45 @@ void buttons_init(lv_obj_t *parent) {
 
     parent_obj = parent;
     lv_msg_subscribe(MSG_PARAM_CHANGED, param_changed_cb, NULL);
+}
+
+void buttons_refresh(button_item_t *item) {
+    if (item->label_obj) {
+        if (item->type == BTN_TEXT) {
+            lv_label_set_text(item->label_obj, item->label);
+        } else if (item->type == BTN_TEXT_FN) {
+            lv_label_set_text(item->label_obj, item->label_fn());
+        } else {
+            lv_label_set_text(item->label_obj, "--");
+        }
+
+    } else {
+        LV_LOG_WARN("Button item label obj is null");
+    }
+}
+
+void buttons_mark(button_item_t *item, bool on) {
+    if (item->label_obj) {
+        lv_obj_t *btn = lv_obj_get_parent(item->label_obj);
+        if (on) {
+            lv_obj_add_state(btn, LV_STATE_CHECKED);
+
+        } else {
+            lv_obj_clear_state(btn, LV_STATE_CHECKED);
+        }
+    }
+}
+
+void buttons_disabled(button_item_t *item, bool on) {
+    if (item->label_obj) {
+        lv_obj_t *btn = lv_obj_get_parent(item->label_obj);
+        if (on) {
+            lv_obj_add_state(btn, LV_STATE_DISABLED);
+
+        } else {
+            lv_obj_clear_state(btn, LV_STATE_DISABLED);
+        }
+    }
 }
 
 void buttons_load(uint8_t n, button_item_t *item) {
@@ -591,6 +627,10 @@ void buttons_load(uint8_t n, button_item_t *item) {
             lv_label_set_text(label, "");
         }
         item->label_obj = label;
+        if (item->mark) {
+            lv_obj_t *btn = lv_obj_get_parent(label);
+            lv_obj_add_state(btn, LV_STATE_CHECKED);
+        }
     } else {
         lv_label_set_text(label, "");
     }
@@ -620,6 +660,8 @@ void buttons_unload_page() {
         lv_obj_t        *label = btn[i].label;
         lv_label_set_text(label, "");
         lv_obj_set_user_data(label, NULL);
+        lv_obj_clear_state(lv_obj_get_parent(label), LV_STATE_CHECKED);
+        lv_obj_clear_state(lv_obj_get_parent(label), LV_STATE_DISABLED);
         if (btn[i].item) {
             btn[i].item->label_obj = NULL;
             if (btn[i].item->observer) {
@@ -858,7 +900,7 @@ static const char * agc_slope_label_getter() {
 
 static const char * comp_label_getter() {
     static char buf[22];
-    sprintf(buf, "Comp\n%s", subject_get_int(cfg.comp.val) ? "Off": "On");
+    sprintf(buf, "Comp:\n%s", params_comp_str_get(subject_get_int(cfg.comp.val)));
     return buf;
 }
 

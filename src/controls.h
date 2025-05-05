@@ -8,7 +8,6 @@ extern "C" {
 
 
 void controls_toggle_agc_hang(button_item_t *btn);
-void controls_toggle_comp(button_item_t *btn);
 void controls_toggle_key_train(button_item_t *btn);
 void controls_toggle_key_iambic_mode(button_item_t *btn);
 void controls_toggle_cw_decoder(button_item_t *btn);

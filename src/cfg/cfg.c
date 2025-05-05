@@ -242,7 +242,7 @@ static int init_params_cfg(sqlite3 *db) {
     fill_cfg_item(&cfg.band_id, subject_create_int(5), "band");
     fill_cfg_item(&cfg.ant_id, subject_create_int(1), "ant");
     fill_cfg_item(&cfg.atu_enabled, subject_create_int(false), "atu");
-    fill_cfg_item(&cfg.comp, subject_create_int(true), "comp");
+    fill_cfg_item(&cfg.comp, subject_create_int(4), "comp");
 
     fill_cfg_item(&cfg.key_speed, subject_create_int(15), "key_speed");
     fill_cfg_item(&cfg.key_mode, subject_create_int(x6100_key_manual), "key_mode");

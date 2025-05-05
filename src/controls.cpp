@@ -15,11 +15,6 @@ void controls_toggle_agc_hang(button_item_t *btn) {
     voice_say_bool("Auto gain hang", new_val);
 }
 
-void controls_toggle_comp(button_item_t *btn) {
-    bool new_val = toggle_subj(cfg.comp.val);
-    voice_say_bool("Compressor", new_val);
-}
-
 void controls_toggle_key_train(button_item_t *btn) {
     bool new_val = toggle_subj(cfg.key_train.val);
     voice_say_bool("CW key train", new_val);

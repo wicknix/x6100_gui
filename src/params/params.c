@@ -676,3 +676,12 @@ inline char * params_iambic_mode_str_ger(x6100_iambic_mode_t val) {
             return "B";
     }
 }
+
+inline char *params_comp_str_get(uint8_t comp) {
+    static char buf[8];
+    if (comp == 1) {
+        return "1:1 (Off)";
+    }
+    sprintf(buf, "%d:1", comp);
+    return buf;
+}

@@ -169,6 +169,25 @@ void mfk_update(int16_t diff, bool voice) {
             }
             break;
 
+        case MFK_COMP:
+            i = subject_get_int(cfg.comp.val);
+            if (diff) {
+                i = clip(i + diff, 1, 8);
+                subject_set_int(cfg.comp.val, i);
+            }
+            msg_update_text_fmt("#%3X Compressor ratio: %s", color, params_comp_str_get(i));
+
+            if (diff) {
+                if (i > 1) {
+                    voice_say_text_fmt("Compressor ratio %d to 1", i);
+                } else {
+                    voice_say_text_fmt("Compressor disabled");
+                }
+            } else if (voice) {
+                voice_say_text_fmt("Compressor ratio");
+            }
+            break;
+
         case MFK_PEAK_SPEED:
             if (diff != 0) {
                 f = params.spectrum_peak_speed + diff * 0.1f;
