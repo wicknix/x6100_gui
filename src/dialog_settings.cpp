@@ -8,27 +8,32 @@
 
 #include "dialog_settings.h"
 
-#include "cfg/transverter.h"
-#include "lvgl/lvgl.h"
-#include "dialog.h"
-#include "styles.h"
-#include "params/params.h"
-#include "backlight.h"
-#include "radio.h"
-#include "events.h"
-#include "keyboard.h"
-#include "clock.h"
 #include "voice.h"
-#include "audio.h"
 
-#include <sys/time.h>
-#include <time.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/rtc.h>
-#include <errno.h>
+extern "C" {
+
+    #include "cfg/transverter.h"
+    #include "dialog.h"
+    #include "styles.h"
+    #include "params/params.h"
+    #include "backlight.h"
+    #include "radio.h"
+    #include "events.h"
+    #include "keyboard.h"
+    #include "clock.h"
+    #include "audio.h"
+
+    #include "lvgl/lvgl.h"
+    #include <sys/time.h>
+    #include <time.h>
+    #include <fcntl.h>
+    #include <stdlib.h>
+    #include <unistd.h>
+    #include <sys/ioctl.h>
+    #include <linux/rtc.h>
+    #include <errno.h>
+
+}
 
 static lv_obj_t     *grid;
 
@@ -60,11 +65,11 @@ static void construct_cb(lv_obj_t *parent);
 static void key_cb(lv_event_t * e);
 
 static dialog_t     dialog = {
-    .run = false,
     .construct_cb = construct_cb,
     .destruct_cb = NULL,
     .audio_cb = NULL,
-    .key_cb = key_cb
+    .key_cb = key_cb,
+    .run = false,
 };
 
 dialog_t            *dialog_settings = &dialog;
@@ -73,31 +78,31 @@ dialog_t            *dialog_settings = &dialog;
 
 static void bool_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    params_bool_t   *var = lv_event_get_user_data(e);
+    params_bool_t   *var = (params_bool_t*)lv_event_get_user_data(e);
 
     params_bool_set(var, lv_obj_has_state(obj, LV_STATE_CHECKED));
 }
 
 static void uint8_spinbox_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    params_uint8_t  *var = lv_event_get_user_data(e);
+    params_uint8_t  *var = (params_uint8_t*)lv_event_get_user_data(e);
 
     params_uint8_set(var, lv_spinbox_get_value(obj));
 }
 
 static void uint8_dropdown_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    params_uint8_t  *var = lv_event_get_user_data(e);
+    params_uint8_t  *var = (params_uint8_t*)lv_event_get_user_data(e);
 
     params_uint8_set(var, lv_dropdown_get_selected(obj));
 }
 
 static void theme_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    params_uint8_t  *var = lv_event_get_user_data(e);
+    params_uint8_t  *var = (params_uint8_t*)lv_event_get_user_data(e);
 
     params_uint8_set(var, lv_dropdown_get_selected(obj));
-    styles_set_theme(var->x);
+    styles_set_theme((themes_t)var->x);
 }
 
 /* Shared create */
@@ -129,7 +134,7 @@ static lv_obj_t * spinbox_uint8(lv_obj_t *parent, params_uint8_t *var) {
     return obj;
 }
 
-static lv_obj_t * dropdown_uint8_custom_cb(lv_obj_t *parent, params_uint8_t *var, const char *options, lv_event_cb_t cb) {
+static lv_obj_t * dropdown_uint8(lv_obj_t *parent, params_uint8_t *var, const char *options, lv_event_cb_t cb=uint8_dropdown_update_cb) {
     lv_obj_t *obj = lv_dropdown_create(parent);
 
     dialog_item(&dialog, obj);
@@ -147,11 +152,8 @@ static lv_obj_t * dropdown_uint8_custom_cb(lv_obj_t *parent, params_uint8_t *var
     return obj;
 }
 
-static lv_obj_t * dropdown_uint8(lv_obj_t *parent, params_uint8_t *var, const char *options) {
-    return dropdown_uint8_custom_cb(parent, var, options, uint8_dropdown_update_cb);
-}
-
-static void label_with_text(lv_obj_t *cell, int32_t val, int32_t min, int32_t max, size_t width, char *fmt, lv_event_cb_t event_cb) {
+static void slider_with_text(lv_obj_t *cell, int32_t val, int32_t min, int32_t max, size_t width, const char *fmt,
+                             lv_event_cb_t event_cb, void * cb_user_data=nullptr) {
     lv_obj_t *obj;
     obj = lv_slider_create(cell);
 
@@ -164,12 +166,14 @@ static void label_with_text(lv_obj_t *cell, int32_t val, int32_t min, int32_t ma
 
     /*Create a label below the slider*/
     lv_obj_t *slider_label = lv_label_create(cell);
-    lv_obj_set_user_data(slider_label, fmt);
+    lv_obj_set_user_data(slider_label, (void *)fmt);
     lv_label_set_text_fmt(slider_label, fmt, val);
     lv_obj_align(slider_label, LV_ALIGN_RIGHT_MID, 12, 0);
     lv_obj_set_style_text_color(slider_label, lv_color_white(), 0);
 
-    lv_obj_add_event_cb(obj, event_cb, LV_EVENT_VALUE_CHANGED, slider_label);
+    lv_obj_set_user_data(obj, slider_label);
+
+    lv_obj_add_event_cb(obj, event_cb, LV_EVENT_VALUE_CHANGED, cb_user_data);
 }
 
 /* Datetime */
@@ -200,7 +204,7 @@ static void datetime_update_cb(lv_event_t * e) {
 
 static void datetime_set_rtc_cb(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
-    if (!lv_group_get_editing(lv_obj_get_group(obj)))
+    if (!lv_group_get_editing((const lv_group_t*)lv_obj_get_group(obj)))
     {
         /* Set RTC */
 
@@ -384,7 +388,7 @@ static void backlight_brightness_update_cb(lv_event_t * e) {
 static void backlight_buttons_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
 
-    backlight_set_buttons(lv_dropdown_get_selected(obj));
+    backlight_set_buttons((buttons_light_t)lv_dropdown_get_selected(obj));
 }
 
 static uint8_t make_backlight(uint8_t row) {
@@ -467,21 +471,13 @@ static uint8_t make_backlight(uint8_t row) {
 
 /* Line-in, Line-out */
 
-static void line_in_update_cb(lv_event_t * e) {
+static void line_in_out_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
-    lv_obj_t *slider_label = (lv_obj_t *)lv_event_get_user_data(e);
+    void (*fn)(uint8_t) = (void (*)(uint8_t))lv_event_get_user_data(e);
+    lv_obj_t *slider_label = (lv_obj_t *)lv_obj_get_user_data(obj);
     char *fmt = (char *)lv_obj_get_user_data(slider_label);
     int32_t val = lv_slider_get_value(obj);
-    radio_set_line_in(val);
-    lv_label_set_text_fmt(slider_label, fmt, val);
-}
-
-static void line_out_update_cb(lv_event_t * e) {
-    lv_obj_t *obj = lv_event_get_target(e);
-    lv_obj_t *slider_label = (lv_obj_t *)lv_event_get_user_data(e);
-    char *fmt = (char *)lv_obj_get_user_data(slider_label);
-    int32_t val = lv_slider_get_value(obj);
-    radio_set_line_out(val);
+    fn(val);
     lv_label_set_text_fmt(slider_label, fmt, val);
 }
 
@@ -504,7 +500,7 @@ static uint8_t make_line_gain(uint8_t row) {
     lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(cell);
 
-    label_with_text(cell, params.line_in, 0, 36, SMALL_3 - 30 - 60, "%d", line_in_update_cb);
+    slider_with_text(cell, params.line_in, 0, 36, SMALL_3 - 30 - 60, "%d", line_in_out_update_cb, (void*)radio_set_line_in);
 
     cell = lv_obj_create(grid);
 
@@ -514,7 +510,7 @@ static uint8_t make_line_gain(uint8_t row) {
     lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(cell);
 
-    label_with_text(cell, params.line_out, 0, 36, SMALL_3 - 30 - 60, "%d", line_out_update_cb);
+    slider_with_text(cell, params.line_out, 0, 36, SMALL_3 - 30 - 60, "%d", line_in_out_update_cb, (void*)radio_set_line_out);
 
     return row + 1;
 }
@@ -582,7 +578,7 @@ static uint8_t make_mag(uint8_t row) {
 static void clock_view_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
 
-    clock_set_view(lv_dropdown_get_selected(obj));
+    clock_set_view((clock_view_t)lv_dropdown_get_selected(obj));
 }
 
 static void clock_time_timeout_update_cb(lv_event_t * e) {
@@ -685,7 +681,7 @@ static uint8_t make_clock(uint8_t row) {
 /* Long press actions */
 
 typedef struct {
-    char                *label;
+    const char                *label;
     press_action_t      action;
 } action_items_t;
 
@@ -708,7 +704,7 @@ static action_items_t long_action_items[] = {
 
 static void long_action_update_cb(lv_event_t * e) {
     lv_obj_t    *obj = lv_event_get_target(e);
-    uint32_t    *i = lv_event_get_user_data(e);
+    uint32_t    *i = (uint32_t*)lv_event_get_user_data(e);
     uint8_t     val = long_action_items[lv_dropdown_get_selected(obj)].action;
 
     params_lock();
@@ -747,7 +743,14 @@ static void long_action_update_cb(lv_event_t * e) {
 }
 
 static uint8_t make_long_action(uint8_t row) {
-    char        *labels[] = { "GEN long press", "APP long press", "KEY long press", "MSG long press", "DFN long press", "DFL long press" };
+    const char        *labels[] = {
+        "GEN long press",
+        "APP long press",
+        "KEY long press",
+        "MSG long press",
+        "DFN long press",
+        "DFL long press",
+    };
     lv_obj_t    *obj;
 
     for (uint8_t i = 0; i < 6; i++) {
@@ -800,7 +803,7 @@ static uint8_t make_long_action(uint8_t row) {
             n++;
         }
 
-        uint32_t *param = malloc(sizeof(uint32_t));
+        uint32_t *param = (uint32_t*)malloc(sizeof(uint32_t));
         *param = i;
 
         lv_obj_add_event_cb(obj, long_action_update_cb, LV_EVENT_VALUE_CHANGED, param);
@@ -828,7 +831,7 @@ static action_items_t hmic_action_items[] = {
 
 static void hmic_action_update_cb(lv_event_t * e) {
     lv_obj_t    *obj = lv_event_get_target(e);
-    uint8_t     *i = lv_event_get_user_data(e);
+    uint8_t     *i = (uint8_t*)lv_event_get_user_data(e);
     uint8_t     val = hmic_action_items[lv_dropdown_get_selected(obj)].action;
 
     params_lock();
@@ -857,7 +860,7 @@ static void hmic_action_update_cb(lv_event_t * e) {
 }
 
 static uint8_t make_hmic_action(uint8_t row) {
-    struct {char *label; uint8_t param;} items[] = {
+    struct {const char *label; uint8_t param;} items[] = {
         {"HMic F1 press", params.press_f1},
         {"HMic F2 press", params.press_f2},
         {"HMic F1 long press", params.long_f1},
@@ -901,7 +904,7 @@ static uint8_t make_hmic_action(uint8_t row) {
             n++;
         }
 
-        uint8_t *param = malloc(sizeof(uint8_t));
+        uint8_t *param = (uint8_t*)malloc(sizeof(uint8_t));
         *param = i;
 
         lv_obj_add_event_cb(obj, hmic_action_update_cb, LV_EVENT_VALUE_CHANGED, param);
@@ -920,7 +923,7 @@ static void play_gain_update_cb(lv_event_t * e) {
 
     params_float_set(&params.play_gain_db_f, val);
 
-    lv_obj_t *slider_label = (lv_obj_t *)lv_event_get_user_data(e);
+    lv_obj_t *slider_label = (lv_obj_t *)lv_obj_get_user_data(obj);
     char *fmt = (char *)lv_obj_get_user_data(slider_label);
     radio_set_line_in(val);
     lv_label_set_text_fmt(slider_label, fmt, val);
@@ -928,10 +931,10 @@ static void play_gain_update_cb(lv_event_t * e) {
 
 static void rec_gain_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
-    float val = audio_set_play_vol(lv_slider_get_value(obj));
+    float val = audio_set_rec_vol(lv_slider_get_value(obj));
 
     params_float_set(&params.rec_gain_db_f, val);
-    lv_obj_t *slider_label = (lv_obj_t *)lv_event_get_user_data(e);
+    lv_obj_t *slider_label = (lv_obj_t *)lv_obj_get_user_data(obj);
     char *fmt = (char *)lv_obj_get_user_data(slider_label);
     radio_set_line_in(val);
     lv_label_set_text_fmt(slider_label, fmt, val);
@@ -956,7 +959,7 @@ static uint8_t make_audio_gain(uint8_t row) {
     lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(cell);
 
-    label_with_text(cell, params.play_gain_db_f.x, -10, 10, SMALL_3 - 30 - 65, "%.1f", play_gain_update_cb);
+    slider_with_text(cell, params.play_gain_db_f.x, -10, 10, SMALL_3 - 30 - 65, "%.1f", play_gain_update_cb);
 
     cell = lv_obj_create(grid);
 
@@ -966,7 +969,7 @@ static uint8_t make_audio_gain(uint8_t row) {
     lv_obj_clear_flag(cell, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(cell);
 
-    label_with_text(cell, params.rec_gain_db_f.x, -10, 10, SMALL_3 - 30 - 65, "%.1f", rec_gain_update_cb);
+    slider_with_text(cell, params.rec_gain_db_f.x, -10, 10, SMALL_3 - 30 - 65, "%.1f", rec_gain_update_cb);
 
     return row + 1;
 }
@@ -975,19 +978,19 @@ static uint8_t make_audio_gain(uint8_t row) {
 
 static void transverter_from_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    cfg_transverter_t   *transverter = lv_event_get_user_data(e);
+    cfg_transverter_t   *transverter = (cfg_transverter_t*)lv_event_get_user_data(e);
     subject_set_int(transverter->from.val, lv_spinbox_get_value(obj) * 1000000L);
 }
 
 static void transverter_to_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    cfg_transverter_t   *transverter = lv_event_get_user_data(e);
+    cfg_transverter_t   *transverter = (cfg_transverter_t*)lv_event_get_user_data(e);
     subject_set_int(transverter->to.val, lv_spinbox_get_value(obj) * 1000000L);
 }
 
 static void transverter_shift_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
-    cfg_transverter_t   *transverter = lv_event_get_user_data(e);
+    cfg_transverter_t   *transverter = (cfg_transverter_t*)lv_event_get_user_data(e);
     subject_set_int(transverter->shift.val, lv_spinbox_get_value(obj) * 1000000L);
 }
 
@@ -1322,7 +1325,7 @@ static uint8_t make_theme(uint8_t row) {
     lv_label_set_text(obj, "Theme");
     lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, col++, 1, LV_GRID_ALIGN_CENTER, row, 1);
 
-    obj = dropdown_uint8_custom_cb(grid, &params.theme, " Simple \n Legacy", theme_update_cb);
+    obj = dropdown_uint8(grid, &params.theme, " Simple \n Legacy", theme_update_cb);
 
     lv_obj_set_size(obj, SMALL_6, 56);
     lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 6, LV_GRID_ALIGN_CENTER, row, 1);
@@ -1421,7 +1424,7 @@ static void key_cb(lv_event_t * e) {
              break;
 
         case LV_KEY_ESC:
-            dialog_destruct(&dialog);
+            dialog_destruct();
             break;
 
         case KEY_VOL_LEFT_EDIT:

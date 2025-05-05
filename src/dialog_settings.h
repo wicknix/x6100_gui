@@ -8,6 +8,18 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "helpers.h"
+#include "cfg/subjects.h"
+
+extern "C" {
+#endif
+
 #include "dialog.h"
 
 extern dialog_t *dialog_settings;
+
+#ifdef __cplusplus
+}
+#endif
