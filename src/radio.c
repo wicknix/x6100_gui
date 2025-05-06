@@ -443,6 +443,7 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
     subject_add_observer_and_call(cfg.dnf.val, on_change_uint8, x6100_control_dnf_set);
     subject_add_observer_and_call(cfg.dnf_center.val, on_change_uint16, x6100_control_dnf_center_set);
     subject_add_observer_and_call(cfg.dnf_width.val, on_change_uint16, x6100_control_dnf_width_set);
+    subject_add_observer_and_call(cfg.dnf_auto.val, on_change_uint16, x6100_control_dnf_update_set);
     subject_add_observer_and_call(cfg.nb.val, on_change_uint8, x6100_control_nb_set);
     subject_add_observer_and_call(cfg.nb_level.val, on_change_uint8, x6100_control_nb_level_set);
     subject_add_observer_and_call(cfg.nb_width.val, on_change_uint8, x6100_control_nb_width_set);

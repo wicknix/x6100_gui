@@ -54,6 +54,7 @@ static x6100_mode_t cur_mode;
 static int32_t lo_offset;
 
 static int32_t dnf_enabled = false;
+static int32_t dnf_auto;
 static int32_t dnf_center;
 static int32_t dnf_width;
 
@@ -183,7 +184,7 @@ static void spectrum_draw_cb(lv_event_t *e) {
     lv_draw_rect(draw_ctx, &rect_dsc, &area);
 
     /* Notch */
-    if (dnf_enabled) {
+    if (dnf_enabled && !dnf_auto && ((cur_mode != x6100_mode_am) || (cur_mode != x6100_mode_nfm))) {
         int32_t from, to;
 
         rect_dsc.bg_color = lv_color_white();
@@ -284,6 +285,7 @@ lv_obj_t *spectrum_init(lv_obj_t *parent) {
     subject_add_observer_and_call(cfg_cur.band->grid.max.val, on_grid_max_change, NULL);
 
     subject_add_observer_and_call(cfg.dnf.val, on_int32_val_change, &dnf_enabled);
+    subject_add_observer_and_call(cfg.dnf_auto.val, on_int32_val_change, &dnf_auto);
     subject_add_observer_and_call(cfg.dnf_center.val, on_int32_val_change, &dnf_center);
     subject_add_observer_and_call(cfg.dnf_width.val, on_int32_val_change, &dnf_width);
 

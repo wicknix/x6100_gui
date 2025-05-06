@@ -32,13 +32,6 @@ extern "C" {
     #include <stdlib.h>
 }
 
-
-#define ANF_DECIM_FACTOR 8 // 100000 -> 12500
-#define ANF_STEP 25 // Hz
-#define ANF_NFFT 100000 / ANF_DECIM_FACTOR / ANF_STEP
-#define ANF_INTERVAL_MS 500
-#define ANF_HIST_LEN 3
-
 static iirfilt_cccf dc_block;
 
 static pthread_mutex_t spectrum_mux = PTHREAD_MUTEX_INITIALIZER;
@@ -62,9 +55,6 @@ static float          waterfall_psd[WATERFALL_NFFT];
 static uint8_t        waterfall_fps_ms = (1000 / 25);
 static uint64_t       waterfall_time;
 
-static Anf *anf;
-static bool anf_enabled = true;
-
 static cfloat buf_filtered[RADIO_SAMPLES];
 
 static uint32_t cur_freq;
@@ -85,7 +75,7 @@ static void setup_spectrum_spgram();
 static void on_zoom_change(Subject *subj, void *user_data);
 static void on_real_filter_from_change(Subject *subj, void *user_data);
 static void on_real_filter_to_change(Subject *subj, void *user_data);
-static void update_dnf_enabled(Subject *subj, void *user_data);
+static void update_cur_mode(Subject *subj, void *user_data);
 static void on_cur_freq_change(Subject *subj, void *user_data);
 
 
@@ -214,144 +204,7 @@ void ChunkedSpgram::get_psd(float *psd) {
         psd[i] = 10*log10f(psd[i]);
 }
 
-/* Anf class */
-
-Anf::Anf(size_t decim_factor, size_t chunk_size, size_t nfft, size_t interval_ms, size_t freq_bin) {
-    this->decim_factor = decim_factor;
-    this->interval_ms = interval_ms;
-    this->freq_bin = freq_bin;
-    this->nfft = nfft;
-
-    decim_buf = (cfloat *)calloc(chunk_size / decim_factor, sizeof(cfloat));
-    psd = (float *)calloc(nfft, sizeof(float));
-
-    decim = firdecim_crcf_create_kaiser(this->decim_factor, 8, 60.0f);
-    firdecim_crcf_set_scale(decim, 1.0f/(float)this->decim_factor);
-    sg = spgramcf_create(nfft, LIQUID_WINDOW_HANN, chunk_size / this->decim_factor, chunk_size / this->decim_factor);
-    last_ts = get_time();
-    notch_freq_subj = new SubjectT(0);
-}
-
-void Anf::set_freq_from(int32_t freq) {
-    freq_from = freq;
-}
-
-void Anf::set_freq_to(int32_t freq) {
-    freq_to = freq;
-}
-
-void Anf::shift(int32_t freq_diff, bool lower_band) {
-    if (lower_band)
-        freq_diff = -freq_diff;
-
-    // Shift history
-    for (size_t i = 0; i < hist_size; i++){
-        freq_hist[i] -= freq_diff;
-    }
-    // Shift detected val
-    int32_t notch_freq = notch_freq_subj->get();
-    if (notch_freq > 0) {
-        notch_freq -= freq_diff;
-        notch_freq_subj->set(notch_freq);
-    }
-    firdecim_crcf_reset(decim);
-    spgramcf_reset(sg);
-}
-
-void Anf::reset() {
-    for (size_t i = 0; i < hist_size; i++){
-        freq_hist[i] = 0;
-    }
-    notch_freq_subj->set(0);
-    firdecim_crcf_reset(decim);
-    spgramcf_reset(sg);
-}
-
-void Anf::execute_block(cfloat *block, size_t size) {
-    size_t decim_size = size / decim_factor;
-    firdecim_crcf_execute_block(decim, block, decim_size, decim_buf);
-    spgramcf_write(sg, decim_buf, decim_size);
-}
-
-void Anf::update(uint64_t now, bool lower_band) {
-    if ((now - last_ts > interval_ms) && (spgramcf_get_num_transforms(sg) > 5)) {
-        spgramcf_get_psd(sg, psd);
-        float max = -INFINITY;
-        float min = INFINITY;
-        float mean = 0;
-        int32_t max_pos = 0;
-
-        // Search for peak
-        size_t center = nfft / 2;
-        size_t start = center + freq_from / (int32_t)freq_bin;
-        size_t stop = center + freq_to / (int32_t)freq_bin;
-        for (size_t i = start; i < stop; i++){
-            if (max < psd[i]) {
-                max = psd[i];
-                max_pos = i;
-            }
-            if (min > psd[i]) {
-                min = psd[i];
-            }
-            mean += psd[i];
-        }
-        size_t peak_width = 150 / freq_bin;
-        if (stop - start < peak_width) {
-            peak_width = (stop - start) / 2;
-        }
-        mean -= peak_width * max;
-        mean /= (stop - start - peak_width);
-        // Adjust pos for USB
-        if (!lower_band) {
-            max_pos--;
-        }
-        int16_t peak_freq = (max_pos - center) * freq_bin;
-
-        // Set threshold based on freq (6 db for 3000 Hz, ~12 db on 600 Hz)
-        float threshold = 5000.0f / (peak_freq + 2000.0f) * 6.0f;
-        if (max - mean > threshold){
-            freq_hist[hist_pos] = peak_freq;
-        } else {
-            freq_hist[hist_pos] = 0;
-        }
-        hist_pos = (hist_pos + 1) % hist_size;
-
-        // Inspect history
-        int16_t mean_freq = 0;
-        for (size_t i = 0; i < hist_size; i++) {
-            mean_freq += freq_hist[i];
-        }
-        mean_freq /= (int16_t)hist_size;
-
-        int16_t deviations = 0;
-        for (size_t i = 0; i < hist_size; i++) {
-            deviations += abs(mean_freq - freq_hist[i]);
-        }
-        deviations /= (int16_t)hist_size - 1;
-        if (deviations < freq_bin) {
-            int16_t new_freq = roundf((float)mean_freq / 50) * 50;
-            if (lower_band) {
-                new_freq = - new_freq;
-            }
-            notch_freq_subj->set(new_freq);
-        }
-        last_ts = now;
-        spgramcf_reset(sg);
-    }
-}
-
 /* * */
-
-static void on_anf_update(Subject *subj, void *user_data) {
-    if (!anf_enabled) {
-        return;
-    }
-    int32_t new_val = subject_get_int(subj);
-    if ((new_val <= 0) || (new_val > 3000)) {
-        new_val = 3000;
-    }
-    subject_set_int(cfg.dnf_center.val, new_val);
-}
 
 void dsp_init() {
     dc_block = iirfilt_cccf_create_dc_blocker(0.005f);
@@ -366,9 +219,6 @@ void dsp_init() {
     spectrum_time  = get_time();
     waterfall_time = get_time();
 
-    anf = new Anf(ANF_DECIM_FACTOR, RADIO_SAMPLES, ANF_NFFT, ANF_INTERVAL_MS, ANF_STEP);
-    anf->notch_freq_subj->subscribe(on_anf_update);
-
     psd_delay = 4;
 
     audio      = (cfloat *)malloc(AUDIO_CAPTURE_RATE * sizeof(cfloat));
@@ -377,8 +227,7 @@ void dsp_init() {
     subject_add_observer_and_call(cfg_cur.zoom, on_zoom_change, NULL);
     subject_add_observer_and_call(cfg_cur.filter.real.from, on_real_filter_from_change, NULL);
     subject_add_observer_and_call(cfg_cur.filter.real.to, on_real_filter_to_change, NULL);
-    cfg.dnf_auto.val->subscribe(update_dnf_enabled);
-    cfg_cur.mode->subscribe(update_dnf_enabled)->notify();
+    cfg_cur.mode->subscribe(update_cur_mode)->notify();
 
     cfg_cur.fg_freq->subscribe(on_cur_freq_change);
     ready = true;
@@ -410,10 +259,6 @@ static void process_samples(cfloat *buf_samples, uint16_t size, firdecim_crcf sp
     }
 
     wf_sg->execute_block(buf_filtered);
-
-    if (!tx && anf_enabled) {
-        anf->execute_block(buf_filtered, size);
-    }
 }
 
 static bool update_spectrum(ChunkedSpgram *sp_sg, uint64_t now, bool tx) {
@@ -490,9 +335,6 @@ void dsp_samples(cfloat *buf_samples, uint16_t size, bool tx) {
             min_max_delay = 2;
         }
     }
-    if (!tx  && !psd_delay) {
-        anf->update(now, cur_mode==x6100_mode_lsb);
-    }
 }
 
 static void on_zoom_change(Subject *subj, void *user_data) {
@@ -531,34 +373,20 @@ static void on_zoom_change(Subject *subj, void *user_data) {
 
 static void on_real_filter_from_change(Subject *subj, void *user_data) {
     filter_from = subject_get_int(subj);
-    anf->set_freq_from(filter_from);
 }
 
 static void on_real_filter_to_change(Subject *subj, void *user_data) {
     filter_to = subject_get_int(subj);
-    anf->set_freq_to(filter_to);
 }
 
-static void update_dnf_enabled(Subject *subj, void *user_data) {
+static void update_cur_mode(Subject *subj, void *user_data) {
     cur_mode = (x6100_mode_t)subject_get_int(cfg_cur.mode);
-    bool enabled = subject_get_int(cfg.dnf_auto.val);
-    switch (cur_mode) {
-        case x6100_mode_lsb:
-        case x6100_mode_usb:
-            anf_enabled = enabled;
-            break;
-        default:
-            anf_enabled = false;
-            break;
-    }
-    anf->reset();
 }
 
 static void on_cur_freq_change(Subject *subj, void *user_data) {
     int32_t new_freq = static_cast<SubjectT<int32_t> *>(subj)->get();
     int32_t diff = new_freq - cur_freq;
     cur_freq = new_freq;
-    anf->shift(diff, cur_mode == x6100_mode_lsb);
     waterfall_sg_rx->reset();
     psd_delay = 1;
 }

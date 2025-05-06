@@ -58,34 +58,6 @@ class ChunkedSpgram {
     void get_psd(float *psd);
 };
 
-class Anf {
-    size_t              decim_factor;
-    size_t              freq_bin;
-    size_t              nfft;
-    cfloat             *decim_buf;
-    firdecim_crcf       decim;
-    spgramcf            sg;
-    float              *psd;
-    uint64_t            last_ts;
-    size_t              interval_ms;
-    int32_t             freq_from = -3000;
-    int32_t             freq_to   = 3000;
-    static const size_t hist_size = 3;
-    int16_t             freq_hist[hist_size];
-    size_t              hist_pos = 0;
-
-  public:
-    Anf(size_t decim_factor, size_t chunk_size, size_t nfft, size_t interval_ms, size_t freq_bin);
-    void set_freq_from(int32_t freq);
-    void set_freq_to(int32_t freq);
-    void shift(int32_t freq_diff, bool lower_band);
-    void reset();
-    void execute_block(cfloat *block, size_t size);
-    void update(uint64_t now, bool lower_band);
-
-    SubjectT<int32_t> *notch_freq_subj;
-};
-
 extern "C" {
 #endif
 
