@@ -711,7 +711,12 @@ static void construct_cb(lv_obj_t *parent) {
 
     // setup gain offset
     float target_pwr = LV_MIN(subject_get_float(cfg.pwr.val), MAX_PWR);
-    base_gain_offset = -16.4f + log10f(target_pwr) * 10.0f;
+    if (x6100_control_get_patched_revision() >= 3) {
+        // patched firmware has a true power control
+        base_gain_offset = -9.4f;
+    } else {
+        base_gain_offset = -16.4f + log10f(target_pwr) * 10.0f;
+    }
 }
 
 /* Buttons */
