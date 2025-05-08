@@ -13,12 +13,15 @@ typedef struct {
     cfg_item_t vol;
     cfg_item_t sql;
     cfg_item_t pwr;
+    cfg_item_t output_gain;
 
     cfg_item_t key_tone;
     cfg_item_t band_id;
     cfg_item_t ant_id;
     cfg_item_t atu_enabled;
     cfg_item_t comp;
+    cfg_item_t comp_threshold_offset;
+    cfg_item_t comp_makeup_offset;
 
     cfg_item_t tx_i_offset;
     cfg_item_t tx_q_offset;

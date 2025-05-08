@@ -237,12 +237,15 @@ static int init_params_cfg(sqlite3 *db) {
     fill_cfg_item(&cfg.vol, subject_create_int(20), "vol");
     fill_cfg_item(&cfg.sql, subject_create_int(0), "sql");
     fill_cfg_item_float(&cfg.pwr, subject_create_float(5.0f), 0.1f, "pwr");
+    fill_cfg_item_float(&cfg.output_gain, subject_create_float(0.0f), 0.2f, "output_gain");
 
     fill_cfg_item(&cfg.key_tone, subject_create_int(700), "key_tone");
     fill_cfg_item(&cfg.band_id, subject_create_int(5), "band");
     fill_cfg_item(&cfg.ant_id, subject_create_int(1), "ant");
     fill_cfg_item(&cfg.atu_enabled, subject_create_int(false), "atu");
     fill_cfg_item(&cfg.comp, subject_create_int(4), "comp");
+    fill_cfg_item_float(&cfg.comp_threshold_offset, subject_create_float(0.0f), 0.5f, "comp_threshold_offset");
+    fill_cfg_item_float(&cfg.comp_makeup_offset, subject_create_float(0.0f), 0.5f, "comp_makeup_offset");
 
     fill_cfg_item(&cfg.tx_i_offset, subject_create_int(0), "tx_i_offset");
     fill_cfg_item(&cfg.tx_q_offset, subject_create_int(0), "tx_q_offset");
