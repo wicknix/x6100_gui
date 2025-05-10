@@ -578,10 +578,11 @@ void buttons_refresh(button_item_t *item) {
     }
 }
 
-void buttons_mark(button_item_t *item, bool on) {
+void buttons_mark(button_item_t *item, bool val) {
+    item->mark = val;
     if (item->label_obj) {
         lv_obj_t *btn = lv_obj_get_parent(item->label_obj);
-        if (on) {
+        if (val) {
             lv_obj_add_state(btn, LV_STATE_CHECKED);
 
         } else {
@@ -590,10 +591,11 @@ void buttons_mark(button_item_t *item, bool on) {
     }
 }
 
-void buttons_disabled(button_item_t *item, bool on) {
+void buttons_disabled(button_item_t *item, bool val) {
+    item->disabled = val;
     if (item->label_obj) {
         lv_obj_t *btn = lv_obj_get_parent(item->label_obj);
-        if (on) {
+        if (val) {
             lv_obj_add_state(btn, LV_STATE_DISABLED);
 
         } else {
@@ -627,9 +629,16 @@ void buttons_load(uint8_t n, button_item_t *item) {
             lv_label_set_text(label, "");
         }
         item->label_obj = label;
+        lv_obj_t *btn = lv_obj_get_parent(label);
         if (item->mark) {
-            lv_obj_t *btn = lv_obj_get_parent(label);
             lv_obj_add_state(btn, LV_STATE_CHECKED);
+        } else {
+            lv_obj_clear_state(btn, LV_STATE_CHECKED);
+        }
+        if (item->disabled) {
+            lv_obj_add_state(btn, LV_STATE_DISABLED);
+        } else {
+            lv_obj_clear_state(btn, LV_STATE_DISABLED);
         }
     } else {
         lv_label_set_text(label, "");
@@ -751,6 +760,10 @@ void buttons_press(uint8_t n, bool hold) {
     button_item_t *item = btn[n].item;
     if (item == NULL) {
         LV_LOG_WARN("Button %u is NULL", n);
+        return;
+    }
+    if (item->disabled) {
+        LV_LOG_USER("Button %s disabled", lv_label_get_text(item->label_obj));
         return;
     }
     if (hold) {
