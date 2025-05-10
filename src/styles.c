@@ -94,6 +94,7 @@ lv_style_t  msg_style;
 lv_style_t  msg_tiny_style;
 lv_style_t  clock_style;
 lv_style_t  info_style;
+lv_style_t  info_row_style;
 lv_style_t  info_item_style;
 lv_style_t  meter_style;
 lv_style_t  tx_info_style;
@@ -247,15 +248,26 @@ void styles_init(themes_t theme) {
     /* Left info */
     lv_style_init(&info_style);
     lv_style_set_align(&info_style, LV_ALIGN_TOP_LEFT);
-    lv_style_set_pad_all(&info_style, 0);
+    lv_style_set_pad_hor(&info_style, 2);
+    lv_style_set_pad_ver(&info_style, 2);
+    lv_style_set_pad_row(&info_style, 1);
     lv_style_set_radius(&info_style, 0);
     lv_style_set_bg_img_opa(&info_style, LV_OPA_COVER);
     lv_style_set_border_width(&info_style, 0);
     lv_style_set_bg_opa(&info_style, LV_OPA_0);
 
+    lv_style_init(&info_row_style);
+    lv_style_set_align(&info_row_style, LV_ALIGN_CENTER);
+    lv_style_set_radius(&info_row_style, 0);
+    lv_style_set_border_width(&info_row_style, 0);
+    lv_style_set_bg_opa(&info_row_style, LV_OPA_0);
+    lv_style_set_pad_hor(&info_row_style, 2);
+    lv_style_set_pad_ver(&info_row_style, 0);
+    lv_style_set_pad_column(&info_row_style, 2);
+
     lv_style_init(&info_item_style);
     lv_style_set_text_font(&info_item_style, &sony_20);
-    lv_style_set_pad_ver(&info_item_style, 5);
+    lv_style_set_pad_ver(&info_item_style, 3);
     lv_style_set_radius(&info_item_style, 0);
 
     /* Meter */

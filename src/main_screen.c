@@ -365,26 +365,16 @@ static void main_screen_keypad_cb(lv_event_t * e) {
             int32_t att = subject_get_int(cfg_cur.att);
             if (keypad->state == KEYPAD_RELEASE) {
                 pre = !pre;
-                if (pre && att) {
-                    subject_set_int(cfg_cur.att, x6100_att_off);
-                }
                 subject_set_int(cfg_cur.pre, pre);
                 voice_say_text_fmt("Preamplifier %s", pre ? "On" : "Off");
-                // radio_change_pre();
-                //
 
                 if (params.mag_info.x) {
                     msg_tiny_set_text_fmt("Pre: %s", pre ? "On" : "Off");
                 }
             } else if (keypad->state == KEYPAD_LONG) {
                 att = !att;
-                if (pre && att) {
-                    subject_set_int(cfg_cur.pre, x6100_pre_off);
-                }
                 subject_set_int(cfg_cur.att, att);
                 voice_say_text_fmt("Attenuator %s", att ? "On" : "Off");
-                // radio_change_att();
-                //
 
                 if (params.mag_info.x) {
                     msg_tiny_set_text_fmt("Att: %s", att ? "On" : "Off");

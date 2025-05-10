@@ -42,6 +42,7 @@ extern lv_style_t   msg_style;
 extern lv_style_t   msg_tiny_style;
 extern lv_style_t   clock_style;
 extern lv_style_t   info_style;
+extern lv_style_t   info_row_style;
 extern lv_style_t   info_item_style;
 extern lv_style_t   meter_style;
 extern lv_style_t   tx_info_style;

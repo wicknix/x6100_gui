@@ -18,13 +18,14 @@ typedef enum {
     INFO_VFO = 0,
     INFO_MODE,
     INFO_AGC,
-    INFO_PRE_ATT,
+    INFO_PRE,
+    INFO_ATT,
     INFO_ATU,
     INFO_WIFI
 } info_items_t;
 
 static lv_obj_t     *obj;
-static lv_obj_t     *items[6];
+static lv_obj_t     *items[7];
 
 static Subject *mode_lock;
 
@@ -44,25 +45,44 @@ lv_obj_t * info_init(lv_obj_t * parent) {
 
     lv_obj_add_style(obj, &info_style, 0);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(obj, LV_FLEX_FLOW_COLUMN);
 
-    uint8_t index = 0;
+    lv_obj_t *row1 = lv_obj_create(obj);
+    lv_obj_add_style(row1, &info_row_style, 0);
+    lv_obj_set_size(row1, 206, 25);
+    lv_obj_align(row1, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_clear_flag(row1, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(row1, LV_FLEX_FLOW_ROW);
 
-    for (uint8_t y = 0; y < 2; y++)
-        for (uint8_t x = 0; x < 3; x++) {
-            lv_obj_t *item = lv_label_create(obj);
+    uint8_t i = 0;
+    for (; i < 3; i++) {
+        lv_obj_t *item = lv_label_create(row1);
+        lv_obj_set_flex_grow(item, 1);
+        items[i] = item;
+    }
 
-            lv_obj_add_style(item, &info_item_style, 0);
-            lv_obj_set_pos(item, x * 58 + 15, y * 22 + 5);
-            lv_obj_set_style_text_align(item, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_t *row2 = lv_obj_create(obj);
+    lv_obj_add_style(row2, &info_row_style, 0);
+    lv_obj_set_size(row2, 206, 25);
+    lv_obj_align(row2, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_clear_flag(row2, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_flex_flow(row2, LV_FLEX_FLOW_ROW);
 
-            lv_obj_set_style_text_color(item, lv_color_white(), 0);
-            lv_obj_set_size(item, 56, 26);
+    for (; i < sizeof(items) / sizeof(*items); i++) {
+        lv_obj_t *item = lv_label_create(row2);
+        lv_obj_set_flex_grow(item, 1);
+        items[i] = item;
+    }
 
-            items[index] = item;
-            index++;
-        }
+    for (i = 0; i < sizeof(items) / sizeof(*items); i++)
+    {
+        lv_obj_add_style(items[i], &info_item_style, 0);
+        lv_obj_set_style_text_align(items[i], LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_text_color(items[i], lv_color_white(), 0);
+    }
 
-    lv_label_set_text(items[INFO_PRE_ATT], "PRE/ATT");
+    lv_label_set_text(items[INFO_PRE], "PRE");
+    lv_label_set_text(items[INFO_ATT], "ATT");
     lv_label_set_text(items[INFO_WIFI], LV_SYMBOL_WIFI);
     lv_obj_set_style_text_color(items[INFO_WIFI], lv_color_hex(0x909090), 0);
 
@@ -83,9 +103,8 @@ lv_obj_t * info_init(lv_obj_t * parent) {
     subject_add_delayed_observer(cfg_cur.agc, agc_label_update, NULL);
     agc_label_update(cfg_cur.agc, NULL);
 
-    subject_add_delayed_observer(cfg_cur.att, att_pre_label_update, NULL);
-    subject_add_delayed_observer(cfg_cur.pre, att_pre_label_update, NULL);
-    att_pre_label_update(cfg_cur.pre, NULL);
+    subject_add_delayed_observer_and_call(cfg_cur.att, att_pre_label_update, NULL);
+    subject_add_delayed_observer_and_call(cfg_cur.pre, att_pre_label_update, NULL);
 
     lv_msg_subscribe(MSG_WIFI_STATE_CHANGED, wifi_state_change_cb, NULL);
 
@@ -243,20 +262,19 @@ static void agc_label_update(Subject *subj, void * user_data) {
 }
 
 static void att_pre_label_update(Subject *subj, void * user_data) {
-    if (subject_get_int(cfg_cur.att)) {
-        lv_obj_set_style_text_color(items[INFO_PRE_ATT], lv_color_black(), 0);
-        lv_obj_set_style_bg_color(items[INFO_PRE_ATT], lv_color_white(), 0);
-        lv_obj_set_style_bg_opa(items[INFO_PRE_ATT], LV_OPA_50, 0);
-        lv_label_set_text(items[INFO_PRE_ATT], "ATT");
-    } else if (subject_get_int(cfg_cur.pre)) {
-        lv_obj_set_style_text_color(items[INFO_PRE_ATT], lv_color_black(), 0);
-        lv_obj_set_style_bg_color(items[INFO_PRE_ATT], lv_color_white(), 0);
-        lv_obj_set_style_bg_opa(items[INFO_PRE_ATT], LV_OPA_50, 0);
-        lv_label_set_text(items[INFO_PRE_ATT], "PRE");
+    info_items_t item_id;
+    if (subj == cfg_cur.att) {
+        item_id = INFO_ATT;
     } else {
-        lv_obj_set_style_text_color(items[INFO_PRE_ATT], lv_color_white(), 0);
-        lv_obj_set_style_bg_color(items[INFO_PRE_ATT], lv_color_black(), 0);
-        lv_obj_set_style_bg_opa(items[INFO_PRE_ATT], LV_OPA_0, 0);
-        lv_label_set_text(items[INFO_PRE_ATT], "P/A");
+        item_id = INFO_PRE;
+    }
+    if (subject_get_int(subj)) {
+        lv_obj_set_style_text_color(items[item_id], lv_color_black(), 0);
+        lv_obj_set_style_bg_color(items[item_id], lv_color_white(), 0);
+        lv_obj_set_style_bg_opa(items[item_id], LV_OPA_50, 0);
+    } else {
+        lv_obj_set_style_text_color(items[item_id], lv_color_white(), 0);
+        lv_obj_set_style_bg_color(items[item_id], lv_color_black(), 0);
+        lv_obj_set_style_bg_opa(items[item_id], LV_OPA_0, 0);
     }
 }
