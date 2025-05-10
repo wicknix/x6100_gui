@@ -158,7 +158,6 @@ static void tx_call_en_dis_cb(struct button_item_t *btn);
 static void hold_tx_freq_cb(struct button_item_t *btn);
 static void mode_auto_cb(struct button_item_t *btn);
 static void cq_modifier_cb(struct button_item_t *btn);
-static void load_page(struct button_item_t *btn);
 static void time_sync(struct button_item_t *btn);
 
 static void reload_buttons();
@@ -177,17 +176,28 @@ static bool get_time_slot(struct timespec now, float *time_since_start);
 
 // button label is current state, press action and name - next state
 
-static button_item_t button_page_1 = { .type=BTN_TEXT, .label = "(Page: 1:2)", .press = load_page};
+static buttons_page_t btn_page_1;
+static buttons_page_t btn_page_2;
+
+static button_item_t button_page_1 = { .type=BTN_TEXT, .label = "(Page: 1:2)", .press = button_next_page_cb, .next=&btn_page_2};
 static button_item_t button_show_cq_all = { .type=BTN_TEXT, .label = "Show:\nAll", .press = show_cq_all_cb };
 static button_item_t button_mode_ft4_ft8 = { .type=BTN_TEXT, .label = "Mode:\nFT8", .press = mode_ft4_ft8_cb };
 static button_item_t button_tx_cq_en_dis = { .type=BTN_TEXT, .label = "TX CQ:\nDisabled", .press = tx_cq_en_dis_cb };
 static button_item_t button_tx_call_en_dis = { .type=BTN_TEXT, .label = "TX Call:\nDisabled", .press = tx_call_en_dis_cb};
 
-static button_item_t button_page_2 = { .type=BTN_TEXT, .label = "(Page: 2:2)", .press = load_page};
+static button_item_t button_page_2 = { .type=BTN_TEXT, .label = "(Page: 2:2)", .press = button_next_page_cb, .next=&btn_page_1};
 static button_item_t button_hold_freq = { .type=BTN_TEXT, .label = "Hold Freq:\nEnabled", .press = hold_tx_freq_cb };
 static button_item_t button_auto_en_dis = { .type=BTN_TEXT, .label = "Auto:\nDisabled", .press = mode_auto_cb };
 static button_item_t button_cq_mod = { .type=BTN_TEXT, .label = "CQ\nModifier", .press = cq_modifier_cb };
 static button_item_t button_time_sync = { .type=BTN_TEXT, .label = "Time\nSync", .press = time_sync };
+
+static buttons_page_t btn_page_1 = {
+    {&button_page_1, &button_show_cq_all, &button_mode_ft4_ft8, &button_tx_cq_en_dis, &button_tx_call_en_dis}
+};
+
+static buttons_page_t btn_page_2 = {
+    {&button_page_2, &button_hold_freq, &button_auto_en_dis, &button_cq_mod, &button_time_sync}
+};
 
 static dialog_t dialog = {
     .run = false,
@@ -603,6 +613,8 @@ static void construct_cb(lv_obj_t *parent) {
     firdecim_crcf_set_scale(decim, 1.0f / DECIM);
     audio_buf = cbuffercf_create(AUDIO_CAPTURE_RATE * 3);
 
+    cq_enabled = false;
+
     /* Waterfall */
 
     waterfall = lv_waterfall_create(dialog.obj);
@@ -726,32 +738,22 @@ static void reload_buttons() {
     switch (button_page)
     {
     case 0:
-        buttons_load(0, &button_page_1);
-
         button_show_cq_all.label = params.ft8_show_all ? "Show:\nAll" : "Show:\nCQ";
-        buttons_load(1, &button_show_cq_all);
-
         button_mode_ft4_ft8.label = params.ft8_protocol == FTX_PROTOCOL_FT8 ? "Mode:\nFT8" : "Mode:\nFT4";
-        buttons_load(2, &button_mode_ft4_ft8);
-
         button_tx_cq_en_dis.label = cq_enabled ? "TX CQ:\nEnabled" : "TX CQ:\nDisabled";
-        buttons_load(3, &button_tx_cq_en_dis);
-
         button_tx_call_en_dis.label = tx_enabled ? "TX Call:\nEnabled" : "TX Call:\nDisabled";
-        buttons_load(4, &button_tx_call_en_dis);
+
+        buttons_load_page(&btn_page_1);
+
+        // buttons_mark(&button_tx_cq_en_dis, cq_enabled);
+        // buttons_mark(&button_tx_call_en_dis, tx_enabled);
         break;
 
     case 1:
-        buttons_load(0, &button_page_2);
-
         button_hold_freq.label = subject_get_int(cfg.ft8_hold_freq.val) ? "Hold Freq:\nEnabled" : "Hold Freq:\nDisabled";
-        buttons_load(1, &button_hold_freq);
-
         button_auto_en_dis.label = params.ft8_auto.x ? "Auto:\nEnabled" : "Auto:\nDisabled";
-        buttons_load(2, &button_auto_en_dis);
 
-        buttons_load(3, &button_cq_mod);
-        buttons_load(4, &button_time_sync);
+        buttons_load_page(&btn_page_2);
     default:
         break;
     }
@@ -894,11 +896,6 @@ static void time_sync(struct button_item_t *btn) {
         LV_LOG_ERROR("Can't set system time: %s\n", strerror(errno));
         return;
     }
-}
-
-static void load_page(struct button_item_t *btn) {
-    button_page = (button_page + 1) % 2;
-    reload_buttons();
 }
 
 static void cell_press_cb(lv_event_t * e) {
