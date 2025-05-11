@@ -513,6 +513,11 @@ static struct {
 
 void buttons_init(lv_obj_t *parent) {
 
+    if (x6100_control_get_patched_revision() < 3) {
+        // Hide DNF auto button
+        page_dfn_1.items[4] = NULL;
+    }
+
     btn_rfg.subj = &cfg_cur.band->rfg.val;
 
     /* Fill prev/next pointers */

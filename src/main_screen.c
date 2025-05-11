@@ -1091,14 +1091,13 @@ lv_obj_t * main_screen() {
     return obj;
 }
 
-void main_screen_notify_tx()
-{
-    event_send(obj, EVENT_RADIO_TX, NULL);
-}
+void main_screen_notify_rx_tx(bool tx) {
+    if (tx) {
+        event_send(obj, EVENT_RADIO_TX, NULL);
 
-void main_screen_notify_rx()
-{
-    event_send(obj, EVENT_RADIO_RX, NULL);
+    } else {
+        event_send(obj, EVENT_RADIO_RX, NULL);
+    }
 }
 
 static void on_fg_freq_change(Subject *subj, void *user_data) {

@@ -32,8 +32,7 @@
 #define FLOW_RESTART_TIMEOUT 300
 #define IDLE_TIMEOUT        (3 * 1000)
 
-static radio_state_change_t notify_tx;
-static radio_state_change_t notify_rx;
+static radio_rx_tx_change_t notify_rx_tx;
 
 static pthread_mutex_t  control_mux;
 
@@ -107,14 +106,18 @@ bool radio_tick() {
             case RADIO_RX:
                 if (pack->flag.tx) {
                     state = RADIO_TX;
-                    notify_tx();
+                    if (notify_rx_tx) {
+                        notify_rx_tx(true);
+                    }
                 }
                 break;
 
             case RADIO_TX:
                 if (!pack->flag.tx) {
                     state = RADIO_RX;
-                    notify_rx();
+                    if (notify_rx_tx) {
+                        notify_rx_tx(false);
+                    }
                 } else {
                     tx_info_update(pack->tx_power * 0.1f, pack->vswr * 0.1f, pack->alc_level * 0.1f);
                 }
@@ -127,7 +130,9 @@ bool radio_tick() {
 
             case RADIO_ATU_WAIT:
                 if (pack->flag.tx) {
-                    notify_tx();
+                    if (notify_rx_tx) {
+                        notify_rx_tx(true);
+                    }
                     state = RADIO_ATU_RUN;
                 }
                 break;
@@ -138,7 +143,9 @@ bool radio_tick() {
                     WITH_RADIO_LOCK(x6100_control_atu_tune(false));
                     subject_set_int(cfg.atu_enabled.val, true);
                     recover_processing_audio_inputs();
-                    notify_rx();
+                    if (notify_rx_tx) {
+                        notify_rx_tx(false);
+                    }
 
                     // TODO: change with observer on atu->loaded change
                     WITH_RADIO_LOCK(x6100_control_cmd(x6100_atu_network, pack->atu_params));
@@ -374,7 +381,7 @@ void radio_bb_reset() {
     x6100_gpio_set(x6100_pin_bb_reset, 0);
 }
 
-void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
+void radio_init() {
     if (!x6100_gpio_init())
         return;
 
@@ -386,9 +393,6 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
         return;
 
     x6100_gpio_set(x6100_pin_morse_key, 1);     /* Morse key off */
-
-    notify_tx = tx_cb;
-    notify_rx = rx_cb;
 
     pack = malloc(sizeof(x6100_flow_t));
 
@@ -482,6 +486,10 @@ void radio_init(radio_state_change_t tx_cb, radio_state_change_t rx_cb) {
 
     pthread_create(&thread, NULL, radio_thread, NULL);
     pthread_detach(thread);
+}
+
+void radio_set_rx_tx_notify_fn(radio_rx_tx_change_t cb) {
+    notify_rx_tx = cb;
 }
 
 radio_state_t radio_get_state() {

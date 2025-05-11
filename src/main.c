@@ -98,14 +98,12 @@ int main(void) {
     styles_init(params.theme.x);
 
     dsp_init();
+    radio_init();
     lv_obj_t *main_obj = main_screen();
 
     cw_init();
     rtty_init();
-    radio_init(
-        &main_screen_notify_tx,
-        &main_screen_notify_rx
-    );
+    radio_set_rx_tx_notify_fn(&main_screen_notify_rx_tx);
     wifi_power_setup();
     backlight_init();
     cat_init();
