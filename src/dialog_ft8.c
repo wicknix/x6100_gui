@@ -1043,6 +1043,10 @@ static void tx_worker() {
         state = RX_PROCESS;
         return;
     }
+    if (subject_get_float(cfg.pwr.val) > MAX_PWR) {
+        radio_set_pwr(MAX_PWR);
+    }
+
     float gain_offset = base_gain_offset + params.ft8_output_gain_offset.x;
     float play_gain_offset = audio_set_play_vol(gain_offset + 6.0f);
     gain_offset -= play_gain_offset;
