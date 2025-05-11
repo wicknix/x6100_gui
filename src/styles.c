@@ -248,9 +248,9 @@ void styles_init(themes_t theme) {
     /* Left info */
     lv_style_init(&info_style);
     lv_style_set_align(&info_style, LV_ALIGN_TOP_LEFT);
-    lv_style_set_pad_hor(&info_style, 2);
-    lv_style_set_pad_ver(&info_style, 2);
-    lv_style_set_pad_row(&info_style, 1);
+    lv_style_set_pad_hor(&info_style, 8);
+    lv_style_set_pad_ver(&info_style, 6);
+    lv_style_set_pad_row(&info_style, 0);
     lv_style_set_radius(&info_style, 0);
     lv_style_set_bg_img_opa(&info_style, LV_OPA_COVER);
     lv_style_set_border_width(&info_style, 0);

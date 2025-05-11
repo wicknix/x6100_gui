@@ -49,7 +49,7 @@ lv_obj_t * info_init(lv_obj_t * parent) {
 
     lv_obj_t *row1 = lv_obj_create(obj);
     lv_obj_add_style(row1, &info_row_style, 0);
-    lv_obj_set_size(row1, 206, 25);
+    lv_obj_set_size(row1, 190, 24);
     lv_obj_align(row1, LV_ALIGN_CENTER, 0, 0);
     lv_obj_clear_flag(row1, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(row1, LV_FLEX_FLOW_ROW);
@@ -63,16 +63,18 @@ lv_obj_t * info_init(lv_obj_t * parent) {
 
     lv_obj_t *row2 = lv_obj_create(obj);
     lv_obj_add_style(row2, &info_row_style, 0);
-    lv_obj_set_size(row2, 206, 25);
+    lv_obj_set_size(row2, 190, 24);
     lv_obj_align(row2, LV_ALIGN_CENTER, 0, 0);
     lv_obj_clear_flag(row2, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(row2, LV_FLEX_FLOW_ROW);
 
     for (; i < sizeof(items) / sizeof(*items); i++) {
         lv_obj_t *item = lv_label_create(row2);
-        lv_obj_set_flex_grow(item, 1);
+        lv_obj_set_flex_grow(item, 3);
         items[i] = item;
     }
+
+    lv_obj_set_flex_grow(items[INFO_WIFI], 2);
 
     for (i = 0; i < sizeof(items) / sizeof(*items); i++)
     {
@@ -83,7 +85,7 @@ lv_obj_t * info_init(lv_obj_t * parent) {
 
     lv_label_set_text(items[INFO_PRE], "PRE");
     lv_label_set_text(items[INFO_ATT], "ATT");
-    lv_label_set_text(items[INFO_WIFI], LV_SYMBOL_WIFI);
+    lv_label_set_text(items[INFO_WIFI], LV_SYMBOL_WIFI " ");
     lv_obj_set_style_text_color(items[INFO_WIFI], lv_color_hex(0x909090), 0);
 
     subject_add_delayed_observer(cfg_cur.band->vfo.val, vfo_label_update, NULL);
