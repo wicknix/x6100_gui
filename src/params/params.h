@@ -137,10 +137,7 @@ typedef struct {
 
     /* FT8 */
 
-    bool                ft8_show_all;
-    ftx_protocol_t      ft8_protocol;
     params_uint16_t     ft8_tx_freq;
-    params_bool_t       ft8_auto;
     params_str_t        ft8_cq_modifier;
 
     // FT8 gain offset for different radios/bands/modes

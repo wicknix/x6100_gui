@@ -85,10 +85,7 @@ params_t params = {
     .rtty_bits              = 5,
     .rtty_snr               = 3.0f,
 
-    .ft8_show_all           = true,
-    .ft8_protocol           = FTX_PROTOCOL_FT8,
     .ft8_tx_freq            = { .x = 1325,      .name = "ft8_tx_freq" },
-    .ft8_auto               = { .x = true,      .name = "ft8_auto" },
     .ft8_output_gain_offset = { .x = 0.0f,      .name = "ft8_output_gain_offset" },
     .ft8_cq_modifier        = { .x = "",        .name = "ft8_cq_modifier"},
 
@@ -250,10 +247,6 @@ static bool params_load() {
             params.clock_power_timeout = i;
         } else if (strcmp(name, "clock_tx_timeout") == 0) {
             params.clock_tx_timeout = i;
-        } else if (strcmp(name, "ft8_show_all") == 0) {
-            params.ft8_show_all = i;
-        } else if (strcmp(name, "ft8_protocol") == 0) {
-            params.ft8_protocol = i;
         } else if (strcmp(name, "long_gen") == 0) {
             params.long_gen = i;
         } else if (strcmp(name, "long_app") == 0) {
@@ -290,7 +283,6 @@ static bool params_load() {
         if (params_load_bool(&params.waterfall_center_line, name, i)) continue;
         if (params_load_bool(&params.waterfall_zoom, name, i)) continue;
         if (params_load_bool(&params.spmode, name, i)) continue;
-        if (params_load_bool(&params.ft8_auto, name, i)) continue;
         if (params_load_float(&params.ft8_output_gain_offset, name, f)) continue;
         if (params_load_str(&params.ft8_cq_modifier, name, t)) continue;
 
@@ -392,9 +384,6 @@ static void params_save() {
     if (params.dirty.clock_power_timeout)   params_write_int("clock_power_timeout", params.clock_power_timeout, &params.dirty.clock_power_timeout);
     if (params.dirty.clock_tx_timeout)      params_write_int("clock_tx_timeout", params.clock_tx_timeout, &params.dirty.clock_tx_timeout);
 
-    if (params.dirty.ft8_show_all)          params_write_int("ft8_show_all", params.ft8_show_all, &params.dirty.ft8_show_all);
-    if (params.dirty.ft8_protocol)          params_write_int("ft8_protocol", params.ft8_protocol, &params.dirty.ft8_protocol);
-
     if (params.dirty.long_gen)              params_write_int("long_gen", params.long_gen, &params.dirty.long_gen);
     if (params.dirty.long_app)              params_write_int("long_app", params.long_app, &params.dirty.long_app);
     if (params.dirty.long_key)              params_write_int("long_key", params.long_key, &params.dirty.long_key);
@@ -430,7 +419,6 @@ static void params_save() {
     params_save_bool(&params.waterfall_center_line);
     params_save_bool(&params.waterfall_zoom);
     params_save_bool(&params.spmode);
-    params_save_bool(&params.ft8_auto);
     params_save_float(&params.ft8_output_gain_offset);
     params_save_str(&params.ft8_cq_modifier);
 

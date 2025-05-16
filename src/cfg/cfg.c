@@ -11,6 +11,7 @@
 #include "../lvgl/lvgl.h"
 #include "../util.h"
 #include <aether_radio/x6100_control/control.h>
+#include <ft8lib/constants.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -288,6 +289,9 @@ static int init_params_cfg(sqlite3 *db) {
     fill_cfg_item(&cfg.swrscan_span, subject_create_int(200000), "swrscan_span");
 
     // FT8
+    fill_cfg_item(&cfg.ft8_show_all, subject_create_int(true), "ft8_show_all");
+    fill_cfg_item(&cfg.ft8_protocol, subject_create_int(FTX_PROTOCOL_FT8), "ft8_protocol");
+    fill_cfg_item(&cfg.ft8_auto, subject_create_int(true), "ft8_auto");
     fill_cfg_item(&cfg.ft8_hold_freq, subject_create_int(true), "ft8_hold_freq");
     fill_cfg_item(&cfg.ft8_max_repeats, subject_create_int(6), "ft8_max_repeats");
 
