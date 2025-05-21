@@ -70,6 +70,7 @@ typedef struct {
     cfg_item_t ft8_auto;
     cfg_item_t ft8_hold_freq;
     cfg_item_t ft8_max_repeats;
+    cfg_item_t ft8_omit_cq_qth;
 } cfg_t;
 extern cfg_t cfg;
 

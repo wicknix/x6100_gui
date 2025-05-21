@@ -828,9 +828,7 @@ static void tx_cq_en_dis_cb(struct button_item_t *btn) {
         subject_set_int(cq_enabled, true);
         subject_set_int(tx_enabled, true);
 
-        char qth[5] = "";
-        strncpy(qth, params.qth.x, sizeof(qth) - 1);
-        make_cq_msg(params.callsign.x, qth, params.ft8_cq_modifier.x, tx_msg.msg);
+        make_cq_msg(params.callsign.x, params.qth.x, params.ft8_cq_modifier.x, tx_msg.msg);
 
         struct timespec now;
         clock_gettime(CLOCK_REALTIME, &now);
@@ -1021,10 +1019,15 @@ static bool get_time_slot(struct timespec now, float *sec_since_start) {
  * Create CQ TX message
  */
 static void make_cq_msg(const char *callsign, const char *qth, const char *cq_mod, char *text) {
+    size_t text_len;
     if (strlen(cq_mod)) {
-        snprintf(text, FTX_MAX_MESSAGE_LENGTH, "CQ_%s %s %s", cq_mod, callsign, qth);
+        snprintf(text, FTX_MAX_MESSAGE_LENGTH, "CQ_%s %s", cq_mod, callsign);
     } else {
-        snprintf(text, FTX_MAX_MESSAGE_LENGTH, "CQ %s %s", callsign, qth);
+        snprintf(text, FTX_MAX_MESSAGE_LENGTH, "CQ %s", callsign);
+    }
+    if (!subject_get_int(cfg.ft8_omit_cq_qth.val)){
+        text_len = strlen(text);
+        snprintf(text + text_len, FTX_MAX_MESSAGE_LENGTH - text_len, " %.4s", qth);
     }
 }
 
