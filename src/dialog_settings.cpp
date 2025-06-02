@@ -51,6 +51,7 @@ static lv_obj_t     *grid;
 static lv_coord_t   col_dsc[] = { 740 - (SMALL_1 + SMALL_PAD) * 6, SMALL_1, SMALL_1, SMALL_1, SMALL_1, SMALL_1, SMALL_1, LV_GRID_TEMPLATE_LAST };
 static lv_coord_t   row_dsc[64] = { 1 };
 
+static bool         datetime_changed;
 static time_t       now;
 struct tm           ts;
 
@@ -83,6 +84,13 @@ static void bool_update_cb(lv_event_t * e) {
     params_bool_set(var, lv_obj_has_state(obj, LV_STATE_CHECKED));
 }
 
+static void bool_update_subj_cb(lv_event_t *e) {
+    lv_obj_t *obj  = lv_event_get_target(e);
+    Subject  *subj = (Subject *)lv_event_get_user_data(e);
+
+    subject_set_int(subj, lv_obj_has_state(obj, LV_STATE_CHECKED));
+}
+
 static void uint8_spinbox_update_cb(lv_event_t * e) {
     lv_obj_t        *obj = lv_event_get_target(e);
     params_uint8_t  *var = (params_uint8_t*)lv_event_get_user_data(e);
@@ -106,19 +114,28 @@ static void theme_update_cb(lv_event_t * e) {
 }
 
 /* Shared create */
+static lv_obj_t * create_switch(lv_obj_t *parent){
+    lv_obj_t *obj = lv_switch_create(parent);
+    dialog_item(&dialog, obj);
+    lv_obj_center(obj);
+    return obj;
+}
 
 static lv_obj_t * switch_bool(lv_obj_t *parent, params_bool_t *var) {
-    lv_obj_t *obj = lv_switch_create(parent);
-
-    dialog_item(&dialog, obj);
-
-    lv_obj_center(obj);
-    lv_obj_add_event_cb(obj, bool_update_cb, LV_EVENT_VALUE_CHANGED, var);
-
+    lv_obj_t *obj = create_switch(parent);
     if (var->x) {
         lv_obj_add_state(obj, LV_STATE_CHECKED);
     }
+    return obj;
+}
 
+static lv_obj_t * switch_bool(lv_obj_t *parent, Subject *subj) {
+    lv_obj_t *obj = create_switch(parent);
+    lv_obj_add_event_cb(obj, bool_update_subj_cb, LV_EVENT_VALUE_CHANGED, subj);
+
+    if (subject_get_int(subj)) {
+        lv_obj_add_state(obj, LV_STATE_CHECKED);
+    }
     return obj;
 }
 
@@ -152,8 +169,9 @@ static lv_obj_t * dropdown_uint8(lv_obj_t *parent, params_uint8_t *var, const ch
     return obj;
 }
 
-template <typename T> void slider_with_text(lv_obj_t *cell, T val, T min, T max, T step, size_t width, const char *fmt,
-                             lv_event_cb_t event_cb, void * cb_user_data=nullptr) {
+template <typename T>
+lv_obj_t *slider_with_text(lv_obj_t *cell, T val, T min, T max, T step, size_t width, const char *fmt,
+                           lv_event_cb_t event_cb, void *cb_user_data = nullptr) {
     lv_obj_t *obj;
     obj = lv_slider_create(cell);
 
@@ -174,6 +192,7 @@ template <typename T> void slider_with_text(lv_obj_t *cell, T val, T min, T max,
     lv_obj_set_user_data(obj, slider_label);
 
     lv_obj_add_event_cb(obj, event_cb, LV_EVENT_VALUE_CHANGED, cb_user_data);
+    return obj;
 }
 
 /* Datetime */
@@ -185,6 +204,8 @@ static void datetime_update_cb(lv_event_t * e) {
     ts.tm_hour = lv_spinbox_get_value(hour);
     ts.tm_min = lv_spinbox_get_value(min);
     ts.tm_sec = lv_spinbox_get_value(sec);
+
+    datetime_changed = true;
 
     /* Set system */
 
@@ -204,7 +225,7 @@ static void datetime_update_cb(lv_event_t * e) {
 
 static void datetime_set_rtc_cb(lv_event_t * e) {
     lv_obj_t * obj = lv_event_get_target(e);
-    if (!lv_group_get_editing((const lv_group_t*)lv_obj_get_group(obj)))
+    if (!lv_obj_has_state(obj, LV_STATE_EDITED) && datetime_changed)
     {
         /* Set RTC */
 
@@ -221,6 +242,7 @@ static void datetime_set_rtc_cb(lv_event_t * e) {
         } else {
             LV_LOG_ERROR("Can't open /dev/rtc1: %s\n", strerror(errno));
         }
+        datetime_changed = false;
     }
 
 }
@@ -1112,75 +1134,58 @@ static uint8_t make_voice(uint8_t row) {
 
 /* Spectrum and waterfall auto */
 
+#define AUTO_LEVEL_STEP 0.2f
+
+static void change_bg_opa_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+    if (lv_obj_has_state(obj, LV_STATE_EDITED)) {
+        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_50, 0);
+    } else {
+        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_100, 0);
+    }
+}
+
+static void auto_level_offset_update_cb(lv_event_t * e) {
+    lv_obj_t *obj = lv_event_get_target(e);
+    float val = lv_slider_get_value(obj) * AUTO_LEVEL_STEP;
+
+    lv_obj_t *slider_label = (lv_obj_t *)lv_obj_get_user_data(obj);
+    char *fmt = (char *)lv_obj_get_user_data(slider_label);
+    lv_label_set_text_fmt(slider_label, fmt, val);
+    Subject *subj = (Subject *)lv_event_get_user_data(e);
+    subject_set_float(subj, val);
+}
+
 static uint8_t make_auto(uint8_t row) {
-    lv_obj_t    *obj;
+    lv_obj_t *obj;
 
     row_dsc[row] = 54;
 
-    /* Spectrum */
-
     obj = lv_label_create(grid);
 
-    lv_label_set_text(obj, "Spectrum auto min, max");
+    lv_label_set_text(obj, "Spectrum auto, offset");
     lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, row, 1);
 
+    /* On/off */
     obj = lv_obj_create(grid);
-
     lv_obj_set_size(obj, SMALL_3, 56);
     lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 3, LV_GRID_ALIGN_CENTER, row, 1);
     lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(obj);
-
-    obj = switch_bool(obj, &params.spectrum_auto_min);
-
+    obj = switch_bool(obj, cfg.auto_level_enabled.val);
     lv_obj_set_width(obj, SMALL_3 - 30);
 
+    /* Offset */
     obj = lv_obj_create(grid);
-
     lv_obj_set_size(obj, SMALL_3, 56);
     lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 4, 3, LV_GRID_ALIGN_CENTER, row, 1);
     lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_center(obj);
-
-    obj = switch_bool(obj, &params.spectrum_auto_max);
-
-    lv_obj_set_width(obj, SMALL_3 - 30);
-
-    /* Waterfall */
-
-    row++;
-    row_dsc[row] = 54;
-
-    obj = lv_label_create(grid);
-
-    lv_label_set_text(obj, "Waterfall auto min, max");
-    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, row, 1);
-
-    obj = lv_obj_create(grid);
-
-    lv_obj_set_size(obj, SMALL_3, 56);
-    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 1, 3, LV_GRID_ALIGN_CENTER, row, 1);
-    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(obj);
-
-    obj = switch_bool(obj, &params.waterfall_auto_min);
-
-    lv_obj_set_width(obj, SMALL_3 - 30);
-
-    obj = lv_obj_create(grid);
-
-    lv_obj_set_size(obj, SMALL_3, 56);
-    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 4, 3, LV_GRID_ALIGN_CENTER, row, 1);
-    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_center(obj);
-
-    obj = switch_bool(obj, &params.waterfall_auto_max);
-
-    lv_obj_set_width(obj, SMALL_3 - 30);
+    obj = slider_with_text(obj, subject_get_float(cfg.auto_level_offset.val), -15.0f, 15.0f, AUTO_LEVEL_STEP,
+                           SMALL_3 - 120, "%0.1f", auto_level_offset_update_cb, (void *)cfg.auto_level_offset.val);
+    lv_obj_add_event_cb(obj, change_bg_opa_cb, LV_EVENT_FOCUSED, NULL);
 
     return row + 1;
 }
@@ -1539,10 +1544,8 @@ static void construct_cb(lv_obj_t *parent) {
     row = make_voice(row);
 
     row = make_delimiter(row);
-    row = make_auto(row);
-
-    row = make_delimiter(row);
     row = make_waterfall_line_zoom(row);
+    row = make_auto(row);
     row = make_waterfall_smooth_scroll(row);
 
     row = make_delimiter(row);
