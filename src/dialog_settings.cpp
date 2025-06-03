@@ -35,8 +35,6 @@ extern "C" {
 
 }
 
-static lv_obj_t     *grid;
-
 #define SMALL_PAD   5
 
 #define SMALL_1     57
@@ -48,6 +46,19 @@ static lv_obj_t     *grid;
 
 #define SMALL_WIDTH 57
 
+#define NUM_PAGES 2
+enum {
+    PAGE_GENERAL,
+    PAGE_UI,
+} Page;
+
+static void make_general_page();
+static void make_ui_page();
+
+static void load_general_page(button_item_t *item);
+static void load_ui_page(button_item_t *item);
+
+static lv_obj_t     *grid;
 static lv_coord_t   col_dsc[] = { 740 - (SMALL_1 + SMALL_PAD) * 6, SMALL_1, SMALL_1, SMALL_1, SMALL_1, SMALL_1, SMALL_1, LV_GRID_TEMPLATE_LAST };
 static lv_coord_t   row_dsc[64] = { 1 };
 
@@ -62,18 +73,51 @@ static lv_obj_t     *hour;
 static lv_obj_t     *min;
 static lv_obj_t     *sec;
 
+static button_item_t btn_general = {
+    .type  = BTN_TEXT,
+    .label = "General",
+    .press = load_general_page,
+};
+
+static button_item_t btn_ui = {
+    .type  = BTN_TEXT,
+    .label = "Interface",
+    .press = load_ui_page,
+};
+
+buttons_page_t btn_page = {
+    {
+     &btn_general,
+     &btn_ui,
+     }
+};
+
 static void construct_cb(lv_obj_t *parent);
+static void destruct_cb();
 static void key_cb(lv_event_t * e);
 
 static dialog_t     dialog = {
     .construct_cb = construct_cb,
-    .destruct_cb = NULL,
+    .destruct_cb = destruct_cb,
     .audio_cb = NULL,
+    .btn_page = &btn_page,
     .key_cb = key_cb,
     .run = false,
 };
 
 dialog_t            *dialog_settings = &dialog;
+
+static void load_general_page(button_item_t *item) {
+    make_general_page();
+    buttons_mark(&btn_ui, false);
+    buttons_mark(item, true);
+}
+
+static void load_ui_page(button_item_t *item) {
+    make_ui_page();
+    buttons_mark(&btn_general, false);
+    buttons_mark(item, true);
+}
 
 /* Shared update */
 
@@ -123,6 +167,7 @@ static lv_obj_t * create_switch(lv_obj_t *parent){
 
 static lv_obj_t * switch_bool(lv_obj_t *parent, params_bool_t *var) {
     lv_obj_t *obj = create_switch(parent);
+    lv_obj_add_event_cb(obj, bool_update_cb, LV_EVENT_VALUE_CHANGED, var);
     if (var->x) {
         lv_obj_add_state(obj, LV_STATE_CHECKED);
     }
@@ -195,6 +240,23 @@ lv_obj_t *slider_with_text(lv_obj_t *cell, T val, T min, T max, T step, size_t w
     return obj;
 }
 
+/**
+ * Update bg opacity for some UI elements to preview changes
+ */
+static void change_bg_opa_cb(lv_event_t * e) {
+    lv_obj_t * obj = lv_event_get_target(e);
+    lv_event_code_t code = lv_event_get_code(e);
+
+    if (
+        (lv_obj_check_type(obj, &lv_slider_class) & lv_obj_has_state(obj, LV_STATE_EDITED)) |
+        (lv_obj_check_type(obj, &lv_switch_class) & (code == LV_EVENT_FOCUSED))
+    ) {
+        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_60, 0);
+    } else {
+        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_COVER, 0);
+    }
+}
+
 /* Datetime */
 
 static void datetime_update_cb(lv_event_t * e) {
@@ -252,8 +314,6 @@ static uint8_t make_date(uint8_t row) {
     uint8_t     col = 0;
 
     /* Label */
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -319,8 +379,6 @@ static uint8_t make_time(uint8_t row) {
     uint8_t     col = 0;
 
     /* Label */
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -419,8 +477,6 @@ static uint8_t make_backlight(uint8_t row) {
 
     /* Label */
 
-    row_dsc[row] = 54;
-
     obj = lv_label_create(grid);
 
     lv_label_set_text(obj, "Timeout, Brightness");
@@ -465,8 +521,6 @@ static uint8_t make_backlight(uint8_t row) {
     lv_obj_add_event_cb(obj, backlight_brightness_update_cb, LV_EVENT_VALUE_CHANGED, NULL);
 
     row++;
-    row_dsc[row] = 54;
-
     obj = lv_label_create(grid);
 
     lv_label_set_text(obj, "Buttons brightness");
@@ -507,8 +561,6 @@ static uint8_t make_line_gain(uint8_t row) {
     lv_obj_t    *obj;
     lv_obj_t    *cell;
 
-    row_dsc[row] = 54;
-
     cell = lv_label_create(grid);
 
     lv_label_set_text(cell, "Line-in, Line-out");
@@ -542,8 +594,6 @@ static uint8_t make_line_gain(uint8_t row) {
 static uint8_t make_mag(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -625,8 +675,6 @@ static uint8_t make_clock(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
 
-    row_dsc[row] = 54;
-
     obj = lv_label_create(grid);
 
     lv_label_set_text(obj, "Clock view");
@@ -651,8 +699,6 @@ static uint8_t make_clock(uint8_t row) {
     /* * */
 
     row++;
-    row_dsc[row] = 54;
-
     obj = lv_label_create(grid);
 
     lv_label_set_text(obj, "Timeout Clock, Power, TX");
@@ -776,7 +822,6 @@ static uint8_t make_long_action(uint8_t row) {
     lv_obj_t    *obj;
 
     for (uint8_t i = 0; i < 6; i++) {
-        row_dsc[row] = 54;
 
         obj = lv_label_create(grid);
 
@@ -892,7 +937,6 @@ static uint8_t make_hmic_action(uint8_t row) {
     lv_obj_t    *obj;
 
     for (uint8_t i = 0; i < items_len; i++) {
-        row_dsc[row] = 54;
 
         obj = lv_label_create(grid);
 
@@ -966,8 +1010,6 @@ static uint8_t make_audio_gain(uint8_t row) {
     lv_obj_t    *obj;
     lv_obj_t    *cell;
 
-    row_dsc[row] = 54;
-
     cell = lv_label_create(grid);
 
     lv_label_set_text(cell, "Play,Rec gain");
@@ -1022,8 +1064,6 @@ static uint8_t make_transverter(uint8_t row, uint8_t n) {
     cfg_transverter_t   *transverter = &cfg_transverters[n];
 
     /* Label */
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -1084,8 +1124,6 @@ static uint8_t make_voice(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
 
-    row_dsc[row] = 54;
-
     obj = lv_label_create(grid);
 
     lv_label_set_text(obj, "Voice mode");
@@ -1100,8 +1138,6 @@ static uint8_t make_voice(uint8_t row) {
     /* * */
 
     row++;
-    row_dsc[row] = 54;
-
     obj = lv_label_create(grid);
 
     lv_label_set_text(obj, "Voice rate, pitch, volume");
@@ -1136,15 +1172,6 @@ static uint8_t make_voice(uint8_t row) {
 
 #define AUTO_LEVEL_STEP 0.2f
 
-static void change_bg_opa_cb(lv_event_t * e) {
-    lv_obj_t * obj = lv_event_get_target(e);
-    if (lv_obj_has_state(obj, LV_STATE_EDITED)) {
-        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_50, 0);
-    } else {
-        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_100, 0);
-    }
-}
-
 static void auto_level_offset_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
     float val = lv_slider_get_value(obj) * AUTO_LEVEL_STEP;
@@ -1156,10 +1183,8 @@ static void auto_level_offset_update_cb(lv_event_t * e) {
     subject_set_float(subj, val);
 }
 
-static uint8_t make_auto(uint8_t row) {
+static uint8_t make_auto_levels(uint8_t row) {
     lv_obj_t *obj;
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -1186,6 +1211,7 @@ static uint8_t make_auto(uint8_t row) {
     obj = slider_with_text(obj, subject_get_float(cfg.auto_level_offset.val), -15.0f, 15.0f, AUTO_LEVEL_STEP,
                            SMALL_3 - 120, "%0.1f", auto_level_offset_update_cb, (void *)cfg.auto_level_offset.val);
     lv_obj_add_event_cb(obj, change_bg_opa_cb, LV_EVENT_FOCUSED, NULL);
+    lv_obj_add_event_cb(obj, change_bg_opa_cb, LV_EVENT_DEFOCUSED, NULL);
 
     return row + 1;
 }
@@ -1193,8 +1219,6 @@ static uint8_t make_auto(uint8_t row) {
 static uint8_t make_waterfall_line_zoom(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -1210,7 +1234,8 @@ static uint8_t make_waterfall_line_zoom(uint8_t row) {
     lv_obj_center(obj);
 
     obj = switch_bool(obj, &params.waterfall_center_line);
-
+    lv_obj_add_event_cb(obj, change_bg_opa_cb, LV_EVENT_FOCUSED, NULL);
+    lv_obj_add_event_cb(obj, change_bg_opa_cb, LV_EVENT_DEFOCUSED, NULL);
     lv_obj_set_width(obj, SMALL_3 - 30);
 
     obj = lv_obj_create(grid);
@@ -1231,8 +1256,6 @@ static uint8_t make_waterfall_line_zoom(uint8_t row) {
 static uint8_t make_waterfall_smooth_scroll(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -1267,8 +1290,6 @@ static void sp_mode_update_cb(lv_event_t * e) {
 static uint8_t make_sp_mode(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -1317,8 +1338,6 @@ static void comp_th_gain_update_cb(lv_event_t * e) {
 static uint8_t make_comp_th_makeup(uint8_t row) {
     lv_obj_t    *obj;
     lv_obj_t    *cell;
-
-    row_dsc[row] = 54;
 
     cell = lv_label_create(grid);
 
@@ -1371,8 +1390,6 @@ static uint8_t make_tx_offset(uint8_t row) {
     lv_obj_t    *obj;
     lv_obj_t    *cell;
 
-    row_dsc[row] = 54;
-
     cell = lv_label_create(grid);
 
     lv_label_set_text(cell, "TX IQ offsets");
@@ -1423,8 +1440,6 @@ static uint8_t make_output_gain(uint8_t row) {
     lv_obj_t    *obj;
     lv_obj_t    *cell;
 
-    row_dsc[row] = 54;
-
     cell = lv_label_create(grid);
 
     lv_label_set_text(cell, "Output gain");
@@ -1451,8 +1466,6 @@ static uint8_t make_freq_accel(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
 
-    row_dsc[row] = 54;
-
     obj = lv_label_create(grid);
 
     lv_label_set_text(obj, "Freq acceleration");
@@ -1470,8 +1483,6 @@ static uint8_t make_freq_accel(uint8_t row) {
 static uint8_t make_theme(uint8_t row) {
     lv_obj_t    *obj;
     uint8_t     col = 0;
-
-    row_dsc[row] = 54;
 
     obj = lv_label_create(grid);
 
@@ -1493,13 +1504,10 @@ static uint8_t make_delimiter(uint8_t row) {
     return row + 1;
 }
 
-static void construct_cb(lv_obj_t *parent) {
-    dialog.obj = dialog_init(parent);
-
+static void grid_create() {
+    std::fill_n(row_dsc, 64, 54);
     grid = lv_obj_create(dialog.obj);
-
     lv_obj_set_layout(grid, LV_LAYOUT_GRID);
-
     lv_obj_set_size(grid, 780, 330);
     lv_obj_set_style_text_color(grid, lv_color_white(), 0);
     lv_obj_set_style_bg_opa(grid, LV_OPA_TRANSP, LV_PART_MAIN);
@@ -1508,8 +1516,20 @@ static void construct_cb(lv_obj_t *parent) {
     lv_obj_set_style_pad_row(grid, 5, 0);
 
     lv_obj_center(grid);
+}
 
-    uint8_t row = 1;
+static void grid_delete() {
+    if (grid) {
+        lv_group_set_editing(keyboard_group, false);
+        lv_obj_del(grid);
+    }
+}
+
+static void make_general_page() {
+    grid_delete();
+    grid_create();
+
+    uint8_t row = 0;
 
     now = time(NULL);
     struct tm *t = localtime(&now);
@@ -1526,27 +1546,10 @@ static void construct_cb(lv_obj_t *parent) {
     row = make_line_gain(row);
 
     row = make_delimiter(row);
-    row = make_mag(row);
-
-    row = make_delimiter(row);
-    row = make_clock(row);
-
-    row = make_delimiter(row);
-    row = make_long_action(row);
-
-    row = make_delimiter(row);
-    row = make_hmic_action(row);
-
-    row = make_delimiter(row);
     row = make_audio_gain(row);
 
     row = make_delimiter(row);
     row = make_voice(row);
-
-    row = make_delimiter(row);
-    row = make_waterfall_line_zoom(row);
-    row = make_auto(row);
-    row = make_waterfall_smooth_scroll(row);
 
     row = make_delimiter(row);
     row = make_sp_mode(row);
@@ -1565,18 +1568,57 @@ static void construct_cb(lv_obj_t *parent) {
     }
 
     row = make_delimiter(row);
-    row = make_freq_accel(row);
-
-    row = make_delimiter(row);
-    row = make_theme(row);
-
-    row = make_delimiter(row);
 
     for (uint8_t i = 0; i < TRANSVERTER_NUM; i++)
         row = make_transverter(row, i);
 
     row_dsc[row] = LV_GRID_TEMPLATE_LAST;
     lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
+}
+
+static void make_ui_page() {
+    grid_delete();
+    grid_create();
+    uint8_t row = 0;
+
+    // row = make_delimiter(row);
+    row = make_clock(row);
+
+    row = make_delimiter(row);
+    row = make_long_action(row);
+
+    row = make_delimiter(row);
+    row = make_hmic_action(row);
+
+    row = make_mag(row);
+    row = make_delimiter(row);
+
+    row = make_delimiter(row);
+    row = make_waterfall_line_zoom(row);
+    row = make_auto_levels(row);
+    row = make_waterfall_smooth_scroll(row);
+
+    row = make_delimiter(row);
+    row = make_freq_accel(row);
+
+    row = make_delimiter(row);
+    row = make_theme(row);
+
+
+    row_dsc[row] = LV_GRID_TEMPLATE_LAST;
+    lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
+}
+
+static void construct_cb(lv_obj_t *parent) {
+    dialog.obj = dialog_init(parent);
+    make_general_page();
+    buttons_mark(&btn_ui, false);
+    buttons_mark(&btn_general, true);
+}
+
+static void destruct_cb() {
+    grid_delete();
+    grid = NULL;
 }
 
 static void key_cb(lv_event_t * e) {
