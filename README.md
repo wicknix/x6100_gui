@@ -40,7 +40,9 @@ cd AetherX6100Buildroot
 git submodule init
 git submodule update
 ./br_config.sh
-cd ..
+cd build
+make
+cd ../..
 ```
 
 * Build app
