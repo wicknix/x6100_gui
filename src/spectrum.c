@@ -116,7 +116,7 @@ static void spectrum_draw_cb(lv_event_t *e) {
     lv_point_t main_a, main_b;
     lv_point_t peak_a, peak_b;
 
-    if (!params.spectrum_filled) {
+    if (!params.spectrum_filled.x) {
         main_b.x = x1;
         main_b.y = y1 + h;
     }
@@ -130,7 +130,7 @@ static void spectrum_draw_cb(lv_event_t *e) {
 
         /* Peak */
 
-        if (params.spectrum_peak && !spectrum_tx) {
+        if (params.spectrum_peak.x && !spectrum_tx) {
             float v_peak = (spectrum_peak[i].val - min) / (max - min);
 
             peak_a.x = x1 + x;
@@ -146,14 +146,14 @@ static void spectrum_draw_cb(lv_event_t *e) {
         main_a.x = x1 + x;
         main_a.y = y1 + (1.0f - v) * h;
 
-        if (params.spectrum_filled) {
+        if (params.spectrum_filled.x) {
             main_b.x = main_a.x;
             main_b.y = y1 + h;
         }
 
         lv_draw_line(draw_ctx, &main_line_dsc, &main_a, &main_b);
 
-        if (!params.spectrum_filled) {
+        if (!params.spectrum_filled.x) {
             main_b = main_a;
         }
     }
@@ -304,7 +304,7 @@ void spectrum_data(float *data_buf, uint16_t size, bool tx) {
     for (uint16_t i = 0; i < size; i++) {
         spectrum_buf[i] = data_buf[i];
 
-        if (params.spectrum_peak && !tx) {
+        if (params.spectrum_peak.x && !tx) {
             float   v    = spectrum_buf[i];
             peak_t *peak = &spectrum_peak[i];
 
@@ -312,8 +312,8 @@ void spectrum_data(float *data_buf, uint16_t size, bool tx) {
                 peak->time = now;
                 peak->val  = v;
             } else {
-                if (now - peak->time > params.spectrum_peak_hold) {
-                    peak->val -= params.spectrum_peak_speed;
+                if (now - peak->time > (int)params.spectrum_peak_hold.x * 1000) {
+                    peak->val -= params.spectrum_peak_speed.x * 0.1f;
                 }
             }
         }

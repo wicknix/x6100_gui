@@ -7,16 +7,19 @@
  */
 
 #include "vol.h"
-
-#include "msg.h"
-#include "radio.h"
-#include "main.h"
-#include "params/params.h"
-#include "voice.h"
+#include "helpers.h"
 #include "util.h"
-#include "cfg/mode.h"
 
-static vol_mode_t   vol_mode = VOL_VOL;
+extern "C" {
+    #include "msg.h"
+    #include "radio.h"
+    #include "main.h"
+    #include "params/params.h"
+    #include "voice.h"
+    #include "cfg/mode.h"
+}
+
+static cfg_vol_mode_t   vol_mode = VOL_VOL;
 
 void vol_update(int16_t diff, bool voice) {
     int32_t     x;
@@ -72,7 +75,7 @@ void vol_update(int16_t diff, bool voice) {
                 x = align_int(x + diff * 10, 10);
                 x = cfg_mode_set_low_filter(x);
             }
-            // x = radio_change_filter_low(freq);
+
             msg_update_text_fmt("#%3X Filter low: %i Hz", color, x);
 
             if (diff) {
@@ -83,7 +86,6 @@ void vol_update(int16_t diff, bool voice) {
             break;
 
         case VOL_FILTER_HIGH:
-            // freq = params_current_mode_filter_high_get();
             x = subject_get_int(cfg_cur.filter.high);
             if (diff) {
                 uint8_t freq_step;
@@ -99,7 +101,7 @@ void vol_update(int16_t diff, bool voice) {
                 x = align_int(x + diff * freq_step, freq_step);
                 x = cfg_mode_set_high_filter(x);
             }
-            // x = radio_change_filter_high(freq);
+
             msg_update_text_fmt("#%3X Filter high: %i Hz", color, x);
 
             if (diff) {
@@ -109,18 +111,20 @@ void vol_update(int16_t diff, bool voice) {
             }
             break;
 
-        case VOL_FILTER_BW:;
-            uint32_t bw = subject_get_int(cfg_cur.filter.bw);
-            if (diff) {
-                bw = align_int(bw + diff * 20, 20);
-                subject_set_int(cfg_cur.filter.bw, bw);
-            }
-            msg_update_text_fmt("#%3X Filter bw: %i Hz", color, bw);
+        case VOL_FILTER_BW:
+            {
+                uint32_t bw = subject_get_int(cfg_cur.filter.bw);
+                if (diff) {
+                    bw = align_int(bw + diff * 20, 20);
+                    subject_set_int(cfg_cur.filter.bw, bw);
+                }
+                msg_update_text_fmt("#%3X Filter bw: %i Hz", color, bw);
 
-            if (diff) {
-                voice_delay_say_text_fmt("%i", bw);
-            } else if (voice) {
-                voice_say_text_fmt("Bandwidth filter limit");
+                if (diff) {
+                    voice_delay_say_text_fmt("%i", bw);
+                } else if (voice) {
+                    voice_say_text_fmt("Bandwidth filter limit");
+                }
             }
             break;
 
@@ -141,7 +145,7 @@ void vol_update(int16_t diff, bool voice) {
 
         case VOL_MIC:
             x = radio_change_mic(diff);
-            s = params_mic_str_get(x);
+            s = params_mic_str_get((x6100_mic_sel_t)x);
             msg_update_text_fmt("#%3X MIC: %s", color, s);
 
             if (diff) {
@@ -184,55 +188,20 @@ void vol_update(int16_t diff, bool voice) {
             }
             break;
 
-        case VOL_VOICE_LANG:
-            s = (char *)voice_change(diff);
-            msg_update_text_fmt("#%3X Voice: %s", color, s);
-
-            if (diff) {
-                voice_say_lang();
-            } else if (voice) {
-                voice_say_text_fmt("Voice selector");
-            }
-            break;
-
-        case VOL_VOICE_RATE:
-            x = params_uint8_change(&params.voice_rate, diff);
-            msg_update_text_fmt("#%3X Voice rate: %i", color, x);
-
-            if (diff == 0 && voice) {
-                voice_say_text_fmt(params.voice_rate.voice);
-            }
-            break;
-
-        case VOL_VOICE_PITCH:
-            x = params_uint8_change(&params.voice_pitch, diff);
-            msg_update_text_fmt("#%3X Voice pitch: %i", color, x);
-
-            if (diff == 0 && voice) {
-                voice_say_text_fmt(params.voice_pitch.voice);
-            }
-            break;
-
-        case VOL_VOICE_VOLUME:
-            x = params_uint8_change(&params.voice_volume, diff);
-            msg_update_text_fmt("#%3X Voice volume: %i", color, x);
-
-            if (diff == 0 && voice) {
-                voice_say_text_fmt(params.voice_volume.voice);
-            }
-            break;
-
         default:
             break;
     }
 }
 
 void vol_change_mode(int16_t dir) {
-    vol_mode = loop_modes(dir, vol_mode, params.vol_modes, VOL_LAST-1);
+    uint64_t mask = subject_get_uint64(cfg.vol_modes.val);
+    int size = sizeof(cfg_encoder_vol_modes) / sizeof(cfg_encoder_vol_modes[0]);
+    std::vector<cfg_vol_mode_t> all_modes(cfg_encoder_vol_modes, cfg_encoder_vol_modes + size);
+    vol_mode = loop_modes(dir, vol_mode, mask, all_modes);
     vol_update(0, true);
 }
 
-void vol_set_mode(vol_mode_t mode) {
+void vol_set_mode(cfg_vol_mode_t mode) {
     vol_mode = mode;
     vol->mode = VOL_EDIT;
 }

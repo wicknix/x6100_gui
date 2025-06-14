@@ -65,9 +65,6 @@ typedef enum {
 /* Params */
 
 typedef struct {
-    uint64_t            vol_modes;
-    uint64_t            mfk_modes;
-
     /* LCD */
 
     int16_t             brightness_normal;
@@ -80,7 +77,7 @@ typedef struct {
     x6100_mic_sel_t     mic;
     uint8_t             hmic;
     uint8_t             imic;
-    radio_charger_t     charger;
+    params_uint8_t      charger;
     uint16_t            bias_drive;
     uint16_t            bias_final;
     int16_t             rit;
@@ -100,11 +97,11 @@ typedef struct {
 
     /* main screen */
 
-    int16_t             spectrum_beta;
-    bool                spectrum_peak;
-    uint16_t            spectrum_peak_hold;
-    float               spectrum_peak_speed;
-    bool                spectrum_filled;
+    params_uint8_t      spectrum_beta;
+    params_bool_t       spectrum_peak;
+    params_uint8_t      spectrum_peak_hold;
+    params_uint8_t      spectrum_peak_speed;
+    params_bool_t       spectrum_filled;
     params_bool_t       waterfall_smooth_scroll;
     params_bool_t       waterfall_center_line;
     params_bool_t       waterfall_zoom;
@@ -259,8 +256,6 @@ void params_msg_cw_load();
 void params_msg_cw_new(const char *val);
 void params_msg_cw_edit(uint32_t id, const char *val);
 void params_msg_cw_delete(uint32_t id);
-
-char *params_charger_str_get(radio_charger_t val);
 
 char *params_mic_str_get(x6100_mic_sel_t val);
 

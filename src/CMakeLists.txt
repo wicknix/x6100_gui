@@ -12,7 +12,7 @@ target_sources(${PROJECT_NAME} PUBLIC
     dialog.c dialog_settings.cpp dialog_swrscan.c
     dialog_ft8.c dialog_freq.c dialog_gps.c dialog_msg_cw.c
     dialog_msg_voice.c dialog_recorder.c dialog_qth.c dialog_callsign.c
-    textarea_window.c cw_encoder.c buttons.cpp vol.c recorder.c
+    textarea_window.c cw_encoder.c buttons.cpp vol.cpp recorder.c
     voice.cpp cw_tune_ui.c adif.c qso_log.c scheduler.cpp
     dialog_wifi.c wifi.cpp controls.cpp usb_devices.cpp
 )

@@ -10,12 +10,11 @@
 #include "util.hpp"
 #include "cw.h"
 #include "voice.h"
-#include "cfg/cfg.h"
+#include "util.h"
 
 #include <vector>
 
 extern "C" {
-    #include "util.h"
     #include "params/params.h"
     #include "spectrum.h"
     #include "waterfall.h"
@@ -36,7 +35,7 @@ extern "C" {
 template <typename T> static T loop_items(std::vector<T> items, T cur, bool next);
 
 mfk_state_t  mfk_state = MFK_STATE_EDIT;
-mfk_mode_t   mfk_mode = MFK_MIN_LEVEL;
+cfg_mfk_mode_t   mfk_mode = MFK_SPECTRUM_FACTOR;
 
 void mfk_update(int16_t diff, bool voice) {
     int32_t     i;
@@ -47,36 +46,6 @@ void mfk_update(int16_t diff, bool voice) {
     uint32_t    color = mfk_state == MFK_STATE_EDIT ? 0xFFFFFF : 0xBBBBBB;
 
     switch (mfk_mode) {
-        case MFK_MIN_LEVEL:
-            i = subject_get_int(cfg_cur.band->grid.min.val);
-            if (diff != 0) {
-                i = limit(i + diff, S_MIN, S7);
-                subject_set_int(cfg_cur.band->grid.min.val, i);
-            }
-            msg_update_text_fmt("#%3X Min level: %i dB", color, i);
-
-            if (diff) {
-                voice_say_int("Spectrum min level", i);
-            } else if (voice) {
-                voice_say_text_fmt("Spectrum min level");
-            }
-            break;
-
-        case MFK_MAX_LEVEL:
-            i = subject_get_int(cfg_cur.band->grid.max.val);
-            if (diff != 0) {
-                i = limit(i + diff, S8, S9_40);
-                subject_set_int(cfg_cur.band->grid.max.val, i);
-            }
-            msg_update_text_fmt("#%3X Max level: %i dB", color, i);
-
-            if (diff) {
-                voice_say_int("Spectrum max level", i);
-            } else if (voice) {
-                voice_say_text_fmt("Spectrum max level");
-            }
-            break;
-
         case MFK_SPECTRUM_FACTOR:
             i = subject_get_int(cfg_cur.zoom);
             if (diff != 0) {
@@ -89,83 +58,6 @@ void mfk_update(int16_t diff, bool voice) {
                 voice_say_int("Spectrum zoom", i);
             } else if (voice) {
                 voice_say_text_fmt("Spectrum zoom");
-            }
-            break;
-
-
-        case MFK_SPECTRUM_BETA:
-            if (diff != 0) {
-                params_lock();
-                params.spectrum_beta += (diff < 0) ? -5 : 5;
-
-                if (params.spectrum_beta < 0) {
-                    params.spectrum_beta = 0;
-                } else if (params.spectrum_beta > 90) {
-                    params.spectrum_beta = 90;
-                }
-                params_unlock(&params.dirty.spectrum_beta);
-
-                dsp_set_spectrum_beta(params.spectrum_beta / 100.0f);
-            }
-            msg_update_text_fmt("#%3X Spectrum beta: %i", color, params.spectrum_beta);
-
-            if (diff) {
-                voice_say_int("Spectrum beta", params.spectrum_beta);
-            } else if (voice) {
-                voice_say_text_fmt("Spectrum beta");
-            }
-            break;
-
-        case MFK_SPECTRUM_FILL:
-            if (diff != 0) {
-                params_lock();
-                params.spectrum_filled = !params.spectrum_filled;
-                params_unlock(&params.dirty.spectrum_filled);
-            }
-            msg_update_text_fmt("#%3X Spectrum fill: %s", color, params.spectrum_filled ? "On" : "Off");
-
-            if (diff) {
-                voice_say_bool("Spectrum fill", params.spectrum_filled);
-            } else if (voice) {
-                voice_say_text_fmt("Spectrum fill switcher");
-            }
-            break;
-
-        case MFK_SPECTRUM_PEAK:
-            if (diff != 0) {
-                params_lock();
-                params.spectrum_peak = !params.spectrum_peak;
-                params_unlock(&params.dirty.spectrum_peak);
-            }
-            msg_update_text_fmt("#%3X Spectrum peak: %s", color, params.spectrum_peak ? "On" : "Off");
-
-            if (diff) {
-                voice_say_bool("Spectrum peak", params.spectrum_peak);
-            } else if (voice) {
-                voice_say_text_fmt("Spectrum peak switcher");
-            }
-            break;
-
-        case MFK_PEAK_HOLD:
-            if (diff != 0) {
-                i = params.spectrum_peak_hold + diff * 1000;
-
-                if (i < 1000) {
-                    i = 1000;
-                } else if (i > 10000) {
-                    i = 10000;
-                }
-
-                params_lock();
-                params.spectrum_peak_hold = i;
-                params_unlock(&params.dirty.spectrum_peak_hold);
-            }
-            msg_update_text_fmt("#%3X Peak hold: %i s", color, params.spectrum_peak_hold / 1000);
-
-            if (diff) {
-                voice_say_int("Peak hold time", params.spectrum_peak_hold / 1000);
-            } else if (voice) {
-                voice_say_text_fmt("Peak hold time");
             }
             break;
 
@@ -188,31 +80,7 @@ void mfk_update(int16_t diff, bool voice) {
             }
             break;
 
-        case MFK_PEAK_SPEED:
-            if (diff != 0) {
-                f = params.spectrum_peak_speed + diff * 0.1f;
-
-                if (f < 0.1f) {
-                    f = 0.1f;
-                } else if (f > 3.0f) {
-                    f = 3.0f;
-                }
-
-                params_lock();
-                params.spectrum_peak_speed = f;
-                params_unlock(&params.dirty.spectrum_peak_speed);
-            }
-            msg_update_text_fmt("#%3X Peak speed: %.1f dB", color, params.spectrum_peak_speed);
-
-            if (diff) {
-                voice_say_float("Peak speed time", params.spectrum_peak_speed);
-            } else if (voice) {
-                voice_say_text_fmt("Peak speed time");
-            }
-            break;
-
         case MFK_KEY_SPEED:
-            // i = radio_change_key_speed(diff);
             i = subject_get_int(cfg.key_speed.val);
             if (diff) {
                 i = clip(i + diff, 5, 50);
@@ -228,7 +96,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_MODE:
-            // i = radio_change_key_mode(diff);
             i = subject_get_int(cfg.key_mode.val);
             if (diff) {
                 i = loop_items({x6100_key_manual, x6100_key_auto_left, x6100_key_auto_right}, (x6100_key_mode_t)i, diff > 0);
@@ -245,7 +112,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_IAMBIC_MODE:
-            // i = radio_change_iambic_mode(diff);
             i = subject_get_int(cfg.key_mode.val);
             if (diff) {
                 i = loop_items({x6100_iambic_a, x6100_iambic_b}, (x6100_iambic_mode_t)i, diff > 0);
@@ -262,7 +128,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_TONE:
-            // i = radio_change_key_tone(diff);
             i = subject_get_int(cfg.key_tone.val);
             if (diff) {
                 i = clip(i + diff * 10, 400, 1200);
@@ -278,7 +143,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_VOL:
-            // i = radio_change_key_vol(diff);
             i = subject_get_int(cfg.key_vol.val);
             if (diff) {
                 i = clip(i + diff, 0, 32);
@@ -294,7 +158,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_TRAIN:
-            // b = radio_change_key_train(diff);
             b = subject_get_int(cfg.key_train.val);
             if (diff) {
                 b = !b;
@@ -310,7 +173,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_QSK_TIME:
-            // i = radio_change_qsk_time(diff);
             i = subject_get_int(cfg.qsk_time.val);
             if (diff) {
                 i = clip(i + diff * 10, 0, 1000);
@@ -326,7 +188,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_KEY_RATIO:
-            // i = radio_change_key_ratio(diff);
             f = subject_get_float(cfg.key_ratio.val);
             if (diff) {
                 f = clip(f + diff * 0.1f, 2.5f, 4.5f);
@@ -338,18 +199,6 @@ void mfk_update(int16_t diff, bool voice) {
                 voice_say_float("CW key ratio", f);
             } else if (voice) {
                 voice_say_text_fmt("CW key ratio");
-            }
-            break;
-
-        case MFK_CHARGER:
-            i = radio_change_charger(diff);
-            str = params_charger_str_get((radio_charger_t)i);
-            msg_update_text_fmt("#%3X Charger: %s", color, str);
-
-            if (diff) {
-                voice_say_text("Charger mode", str);
-            } else if (voice) {
-                voice_say_text_fmt("Charger mode selector");
             }
             break;
 
@@ -705,11 +554,14 @@ void mfk_update(int16_t diff, bool voice) {
 }
 
 void mfk_change_mode(int16_t dir) {
-    mfk_mode = (mfk_mode_t)loop_modes(dir, mfk_mode, params.mfk_modes, MFK_LAST-1);
+    uint64_t mask = subject_get_uint64(cfg.mfk_modes.val);
+    int size = sizeof(cfg_encoder_mfk_modes) / sizeof(cfg_encoder_mfk_modes[0]);
+    std::vector<cfg_mfk_mode_t> all_modes(cfg_encoder_mfk_modes, cfg_encoder_mfk_modes + size);
+    mfk_mode = loop_modes(dir, mfk_mode,  mask, all_modes);
     mfk_update(0, true);
 }
 
-void mfk_set_mode(mfk_mode_t mode) {
+void mfk_set_mode(cfg_mfk_mode_t mode) {
     mfk_mode = mode;
     mfk_state = MFK_STATE_EDIT;
 }

@@ -69,12 +69,6 @@ void audio_player::finish() {
         stream.drain();
 }
 
-typedef struct {
-    const char* name;
-    const char* label;
-    const char* welcome;
-} voice_item_t;
-
 static std::shared_ptr<engine>      eng(new engine);
 static voice_profile                profile;
 static char                         buf[512];
@@ -85,11 +79,11 @@ static bool                         run = false;
 static uint16_t                     repeated = 0;
 static bool                         sure = false;
 
-static voice_item_t                 voice_item[VOICES_NUM] = {
-    { .name = "lyubov",         .label = "Lyubov (En)",     .welcome = "Hello. This is voice Lyubov" },
-    { .name = "slt",            .label = "SLT (En)",        .welcome = "Hello. This is voice S L T" },
-    { .name = "alan",           .label = "Alan (En)",       .welcome = "Hello. This is voice Alan" },
-    { .name = "evgeniy-eng",    .label = "Evgeniy (En)",    .welcome = "Hello. This is voice Evgeniy" },
+voice_item_t voice_item[VOICES_NUM] = {
+    {.name = "lyubov",      .label = "Lyubov (En)",  .welcome = "Hello. This is voice Lyubov" },
+    {.name = "slt",         .label = "SLT (En)",     .welcome = "Hello. This is voice S L T"  },
+    {.name = "alan",        .label = "Alan (En)",    .welcome = "Hello. This is voice Alan"   },
+    {.name = "evgeniy-eng", .label = "Evgeniy (En)", .welcome = "Hello. This is voice Evgeniy"},
 };
 
 static void * say_thread(void *arg) {
@@ -277,18 +271,6 @@ void voice_say_float2(const char *prompt, float x) {
 
 void voice_say_text(const char *prompt, const char *x) {
     voice_delay_say_text_fmt("%s|%s", prompt, x);
-}
-
-const char * voice_change(int16_t diff) {
-    uint8_t x;
-
-    if (diff) {
-        x = params_uint8_change(&params.voice_lang, diff);
-    } else {
-        x = params.voice_lang.x;
-    }
-
-    return voice_item[x].label;
 }
 
 void voice_say_lang() {

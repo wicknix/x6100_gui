@@ -12,6 +12,11 @@
 
 #ifdef __cplusplus
 
+#include "vector"
+
+template <typename T>
+T loop_modes(int16_t dir, T mode, const uint64_t mask, const std::vector<T> all_modes);
+
 extern "C" {
 #endif
 
@@ -35,7 +40,6 @@ void to_bcd(uint8_t bcd_data[], uint64_t data, uint8_t len);
 void to_bcd_be(uint8_t bcd_data[], uint64_t data, uint8_t len);
 uint64_t from_bcd(const uint8_t bcd_data[], uint8_t len);
 uint64_t from_bcd_be(const uint8_t bcd_data[], uint8_t len);
-int loop_modes(int16_t dir, int mode, uint64_t modes, const int max_val);
 int sign(int x);
 
 typedef struct wrms_s * wrms_t;

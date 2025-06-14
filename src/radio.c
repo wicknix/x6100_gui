@@ -457,7 +457,7 @@ void radio_init() {
     subject_add_observer_and_call(cfg.nr.val, on_change_uint8, x6100_control_nr_set);
     subject_add_observer_and_call(cfg.nr_level.val, on_change_uint8, x6100_control_nr_level_set);
 
-    x6100_control_charger_set(params.charger == RADIO_CHARGER_ON);
+    x6100_control_charger_set(params.charger.x == RADIO_CHARGER_ON);
     x6100_control_bias_drive_set(params.bias_drive);
     x6100_control_bias_final_set(params.bias_final);
 
@@ -661,40 +661,15 @@ x6100_vfo_t radio_toggle_vfo() {
 }
 
 void radio_poweroff() {
-    if (params.charger == RADIO_CHARGER_SHADOW) {
+    if (params.charger.x == RADIO_CHARGER_SHADOW) {
         WITH_RADIO_LOCK(x6100_control_charger_set(true));
     }
 
     state = RADIO_POWEROFF;
 }
 
-radio_charger_t radio_change_charger(int16_t d) {
-    if (d == 0) {
-        return params.charger;
-    }
-
-    params_lock();
-
-    switch (params.charger) {
-        case RADIO_CHARGER_OFF:
-            params.charger = d > 0 ? RADIO_CHARGER_ON : RADIO_CHARGER_SHADOW;
-            break;
-
-        case RADIO_CHARGER_ON:
-            params.charger = d > 0 ? RADIO_CHARGER_SHADOW : RADIO_CHARGER_OFF;
-            break;
-
-        case RADIO_CHARGER_SHADOW:
-            params.charger = d > 0 ? RADIO_CHARGER_OFF : RADIO_CHARGER_ON;
-            break;
-    }
-
-    params_unlock(&params.dirty.charger);
-    lv_msg_send(MSG_PARAM_CHANGED, NULL);
-
-    WITH_RADIO_LOCK(x6100_control_charger_set(params.charger == RADIO_CHARGER_ON));
-
-    return params.charger;
+void radio_update_charger() {
+    WITH_RADIO_LOCK(x6100_control_charger_set(params.charger.x == RADIO_CHARGER_ON));
 }
 
 void radio_set_ptt(bool tx) {

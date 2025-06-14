@@ -8,30 +8,21 @@
 
 #pragma once
 
+#include "cfg/subjects.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "cfg/cfg.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef enum {
-    VOL_VOL = 0,
-    VOL_SQL,
-    VOL_RFG,
-    VOL_FILTER_LOW,
-    VOL_FILTER_HIGH,
-    VOL_PWR,
-    VOL_HMIC,
-    VOL_MIC,
-    VOL_IMIC,
-    VOL_MONI,
-    VOL_SPMODE,
-    VOL_VOICE_LANG,
-    VOL_VOICE_RATE,
-    VOL_VOICE_PITCH,
-    VOL_VOICE_VOLUME,
-    VOL_FILTER_BW,
-
-    VOL_LAST
-} vol_mode_t;
-
 void vol_update(int16_t diff, bool voice);
 void vol_change_mode(int16_t dir);
-void vol_set_mode(vol_mode_t mode);
+void vol_set_mode(cfg_vol_mode_t mode);
+
+#ifdef __cplusplus
+}
+#endif

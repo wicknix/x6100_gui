@@ -58,7 +58,7 @@ void radio_change_mute();
 
 void radio_set_pwr(float d);
 
-radio_charger_t radio_change_charger(int16_t d);
+void radio_update_charger();
 
 x6100_mic_sel_t radio_change_mic(int16_t d);
 uint8_t radio_change_hmic(int16_t d);

@@ -88,11 +88,23 @@ static int _2_update_atu_freq() {
     return 0;
 }
 
+static int _3_update_spectrum_peak_hold() {
+    int rc;
+    // spectrum peak hold from 1ms to 1s
+    rc = sqlite3_exec(db, "UPDATE params SET val = val / 1000 WHERE name = 'spectrum_peak_hold'", NULL, NULL, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Cannot update spectrum peak hold: %s\n", sqlite3_errmsg(db));
+        return 1;
+    }
+    return 0;
+}
+
 /* Migrations array */
 static int (*migrations[])() = {
     _0_init_migrations,
     _1_create_ftx_table,
     _2_update_atu_freq,
+    _3_update_spectrum_peak_hold,
 };
 
 int migrations_apply(void) {

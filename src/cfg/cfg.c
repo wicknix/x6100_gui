@@ -49,10 +49,66 @@ static void on_cur_freq_step_change(Subject *subj, void *user_data);
 static void on_cur_zoom_change(Subject *subj, void *user_data);
 
 
+// All allowed modes for VOL fast access
+cfg_vol_mode_t cfg_encoder_vol_modes[] = {
+    VOL_VOL,
+    VOL_SQL,
+    VOL_RFG,
+    VOL_FILTER_LOW,
+    VOL_FILTER_HIGH,
+    VOL_PWR,
+    VOL_HMIC,
+    VOL_MIC,
+    VOL_IMIC,
+    VOL_MONI,
+    VOL_SPMODE,
+    VOL_FILTER_BW,
+};
+
+// All allowed modes for MFK fast access
+cfg_mfk_mode_t cfg_encoder_mfk_modes[] = {
+    MFK_SPECTRUM_FACTOR,
+    MFK_KEY_SPEED,
+    MFK_KEY_MODE,
+    MFK_IAMBIC_MODE,
+    MFK_KEY_TONE,
+    MFK_KEY_VOL,
+    MFK_KEY_TRAIN,
+    MFK_QSK_TIME,
+    MFK_KEY_RATIO,
+
+    MFK_DNF,
+    MFK_DNF_CENTER,
+    MFK_DNF_WIDTH,
+    MFK_DNF_AUTO,
+    MFK_NB,
+    MFK_NB_LEVEL,
+    MFK_NB_WIDTH,
+    MFK_NR,
+    MFK_NR_LEVEL,
+
+    MFK_AGC_HANG,
+    MFK_AGC_KNEE,
+    MFK_AGC_SLOPE,
+    MFK_COMP,
+
+    MFK_CW_DECODER,
+    MFK_CW_TUNE,
+    MFK_CW_DECODER_SNR,
+    MFK_CW_DECODER_PEAK_BETA,
+    MFK_CW_DECODER_NOISE_BETA,
+
+    MFK_ANT,
+    MFK_RIT,
+    MFK_XIT,
+};
+
+
 // #define TEST_CFG
 #ifdef TEST_CFG
 #include "test_cfg.c"
 #endif
+
 
 int cfg_init(sqlite3 *db) {
     int rc;
@@ -235,6 +291,13 @@ static int init_params_cfg(sqlite3 *db) {
     cfg_params_init(db);
 
     /* Fill configuration */
+    fill_cfg_item(&cfg.vol_modes, subject_create_uint64(
+        (1 << VOL_VOL) | (1 << VOL_RFG) | (1 << VOL_FILTER_LOW) | (1 << VOL_FILTER_HIGH) | (1 << VOL_PWR) | (1 << VOL_HMIC)
+    ), "vol_modes");
+    fill_cfg_item(&cfg.mfk_modes, subject_create_uint64(
+        (1 << MFK_SPECTRUM_FACTOR) | (1 << MFK_AGC_KNEE) | (1 << MFK_DNF)
+    ), "vol_modes");
+
     fill_cfg_item(&cfg.vol, subject_create_int(20), "vol");
     fill_cfg_item(&cfg.sql, subject_create_int(0), "sql");
     fill_cfg_item_float(&cfg.pwr, subject_create_float(5.0f), 0.1f, "pwr");

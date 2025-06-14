@@ -7,8 +7,11 @@
  */
 #include "util.h"
 #include "util.hpp"
+#include "cfg/subjects.h"
 
 extern "C" {
+    #include "cfg/cfg.h"
+
     #include <complex.h>
     #include <stdlib.h>
     #include <stdio.h>
@@ -159,40 +162,6 @@ uint64_t from_bcd_be(const uint8_t bcd_data[], uint8_t len) {
     return data;
 }
 
-
-int loop_modes(int16_t dir, int mode, uint64_t modes, int max_val) {
-    while (1) {
-        if (dir > 0) {
-            if (mode == max_val) {
-                mode = 0;
-            } else {
-                mode++;
-            }
-        } else {
-            if (dir < 0)
-            {
-                if (mode == 0) {
-                    mode = max_val;
-                } else {
-                    mode--;
-                }
-            }
-        }
-        if (modes & (1LL << mode)) {
-            break;
-        }
-        if (dir == 0)
-        {
-            if (mode == max_val) {
-                mode = 0;
-            } else {
-                mode++;
-            }
-        }
-    }
-    return mode;
-}
-
 int sign(int x) {
     return (x > 0) - (x < 0);
 }
@@ -329,3 +298,35 @@ void sleep_usec(uint32_t msec) {
     }
     errno = olderrno;
 }
+
+template <typename T> T loop_modes(int16_t dir, T mode, const uint64_t mask, const std::vector<T> all_modes) {
+    std::vector<T> enabled;
+    std::vector<T> filtered;
+    auto cond = [mask, mode](T m) { return ((1LL << m) & mask); };
+    std::copy_if(all_modes.begin(), all_modes.end(), std::back_inserter(enabled), cond);
+
+    if (dir >= 0) {
+        int mode_int = mode;
+        if (dir > 0) {
+            mode_int++;
+        }
+        auto cond = [mask, mode_int](T m) { return m >= mode_int; };
+        std::copy_if(enabled.begin(), enabled.end(), std::back_inserter(filtered), cond);
+        std::sort(filtered.begin(), filtered.end());
+        filtered.push_back(enabled[0]);
+        mode = filtered[0];
+    } else {
+        auto cond = [mask, mode](T m) { return m < mode; };
+        std::copy_if(enabled.begin(), enabled.end(), std::back_inserter(filtered), cond);
+        std::sort(filtered.rbegin(), filtered.rend());
+        filtered.push_back(enabled.back());
+        mode = filtered[0];
+    }
+    return mode;
+}
+
+template cfg_vol_mode_t loop_modes(int16_t dir, cfg_vol_mode_t mode, const uint64_t mask,
+                                   const std::vector<cfg_vol_mode_t> all_modes);
+
+template cfg_mfk_mode_t loop_modes(int16_t dir, cfg_mfk_mode_t mode, const uint64_t mask,
+                                   const std::vector<cfg_mfk_mode_t> all_modes);

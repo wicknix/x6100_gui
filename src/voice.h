@@ -18,11 +18,19 @@ extern "C" {
 
 #define VOICES_NUM 4
 
+typedef struct {
+    const char *name;
+    const char *label;
+    const char *welcome;
+} voice_item_t;
+
 typedef enum {
     VOICE_OFF = 0,
     VOICE_LCD,
     VOICE_ALWAYS
 } voice_mode_t;
+
+extern voice_item_t voice_item[VOICES_NUM];
 
 void voice_sure();
 void voice_change_mode();
@@ -37,8 +45,6 @@ void voice_say_float(const char *prompt, float x);
 void voice_say_float2(const char *prompt, float x);
 void voice_say_text(const char *prompt, const char *x);
 void voice_say_lang();
-
-const char * voice_change(int16_t diff);
 
 #ifdef __cplusplus
 }
