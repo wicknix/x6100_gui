@@ -367,12 +367,20 @@ void on_change_comp_ratio(Subject *subj, void *user_data) {
     }
     if (ratio == 1) {
         // invert
-        x6100_control_comp_set(true);
+        WITH_RADIO_LOCK(x6100_control_comp_set(true));
     } else {
+        radio_lock();
         x6100_control_comp_set(false);
         x6100_control_comp_level_set((x6100_comp_level_t)(ratio - 2));
+        radio_unlock();
     }
 
+}
+
+void base_control_command(Subject *subj, void *user_data) {
+    uint32_t val = subject_get_int(subj);
+    x6100_cmd_enum_t cmd = (x6100_cmd_enum_t)user_data;
+    WITH_RADIO_LOCK(x6100_control_cmd(cmd, val));
 }
 
 void radio_bb_reset() {
@@ -431,6 +439,9 @@ void radio_init() {
     subject_add_observer_and_call(cfg.comp_threshold_offset.val, on_change_float, x6100_control_comp_threshold_set);
     subject_add_observer_and_call(cfg.comp_makeup_offset.val, on_change_float, x6100_control_comp_makeup_set);
 
+    subject_add_observer_and_call(cfg.rit.val, base_control_command, (void*)x6100_rit);
+    subject_add_observer_and_call(cfg.xit.val, base_control_command, (void*)x6100_xit);
+
     subject_add_observer_and_call(cfg.tx_i_offset.val, on_change_int32, x6100_control_tx_i_offset_set);
     subject_add_observer_and_call(cfg.tx_q_offset.val, on_change_int32, x6100_control_tx_q_offset_set);
 
@@ -471,8 +482,6 @@ void radio_init() {
     x6100_control_vox_delay_set(params.vox_delay);
     x6100_control_vox_gain_set(params.vox_gain);
 
-    x6100_control_cmd(x6100_rit, params.rit);
-    x6100_control_cmd(x6100_xit, params.xit);
     x6100_control_linein_set(params.line_in);
     x6100_control_lineout_set(params.line_out);
     x6100_control_cmd(x6100_monilevel, params.moni);
@@ -678,40 +687,6 @@ void radio_set_ptt(bool tx) {
 
 void radio_set_modem(bool tx) {
     WITH_RADIO_LOCK(x6100_control_modem_set(tx));
-}
-
-int16_t radio_change_rit(int16_t d) {
-    if (d == 0) {
-        return params.rit;
-    }
-
-    int16_t new_val = limit(align_int(params.rit + d * 10, 10), -1500, +1500);
-    if (new_val != params.rit) {
-        params_lock();
-        params.rit = new_val;
-        params_unlock(&params.dirty.rit);
-        lv_msg_send(MSG_PARAM_CHANGED, NULL);
-        WITH_RADIO_LOCK(x6100_control_cmd(x6100_rit, params.rit));
-    }
-
-    return params.rit;
-}
-
-int16_t radio_change_xit(int16_t d) {
-    if (d == 0) {
-        return params.xit;
-    }
-
-    int16_t new_val = limit(align_int(params.xit + d * 10, 10), -1500, +1500);
-    if (new_val != params.xit) {
-        params_lock();
-        params.xit = new_val;
-        params_unlock(&params.dirty.xit);
-        lv_msg_send(MSG_PARAM_CHANGED, NULL);
-        WITH_RADIO_LOCK(x6100_control_cmd(x6100_xit, params.xit));
-    }
-
-    return params.xit;
 }
 
 void radio_set_line_in(uint8_t d) {

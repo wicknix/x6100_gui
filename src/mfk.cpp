@@ -49,7 +49,7 @@ void mfk_update(int16_t diff, bool voice) {
         case MFK_SPECTRUM_FACTOR:
             i = subject_get_int(cfg_cur.zoom);
             if (diff != 0) {
-                i = limit(i + diff, 1, 8);
+                i = clip(i + diff, 1, 8);
                 subject_set_int(cfg_cur.zoom, i);
             }
             msg_update_text_fmt("#%3X Spectrum zoom: x%i", color, i);
@@ -206,7 +206,7 @@ void mfk_update(int16_t diff, bool voice) {
             {
                 int32_t ant = subject_get_int(cfg.ant_id.val);
                 if (diff != 0) {
-                    ant = limit(ant + diff, 1, 5);
+                    ant = clip(ant + diff, 1, 5);
                     subject_set_int(cfg.ant_id.val, ant);
                     // radio_load_atu();
                     // info_atu_update();
@@ -222,7 +222,11 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_RIT:
-            i = radio_change_rit(diff);
+            i = subject_get_int(cfg.rit.val);
+            if (diff) {
+                i = clip(align(i + diff * 10, 10), -1500, +1500);
+                subject_set_int(cfg.rit.val, i);
+            }
             msg_update_text_fmt("#%3X RIT: %c%i", color, i < 0 ? '-' : '+', abs(i));
 
             if (diff) {
@@ -233,7 +237,11 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_XIT:
-            i = radio_change_xit(diff);
+            i = subject_get_int(cfg.xit.val);
+            if (diff) {
+                i = clip(align(i + diff * 10, 10), -1500, +1500);
+                subject_set_int(cfg.xit.val, i);
+            }
             msg_update_text_fmt("#%3X XIT: %c%i", color, i < 0 ? '-' : '+', abs(i));
 
             if (diff) {
@@ -244,7 +252,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_DNF:
-            // b = radio_change_dnf(diff);
             b = subject_get_int(cfg.dnf.val);
             if (diff) {
                 b = !b;
@@ -260,10 +267,9 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_DNF_CENTER:
-            // i = radio_change_dnf_center(diff);
             i = subject_get_int(cfg.dnf_center.val);
             if (diff) {
-                i = limit(i + diff * 50, 100, 3000);
+                i = clip(i + diff * 50, 100, 3000);
                 subject_set_int(cfg.dnf_center.val, i);
             }
             msg_update_text_fmt("#%3X DNF center: %i Hz", color, i);
@@ -276,10 +282,9 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_DNF_WIDTH:
-            // i = radio_change_dnf_width(diff);
             i = subject_get_int(cfg.dnf_width.val);
             if (diff) {
-                i = limit(i + diff * 5, 10, 100);
+                i = clip(i + diff * 5, 10, 100);
                 subject_set_int(cfg.dnf_width.val, i);
             }
             msg_update_text_fmt("#%3X DNF width: %i Hz", color, i);
@@ -292,7 +297,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NB:
-            // b = radio_change_nb(diff);
             b = subject_get_int(cfg.nb.val);
             if (diff) {
                 b = !b;
@@ -308,11 +312,9 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NB_LEVEL:
-            // i = radio_change_nb_level(diff);
-            // limit(params.nb_level + d * 5, 0, 100);
             i = subject_get_int(cfg.nb_level.val);
             if (diff) {
-                i = limit(i + diff * 5, 0, 100);
+                i = clip(i + diff * 5, 0, 100);
                 subject_set_int(cfg.nb_level.val, i);
             }
             msg_update_text_fmt("#%3X NB level: %i", color, i);
@@ -325,11 +327,9 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NB_WIDTH:
-            // i = radio_change_nb_width(diff);
-            // limit(params.nb_width + d * 5, 0, 100);
             i = subject_get_int(cfg.nb_width.val);
             if (diff) {
-                i = limit(i + diff * 5, 0, 100);
+                i = clip(i + diff * 5, 0, 100);
                 subject_set_int(cfg.nb_width.val, i);
             }
             msg_update_text_fmt("#%3X NB width: %i Hz", color, i);
@@ -342,7 +342,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NR:
-            // b = radio_change_nr(diff);
             b = subject_get_int(cfg.nr.val);
             if (diff) {
                 b = !b;
@@ -358,11 +357,9 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_NR_LEVEL:
-            // i = radio_change_nr_level(diff);
-            // limit(params.nr_level + d * 5, 0, 60);
             i = subject_get_int(cfg.nr_level.val);
             if (diff) {
-                i = limit(i + diff * 5, 0, 60);
+                i = clip(i + diff * 5, 0, 60);
                 subject_set_int(cfg.nr_level.val, i);
             }
             msg_update_text_fmt("#%3X NR level: %i", color, i);
@@ -375,7 +372,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_AGC_HANG:
-            // b = radio_change_agc_hang(diff);
             b = subject_get_int(cfg.agc_hang.val);
             if (diff) {
                 b = !b;
@@ -391,11 +387,9 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_AGC_KNEE:
-            // limit(params.agc_knee + d, -100, 0);
-            // i = radio_change_agc_knee(diff);
             i = subject_get_int(cfg.agc_knee.val);
             if (diff) {
-                i = limit(i + diff, -100, 0);
+                i = clip(i + diff, -100, 0);
                 subject_set_int(cfg.agc_knee.val, i);
             }
             msg_update_text_fmt("#%3X AGC knee: %i dB", color, i);
@@ -408,11 +402,9 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_AGC_SLOPE:
-            // limit(params.agc_slope + d, 0, 10);
-            // i = radio_change_agc_slope(diff);
             i = subject_get_int(cfg.agc_slope.val);
             if (diff) {
-                i = limit(i + diff, 0, 10);
+                i = clip(i + diff, 0, 10);
                 subject_set_int(cfg.agc_slope.val, i);
             }
             msg_update_text_fmt("#%3X AGC slope: %i dB", color, i);
@@ -425,7 +417,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_DECODER:
-            // b = cw_change_decoder(diff);
             b = subject_get_int(cfg.cw_decoder.val);
             if (diff) {
                 b = !b;
@@ -441,7 +432,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_TUNE:
-            // b = cw_tune_toggle(diff);
             b = subject_get_int(cfg.cw_tune.val);
             if (diff) {
                 b = !b;
@@ -457,7 +447,6 @@ void mfk_update(int16_t diff, bool voice) {
             break;
 
         case MFK_CW_DECODER_SNR:
-            // f = cw_change_snr(diff);
             f = subject_get_float(cfg.cw_decoder_snr.val);
             if (diff) {
                 f = clip(f + diff * 0.1f, 3.0f, 30.0f);
@@ -478,7 +467,7 @@ void mfk_update(int16_t diff, bool voice) {
                 f = clip(f + diff * 0.01f, 0.1f, 0.95f);
                 subject_set_float(cfg.cw_decoder_peak_beta.val, f);
             }
-            // f = cw_change_peak_beta(diff);
+
             msg_update_text_fmt("#%3X CW decoder peak beta: %.2f", color, f);
 
             if (diff) {
@@ -494,7 +483,7 @@ void mfk_update(int16_t diff, bool voice) {
                 f = clip(f + diff * 0.01f, 0.1f, 0.95f);
                 subject_set_float(cfg.cw_decoder_noise_beta.val, f);
             }
-            // f = cw_change_noise_beta(diff);
+
             msg_update_text_fmt("#%3X CW decoder noise beta: %.2f", color, f);
 
             if (diff) {

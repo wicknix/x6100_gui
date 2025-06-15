@@ -80,8 +80,6 @@ typedef struct {
     params_uint8_t      charger;
     uint16_t            bias_drive;
     uint16_t            bias_final;
-    int16_t             rit;
-    int16_t             xit;
     uint8_t             line_in;
     uint8_t             line_out;
     int16_t             moni;
@@ -186,13 +184,9 @@ typedef struct {
         bool    brightness_timeout;
         bool    brightness_buttons;
 
-        bool    band;
         bool    mic;
         bool    hmic;
         bool    imic;
-        bool    charger;
-        bool    rit;
-        bool    xit;
         bool    line_in;
         bool    line_out;
         bool    moni;
@@ -202,11 +196,6 @@ typedef struct {
         bool    vox_delay;
         bool    vox_gain;
 
-        bool    spectrum_beta;
-        bool    spectrum_peak;
-        bool    spectrum_peak_hold;
-        bool    spectrum_peak_speed;
-        bool    spectrum_filled;
         bool    clock_view;
         bool    clock_time_timeout;
         bool    clock_power_timeout;
@@ -219,10 +208,6 @@ typedef struct {
         bool    rtty_shift;
         bool    rtty_rate;
         bool    rtty_reverse;
-
-        bool    ft8_show_all;
-        bool    ft8_protocol;
-        bool    ft8_band;
 
         bool    long_gen;
         bool    long_app;

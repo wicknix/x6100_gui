@@ -55,8 +55,6 @@ params_t params = {
     .charger                = { .x = 1, .min = 0, .max = 2, .name = "charger"},
     .bias_drive             = 450,
     .bias_final             = 650,
-    .rit                    = 0,
-    .xit                    = 0,
     .line_in                = 10,
     .line_out               = 10,
     .moni                   = 59,
@@ -198,10 +196,6 @@ static bool params_load() {
             params.rtty_center = i;
         } else if (strcmp(name, "rtty_reverse") == 0) {
             params.rtty_reverse = i;
-        } else if (strcmp(name, "rit") == 0) {
-            params.rit = i;
-        } else if (strcmp(name, "xit") == 0) {
-            params.xit = i;
         } else if (strcmp(name, "brightness_normal") == 0) {
             params.brightness_normal = i;
         } else if (strcmp(name, "brightness_idle") == 0) {
@@ -331,9 +325,6 @@ static void params_save() {
     if (params.dirty.rtty_shift)            params_write_int("rtty_shift", params.rtty_shift, &params.dirty.rtty_shift);
     if (params.dirty.rtty_center)           params_write_int("rtty_center", params.rtty_center, &params.dirty.rtty_center);
     if (params.dirty.rtty_reverse)          params_write_int("rtty_reverse", params.rtty_reverse, &params.dirty.rtty_reverse);
-
-    if (params.dirty.rit)                   params_write_int("rit", params.rit, &params.dirty.rit);
-    if (params.dirty.xit)                   params_write_int("xit", params.xit, &params.dirty.xit);
 
     if (params.dirty.line_in)               params_write_int("line_in", params.line_in, &params.dirty.line_in);
     if (params.dirty.line_out)              params_write_int("line_out", params.line_out, &params.dirty.line_out);

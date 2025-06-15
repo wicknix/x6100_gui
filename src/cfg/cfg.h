@@ -91,6 +91,9 @@ typedef struct {
     cfg_item_t comp_threshold_offset;
     cfg_item_t comp_makeup_offset;
 
+    cfg_item_t rit;
+    cfg_item_t xit;
+
     cfg_item_t tx_i_offset;
     cfg_item_t tx_q_offset;
 

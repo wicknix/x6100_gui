@@ -839,13 +839,13 @@ static const char * moni_level_label_getter() {
 
 static const char * rit_label_getter() {
     static char buf[22];
-    sprintf(buf, "RIT:\n%+zi", params.rit);
+    sprintf(buf, "RIT:\n%+zi", subject_get_int(cfg.rit.val));
     return buf;
 }
 
 static const char * xit_label_getter() {
     static char buf[22];
-    sprintf(buf, "XIT:\n%+zi", params.xit);
+    sprintf(buf, "XIT:\n%+zi", subject_get_int(cfg.xit.val));
     return buf;
 }
 
