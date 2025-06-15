@@ -13,6 +13,7 @@
 #ifdef __cplusplus
 
 #include "cfg/subjects.h"
+#include <liquid/liquid.h>
 
 extern "C" {
 #endif
@@ -20,7 +21,6 @@ extern "C" {
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <liquid/liquid.h>
 
 #ifdef __cplusplus
 }
@@ -55,7 +55,7 @@ class ChunkedSpgram {
     void reset();
     void execute_block(cfloat *block);
     void get_psd_mag(float *psd);
-    void get_psd(float *psd);
+    void get_psd(float *psd, bool linear=false);
 };
 
 extern "C" {

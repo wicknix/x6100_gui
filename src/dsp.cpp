@@ -32,6 +32,8 @@ extern "C" {
     #include <stdlib.h>
 }
 
+#define DB_OFFSET -30.0f
+
 static iirfilt_cccf dc_block;
 
 static pthread_mutex_t spectrum_mux = PTHREAD_MUTEX_INITIALIZER;
@@ -51,6 +53,7 @@ static cfloat         spectrum_dec_buf[SPECTRUM_NFFT / 2];
 
 static ChunkedSpgram *waterfall_sg_rx;
 static ChunkedSpgram *waterfall_sg_tx;
+static float          waterfall_psd_lin[WATERFALL_NFFT];
 static float          waterfall_psd[WATERFALL_NFFT];
 static uint8_t        waterfall_fps_ms = (1000 / 25);
 static uint64_t       waterfall_time;
@@ -69,6 +72,7 @@ static bool ready = false;
 static int32_t filter_from = 0;
 static int32_t filter_to   = 3000;
 static x6100_mode_t cur_mode;
+static float noise_level = S_MIN;
 
 static void dsp_update_min_max(float *data_buf, uint16_t size);
 static void setup_spectrum_spgram();
@@ -195,13 +199,17 @@ void ChunkedSpgram::get_psd_mag(float *psd) {
     }
 }
 
-void ChunkedSpgram::get_psd(float *psd) {
+void ChunkedSpgram::get_psd(float *psd, bool linear) {
     // compute magnitude, linear
     get_psd_mag(psd);
-    // convert to dB
-    unsigned int i;
-    for (i=0; i<nfft; i++)
-        psd[i] = 10*log10f(psd[i]);
+    if (!linear) {
+        // convert to dB
+        unsigned int i;
+        for (i=0; i<nfft; i++) {
+            // 10.0 because psd is squared magnitude (power)
+            psd[i] = 10.0f * log10f(psd[i]);
+        }
+    }
 }
 
 /* * */
@@ -264,7 +272,7 @@ static void process_samples(cfloat *buf_samples, uint16_t size, firdecim_crcf sp
 static bool update_spectrum(ChunkedSpgram *sp_sg, uint64_t now, bool tx) {
     if ((now - spectrum_time > spectrum_fps_ms)) {
         sp_sg->get_psd(spectrum_psd);
-        liquid_vectorf_addscalar(spectrum_psd, SPECTRUM_NFFT, -30.0f, spectrum_psd);
+        liquid_vectorf_addscalar(spectrum_psd, SPECTRUM_NFFT, DB_OFFSET, spectrum_psd);
         // Decrease beta for high zoom
         float new_beta = powf(spectrum_beta, ((float)spectrum_factor - 1.0f) / 2.0f + 1.0f);
         lpf_block(spectrum_psd_filtered, spectrum_psd, new_beta, SPECTRUM_NFFT);
@@ -277,8 +285,12 @@ static bool update_spectrum(ChunkedSpgram *sp_sg, uint64_t now, bool tx) {
 
 static bool update_waterfall(ChunkedSpgram *wf_sg, uint64_t now, bool tx) {
     if ((now - waterfall_time > waterfall_fps_ms) && (!psd_delay)) {
-        wf_sg->get_psd(waterfall_psd);
-        liquid_vectorf_addscalar(waterfall_psd, WATERFALL_NFFT, -30.0f, waterfall_psd);
+        wf_sg->get_psd(waterfall_psd_lin, true);
+        for (size_t i = 0; i < WATERFALL_NFFT; i++) {
+            waterfall_psd[i] = 10.0f * log10f(waterfall_psd_lin[i]);
+        }
+
+        liquid_vectorf_addscalar(waterfall_psd, WATERFALL_NFFT, DB_OFFSET, waterfall_psd);
         waterfall_data(waterfall_psd, WATERFALL_NFFT, tx);
         waterfall_time = now;
         return true;
@@ -294,13 +306,16 @@ static void update_s_meter() {
         from = center + filter_from * WATERFALL_NFFT / 100000;
         to = center + filter_to * WATERFALL_NFFT / 100000;
 
-        int16_t peak_db = -121;
+        float sum_db, sum;
+        sum = 0.0f;
 
-        for (int32_t i = from; i <= to; i++)
-            if (waterfall_psd[i] > peak_db)
-                peak_db = waterfall_psd[i];
+        for (int32_t i = from; i <= to; i++) {
+            sum += waterfall_psd_lin[i];
+        }
 
-        meter_update(peak_db, 0.8f);
+        sum_db = 10.0f * log10f(sum) + DB_OFFSET;
+
+        meter_update(sum_db, params.spectrum_beta.x * 0.01f);
     }
 }
 
@@ -330,7 +345,7 @@ void dsp_samples(cfloat *buf_samples, uint16_t size, bool tx) {
         update_s_meter();
         // TODO: skip on disabled auto min/max
         if (!tx) {
-            dsp_update_min_max(waterfall_psd, WATERFALL_NFFT);
+            dsp_update_min_max(waterfall_psd_lin, WATERFALL_NFFT);
         } else {
             min_max_delay = 2;
         }
@@ -425,32 +440,46 @@ void dsp_put_audio_samples(size_t nsamples, int16_t *samples) {
     }
 }
 
-static int compare_fft(const void *p1, const void *p2) {
-    float *i1 = (float *)p1;
-    float *i2 = (float *)p2;
-
-    return (*i1 < *i2) ? -1 : 1;
-}
-
 static void dsp_update_min_max(float *data_buf, uint16_t size) {
     if (min_max_delay) {
         min_max_delay--;
         return;
     }
-    qsort(data_buf, size, sizeof(float), compare_fft);
-    uint16_t min_nth = size * 15 / 100;
-    uint16_t max_nth = size * 10 / 100;
+    int window_size = (WATERFALL_NFFT * 2500) / 100000;
+    float *power_sum = (float *) calloc(sizeof(float), size - window_size);
 
-    float min = data_buf[min_nth];
-    // float max = data_buf[size - max_nth - 1];
+    // Sum with window
+    for (size_t i = 0; i < size - window_size; i++) {
+        power_sum[i] = 0.0f;
+        for (size_t j = 0; j < window_size; j++) {
+            power_sum[i] += data_buf[i + j];
+        }
+    }
 
+    // Search minimum
+    float min = MAXFLOAT;
+    for (size_t i = 0; i < size - window_size; i++) {
+        if (min > power_sum[i]) {
+            min = power_sum[i];
+        }
+    }
+
+    // Convert to db
+    min = 10.0f * log10f(min) + DB_OFFSET;
+
+    lpf(&noise_level, min, 0.8f, S_MIN);
+
+    min = noise_level;
+    meter_set_noise(min);
+
+    min -= 15.0f;
 
     if (min < S_MIN) {
         min = S_MIN;
     } else if (min > S8) {
         min = S8;
     }
-    float max = min + 48;
+    float max = min + 48.0f;
 
     spectrum_update_min(min);
     waterfall_update_min(min);

@@ -1372,7 +1372,7 @@ uint8_t make_spectrum_beta_peak_hold_speed(uint8_t row) {
     lv_label_set_text(obj, "Spec. beta, hold, speed");
     lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, row, 1);
 
-    obj = spinbox_uint8(grid, &params.spectrum_beta, []() { dsp_set_spectrum_beta(params.spectrum_beta.x / 100.0f); });
+    obj = spinbox_uint8(grid, &params.spectrum_beta, []() { dsp_set_spectrum_beta(params.spectrum_beta.x * 0.01f); });
     lv_obj_add_event_cb(obj, change_bg_opa_cb, LV_EVENT_FOCUSED, NULL);
     lv_obj_add_event_cb(obj, change_bg_opa_cb, LV_EVENT_DEFOCUSED, NULL);
 

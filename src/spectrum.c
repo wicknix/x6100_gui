@@ -333,21 +333,15 @@ void spectrum_min_max_reset() {
     }
 }
 
-float spectrum_get_min() {
-    return grid_min;
-}
-
 void spectrum_update_max(float db) {
     if (subject_get_int(cfg.auto_level_enabled.val)) {
-        lpf(&grid_max, db, 0.75f, DEFAULT_MAX);
-        grid_max -= subject_get_float(cfg.auto_level_offset.val);
+        grid_max = db - subject_get_float(cfg.auto_level_offset.val);
     }
 }
 
 void spectrum_update_min(float db) {
     if (subject_get_int(cfg.auto_level_enabled.val)) {
-        lpf(&grid_min, db, 0.75f, DEFAULT_MIN);
-        grid_min -= subject_get_float(cfg.auto_level_offset.val);
+        grid_min = db - subject_get_float(cfg.auto_level_offset.val);
     }
 }
 

@@ -17,7 +17,6 @@ lv_obj_t * spectrum_init(lv_obj_t * parent);
 void spectrum_data(float *data_buf, uint16_t size, bool tx);
 void spectrum_min_max_reset();
 
-float spectrum_get_min();
 void spectrum_update_max(float db);
 void spectrum_update_min(float db);
 void spectrum_clear();
