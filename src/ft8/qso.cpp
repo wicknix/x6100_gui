@@ -63,6 +63,10 @@ bool Candidate::is_finished() {
     return (_last_rx_type == FTX_MSG_TYPE_73) || (_last_rx_type == FTX_MSG_TYPE_RR73);
 }
 
+bool Candidate::can_be_saved() {
+    return (!_remote_callsign.empty()) && (_rcvd_snr != DEFAULT_SNR) && (_sent_snr != DEFAULT_SNR) && !_saved;
+}
+
 std::string Candidate::get_tx_text(std::string local_callsign, std::string local_qth) {
     std::string answer = make_answer_text(_last_rx_type, _remote_callsign, local_callsign, _local_snr, local_qth);
     if ((_last_rx_type == FTX_MSG_TYPE_GRID) || (_last_rx_type == FTX_MSG_TYPE_REPORT)) {
@@ -72,7 +76,7 @@ std::string Candidate::get_tx_text(std::string local_callsign, std::string local
 }
 
 void Candidate::save_qso(save_qso_cb_t save_qso_cb) {
-    if ((!_remote_callsign.empty()) && (_rcvd_snr != DEFAULT_SNR) && (_sent_snr != DEFAULT_SNR) && !_saved)
+    if (can_be_saved())
         save_qso_cb(_remote_callsign.c_str(), _grid.c_str(), _rcvd_snr, _sent_snr);
         _saved = true;
 }
@@ -323,6 +327,21 @@ void FTxQsoProcessor::start_qso(ftx_msg_meta_t *meta, ftx_tx_msg_t *tx_msg) {
     strcpy(tx_msg->msg, _cur_candidate->get_tx_text(_local_callsign, _local_qth).c_str());
 }
 
+bool FTxQsoProcessor::can_save_qso() {
+    return _cur_candidate && _cur_candidate->can_be_saved();
+}
+
+bool FTxQsoProcessor::force_save_qso() {
+    if (_cur_candidate) {
+        _cur_candidate->save_qso(_save_qso_cb);
+        delete _cur_candidate;
+        _cur_candidate = NULL;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 Candidate **FTxQsoProcessor::get_candidate_to_update(std::string call_de) {
     if (_cur_candidate == NULL) {
         // Start new QSO
@@ -402,4 +421,12 @@ void ftx_qso_processor_add_rx_text(FTxQsoProcessor *p, const char *text, const i
 
 void ftx_qso_processor_start_qso(FTxQsoProcessor *p, ftx_msg_meta_t *meta, ftx_tx_msg_t *tx_msg) {
     p->start_qso(meta, tx_msg);
+}
+
+bool ftx_qso_processor_can_save_qso(FTxQsoProcessor *p) {
+    return p->can_save_qso();
+}
+
+bool ftx_qso_processor_force_save_qso(FTxQsoProcessor *p) {
+    return p->force_save_qso();
 }

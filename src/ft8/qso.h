@@ -51,6 +51,7 @@ class Candidate {
     void set_rcvd_snr(int snr);
     bool match_callsign(std::string callsign);
     bool is_finished();
+    bool can_be_saved();
     void save_qso(save_qso_cb_t save_qso_cb);
 
     std::string get_tx_text(std::string local_callsign, std::string local_qth);
@@ -67,7 +68,7 @@ class Candidate {
 
 class FTxQsoProcessor {
   public:
-    FTxQsoProcessor(std::string local_callsign, std::string local_qth, save_qso_cb_t save_qso_cb, int max_repeats);
+    FTxQsoProcessor(std::string local_callsign, std::string local_qth, save_qso_cb_t save_qso_cb, int max_repeats=-1);
     ~FTxQsoProcessor();
 
     /// @brief Pass an RXed text, update internal state and meta
@@ -76,16 +77,21 @@ class FTxQsoProcessor {
     /// @param[out] meta meta information to fill
     /// @param[out] tx_msg TX message to fill
     void add_rx_text(std::string text, const int snr, ftx_msg_meta_t *meta, ftx_tx_msg_t *tx_msg);
+
     void process_grid(ftx_msg_meta_t *meta, std::vector<std::string> &tokens, const int snr, ftx_tx_msg_t &tx_msg);
     void process_report(ftx_msg_meta_t *meta, std::vector<std::string> &tokens, const int snr, ftx_tx_msg_t &tx_msg);
     void process_r_report(ftx_msg_meta_t *meta, std::vector<std::string> &tokens, const int snr, ftx_tx_msg_t &tx_msg);
     void process_rr73(ftx_msg_meta_t *meta, std::vector<std::string> &tokens, const int snr, ftx_tx_msg_t &tx_msg);
     void process_73(ftx_msg_meta_t *meta, std::vector<std::string> &tokens, const int snr, ftx_tx_msg_t &tx_msg);
     void process_cq(ftx_msg_meta_t *meta, std::vector<std::string> &tokens, const int snr);
+
     void set_auto(bool);
     void start_new_slot();
     void reset();
     void start_qso(ftx_msg_meta_t *meta, ftx_tx_msg_t *tx_msg);
+
+    bool can_save_qso();
+    bool force_save_qso();
 
   private:
     bool          _auto    = true;
@@ -118,6 +124,9 @@ extern void ftx_qso_processor_set_auto(FTxQsoProcessor *p, bool);
 extern void ftx_qso_processor_start_new_slot(FTxQsoProcessor *p);
 extern void ftx_qso_processor_reset(FTxQsoProcessor *p);
 extern void ftx_qso_processor_start_qso(FTxQsoProcessor *p, ftx_msg_meta_t *meta, ftx_tx_msg_t *tx_msg);
+
+extern bool ftx_qso_processor_can_save_qso(FTxQsoProcessor *p);
+extern bool ftx_qso_processor_force_save_qso(FTxQsoProcessor *p);
 
 #ifdef __cplusplus
 }

@@ -108,36 +108,36 @@ static Subject    *tx_enabled;
 static Subject    *cq_enabled;
 static bool        tx_time_slot;
 
-static ftx_tx_msg_t         tx_msg;
+static ftx_tx_msg_t tx_msg;
 
-static lv_obj_t             *table;
+static lv_obj_t *table;
 
-static lv_timer_t           *timer = NULL;
-static lv_anim_t            fade;
-static bool                 fade_run = false;
-static bool                 disable_buttons = false;
+static lv_timer_t *timer = NULL;
+static lv_anim_t   fade;
+static bool        fade_run        = false;
+static bool        disable_buttons = false;
 
-static lv_obj_t             *finder;
-static lv_obj_t             *waterfall;
-static uint16_t             waterfall_nfft;
-static spgramcf             waterfall_sg;
-static float                *waterfall_psd;
-static uint8_t              waterfall_fps_ms = (1000 / 5);
-static uint64_t             waterfall_time;
+static lv_obj_t *finder;
+static lv_obj_t *waterfall;
+static uint16_t  waterfall_nfft;
+static spgramcf  waterfall_sg;
+static float    *waterfall_psd;
+static uint8_t   waterfall_fps_ms = (1000 / 5);
+static uint64_t  waterfall_time;
 
-static pthread_mutex_t      audio_mutex = PTHREAD_MUTEX_INITIALIZER;
-static cbuffercf            audio_buf;
-static pthread_t            thread;
+static pthread_mutex_t audio_mutex = PTHREAD_MUTEX_INITIALIZER;
+static cbuffercf       audio_buf;
+static pthread_t       thread;
 
-static firdecim_crcf        decim;
-static float complex        *decim_buf;
+static firdecim_crcf  decim;
+static float complex *decim_buf;
 
-static adif_log             ft8_log;
-static FTxQsoProcessor         *qso_processor;
+static adif_log         ft8_log;
+static FTxQsoProcessor *qso_processor;
 
-static double               cur_lat, cur_lon;
+static double cur_lat, cur_lon;
 
-static int32_t  filter_low, filter_high;
+static int32_t filter_low, filter_high;
 
 static float base_gain_offset;
 
@@ -164,6 +164,8 @@ static void hold_tx_freq_cb(struct button_item_t *btn);
 static void mode_auto_cb(struct button_item_t *btn);
 static void cq_modifier_cb(struct button_item_t *btn);
 static void time_sync(struct button_item_t *btn);
+
+static void force_save_qso(struct button_item_t *btn);
 
 static void cell_press_cb(lv_event_t * e);
 
@@ -194,6 +196,8 @@ static button_item_t button_hold_freq = { .type=BTN_TEXT_FN, .label_fn = hold_fr
 static button_item_t button_auto_en_dis = { .type=BTN_TEXT_FN, .label_fn = auto_label_getter, .press = mode_auto_cb, .subj=&cfg.ft8_auto.val };
 static button_item_t button_cq_mod = { .type=BTN_TEXT, .label = "CQ\nModifier", .press = cq_modifier_cb };
 static button_item_t button_time_sync = { .type=BTN_TEXT, .label = "Time\nSync", .press = time_sync };
+
+static button_item_t button_force_save = { .type=BTN_TEXT, .label = "Force save\n QSO", .press = force_save_qso };
 
 static buttons_page_t btn_page_1 = {
     {&button_page_1, &button_show_cq_all, &button_mode_ft4_ft8, &button_tx_cq_en_dis, &button_tx_call_en_dis}
@@ -913,6 +917,12 @@ static void time_sync(struct button_item_t *btn) {
     }
 }
 
+static void force_save_qso(struct button_item_t *btn) {
+    if (ftx_qso_processor_can_save_qso(qso_processor)) {
+        ftx_qso_processor_force_save_qso(qso_processor);
+    }
+}
+
 static void cell_press_cb(lv_event_t * e) {
     if (state == TX_PROCESS) {
         tx_call_off();
@@ -1279,6 +1289,15 @@ static void * decode_thread(void *arg) {
                 tx_worker();
                 if (tx_msg.repeats > 0) {
                     tx_msg.repeats--;
+                }
+                if (subject_get_int(cfg.ft8_max_repeats.val) - tx_msg.repeats >= 2) {
+                    // Allow to force save
+                    if (ftx_qso_processor_can_save_qso(qso_processor)) {
+                        // replace button
+                        btn_page_1.items[3] = &button_force_save;
+                    }
+                } else {
+                    btn_page_1.items[3] = &button_tx_cq_en_dis;
                 }
                 if (tx_msg.repeats == 0){
                     if (strncmp(tx_msg.msg, "CQ", 2) == 0) {
