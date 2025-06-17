@@ -105,19 +105,19 @@ static void show_time() {
             const char * bat_sym;
             const char * ext_sym;
             switch ((uint8_t)(v_bat * 10)) {
-                case 0 ... 56:
+                case 0 ... 63:
                     bat_sym = LV_SYMBOL_BATTERY_EMPTY;
                     break;
-                case 57 ... 63:
+                case 64 ... 69:
                     bat_sym = LV_SYMBOL_BATTERY_1;
                     break;
-                case 64 ... 70:
+                case 70 ... 75:
                     bat_sym = LV_SYMBOL_BATTERY_2;
                     break;
-                case 71 ... 77:
+                case 76 ... 81:
                     bat_sym = LV_SYMBOL_BATTERY_3;
                     break;
-                case 78 ... 100:
+                case 82 ... 100:
                     bat_sym = LV_SYMBOL_BATTERY_FULL;
                     break;
             }
