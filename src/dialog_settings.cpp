@@ -1677,7 +1677,7 @@ uint8_t make_charger(uint8_t row) {
 
     obj = dropdown_uint8(grid, &params.charger, " Off \n On \n Shadow", [](lv_event_t *e) {
         uint8_dropdown_update_cb(e);
-        radio_update_charger();
+        radio_set_charger(params.charger.x == RADIO_CHARGER_ON);
     });
 
     lv_obj_set_size(obj, SMALL_6, 56);

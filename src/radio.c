@@ -33,6 +33,7 @@
 #define IDLE_TIMEOUT        (3 * 1000)
 
 static radio_rx_tx_change_t notify_rx_tx;
+static void(*low_power_cb)(bool) = NULL;
 
 static pthread_mutex_t  control_mux;
 
@@ -93,11 +94,14 @@ bool radio_tick() {
     if (x6100_flow_read(pack)) {
         prev_time = now_time;
 
-        static uint8_t delay = 0;
+        static uint8_t delay;
 
         if (delay++ > 10) {
             delay = 0;
             clock_update_power(pack->vext * 0.1f, pack->vbat*0.1f, pack->batcap, pack->flag.charging);
+            if (low_power_cb) {
+                low_power_cb(!pack->flag.vext && (pack->vbat <= 60));
+            }
         }
         cfloat *samples = (cfloat*)((char *)pack + offsetof(x6100_flow_t, samples));
         dsp_samples(samples, RADIO_SAMPLES, pack->flag.tx);
@@ -501,6 +505,10 @@ void radio_set_rx_tx_notify_fn(radio_rx_tx_change_t cb) {
     notify_rx_tx = cb;
 }
 
+void radio_set_low_power_cb(void (*cb)(bool)) {
+    low_power_cb = cb;
+}
+
 radio_state_t radio_get_state() {
     return state;
 }
@@ -677,8 +685,8 @@ void radio_poweroff() {
     state = RADIO_POWEROFF;
 }
 
-void radio_update_charger() {
-    WITH_RADIO_LOCK(x6100_control_charger_set(params.charger.x == RADIO_CHARGER_ON));
+void radio_set_charger(bool on) {
+    WITH_RADIO_LOCK(x6100_control_charger_set(on));
 }
 
 void radio_set_ptt(bool tx) {

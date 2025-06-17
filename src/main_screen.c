@@ -71,6 +71,11 @@ static lv_obj_t     *msg_tiny;
 static lv_obj_t     *meter;
 static lv_obj_t     *tx_info;
 
+// power off on low battery
+static lv_timer_t *low_power_timer;
+
+static void low_power_timer_cb(lv_timer_t * timer);
+
 static void freq_shift(int16_t diff);
 static void next_freq_step(bool up);
 static void toggle_atu_enabled();
@@ -96,6 +101,12 @@ void mem_save(uint16_t id) {
     if (id <= MEM_HKEY_MAX_ID) {
         msg_update_text_fmt("Saved in memory %i", id);
     }
+}
+
+static void low_power_timer_cb(lv_timer_t * timer) {
+    msg_update_text_fmt("Power off");
+    radio_set_charger(true);
+    radio_poweroff();
 }
 
 static void toggle_atu_enabled() {
@@ -1097,6 +1108,21 @@ void main_screen_notify_rx_tx(bool tx) {
 
     } else {
         event_send(obj, EVENT_RADIO_RX, NULL);
+    }
+}
+
+void main_screen_notify_low_power(bool is_low) {
+    if (is_low) {
+        if (!low_power_timer) {
+            low_power_timer = lv_timer_create(low_power_timer_cb, 30000, NULL);
+            lv_timer_set_repeat_count(low_power_timer, 1);
+            msg_schedule_long_text_fmt("Low battery! Turning off in 30s.");
+        }
+    } else {
+        if (low_power_timer) {
+            lv_timer_del(low_power_timer);
+            low_power_timer = NULL;
+        }
     }
 }
 
