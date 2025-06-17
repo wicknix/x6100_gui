@@ -176,10 +176,11 @@ void styles_init(themes_t theme) {
 
     /* Message style */
     lv_style_init(&msg_style);
+    lv_style_set_pad_hor(&msg_style, 10);
     lv_style_set_text_color(&msg_style, lv_color_white());
     lv_style_set_text_font(&msg_style, &sony_38);
     lv_style_set_width(&msg_style, 603);
-    lv_style_set_height(&msg_style, 66);
+    // lv_style_set_height(&msg_style, 66);
     lv_style_set_x(&msg_style, 800 / 2 - (603 / 2));
     lv_style_set_y(&msg_style, 300);
     lv_style_set_radius(&msg_style, 0);

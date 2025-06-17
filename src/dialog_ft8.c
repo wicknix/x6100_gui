@@ -236,7 +236,15 @@ static void save_qso(const char *remote_callsign, const char *remote_grid, const
     // Save QSO to sqlite log
     qso_log_record_save(qso);
 
-    msg_schedule_text_fmt("QSO saved");
+    if (strlen(remote_grid) >= 4) {
+        double lat, lon, dist;
+        qth_str_to_pos(remote_grid, &lat, &lon);
+        dist = qth_pos_dist(lat, lon, cur_lat, cur_lon);
+        msg_schedule_long_text_fmt("Saved QSO de %s %d %d (%.0f km)", remote_callsign, s_snr, r_snr, dist);
+    } else {
+        msg_schedule_long_text_fmt("Saved QSO de %s %d %d", remote_callsign, s_snr, r_snr);
+    }
+
     lv_finder_clear_cursor(finder);
 }
 

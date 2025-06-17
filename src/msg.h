@@ -25,3 +25,8 @@ void msg_update_text_fmt(const char * fmt, ...);
 /// @param fmt
 /// @param
 void msg_schedule_text_fmt(const char * fmt, ...);
+
+/// @brief Schedule message with text for a longer time
+/// @param fmt
+/// @param
+void msg_schedule_long_text_fmt(const char * fmt, ...);

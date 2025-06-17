@@ -17,6 +17,7 @@
 
 #define FADE_TIME 250
 #define DURATION 2000
+#define DURATION_LONG 4000
 
 static lv_obj_t     *obj;
 static lv_timer_t   *fade_out_timer=NULL;
@@ -32,6 +33,7 @@ enum msg_type_t {
 typedef struct {
     char            text[128];
     enum msg_type_t type;
+    uint16_t        dur;
 } delayed_message_t;
 
 static void fade_out_timer_cb(lv_timer_t *t) {
@@ -59,7 +61,7 @@ static void msg_show_timer(lv_timer_t *t) {
     lv_anim_set_values(&fade, lv_obj_get_style_opa(obj, 0), LV_OPA_COVER);
     fade_run = true;
     lv_anim_start(&fade);
-    fade_out_timer = lv_timer_create(fade_out_timer_cb, DURATION - FADE_TIME, NULL);
+    fade_out_timer = lv_timer_create(fade_out_timer_cb, msg->dur - FADE_TIME, NULL);
     lv_timer_set_repeat_count(fade_out_timer, 1);
 }
 
@@ -80,13 +82,22 @@ static void msg_update_cb(lv_event_t * e) {
     *msg_copy = *msg;
     lv_timer_t *timer = lv_timer_create(msg_show_timer, delay, (void *)(msg_copy));
     lv_timer_set_repeat_count(timer, 1);
-    timer_end += DURATION;
+    timer_end += msg->dur;
+}
+
+static void create_msg(const char * fmt, enum msg_type_t type, uint16_t dur, va_list args) {
+    delayed_message_t * msg = (delayed_message_t *) malloc(sizeof(delayed_message_t));
+    vsnprintf(msg->text, sizeof(msg->text), fmt, args);
+    msg->type = type;
+    msg->dur = dur;
+    event_send(obj, EVENT_MSG_UPDATE, (void*)msg);
 }
 
 lv_obj_t * msg_init(lv_obj_t *parent) {
     obj = lv_label_create(parent);
 
     lv_obj_add_style(obj, &msg_style, 0);
+    lv_label_set_long_mode(obj, LV_LABEL_LONG_SCROLL);
 
     lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_opa(obj, LV_OPA_TRANSP, 0);
@@ -104,24 +115,21 @@ lv_obj_t * msg_init(lv_obj_t *parent) {
 
 void msg_update_text_fmt(const char * fmt, ...) {
     va_list args;
-
-    delayed_message_t * msg = (delayed_message_t *) malloc(sizeof(delayed_message_t));
-    msg->type = MSG_UPDATE;
     va_start(args, fmt);
-    vsnprintf(msg->text, sizeof(msg->text), fmt, args);
+    create_msg(fmt, MSG_UPDATE, DURATION, args);
     va_end(args);
-
-    event_send(obj, EVENT_MSG_UPDATE, (void*)msg);
 }
 
 void msg_schedule_text_fmt(const char * fmt, ...) {
     va_list args;
-
-    delayed_message_t * msg = (delayed_message_t *) malloc(sizeof(delayed_message_t));
-    msg->type = MSG_SCHEDULE;
     va_start(args, fmt);
-    vsnprintf(msg->text, sizeof(msg->text), fmt, args);
+    create_msg(fmt, MSG_SCHEDULE, DURATION, args);
     va_end(args);
+}
 
-    event_send(obj, EVENT_MSG_UPDATE, (void*)msg);
+void msg_schedule_long_text_fmt(const char * fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    create_msg(fmt, MSG_SCHEDULE, DURATION_LONG, args);
+    va_end(args);
 }
