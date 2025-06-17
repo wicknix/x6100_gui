@@ -184,27 +184,33 @@ static bool get_time_slot(struct timespec now, float *time_since_start);
 
 static buttons_page_t btn_page_1;
 static buttons_page_t btn_page_2;
+static buttons_page_t btn_page_3;
 
-static button_item_t button_page_1 = { .type=BTN_TEXT, .label = "(Page: 1:2)", .press = button_next_page_cb, .next=&btn_page_2};
+static button_item_t button_page_1 = { .type=BTN_TEXT, .label = "(Page: 1:3)", .press = button_next_page_cb, .next=&btn_page_2};
 static button_item_t button_show_cq_all = { .type=BTN_TEXT_FN, .label_fn = cq_all_label_getter, .press = show_cq_all_cb, .subj=&cfg.ft8_show_all.val};
 static button_item_t button_mode_ft4_ft8 = { .type=BTN_TEXT_FN, .label_fn = protocol_label_getter, .press = mode_ft4_ft8_cb, .subj=&cfg.ft8_protocol.val };
 static button_item_t button_tx_cq_en_dis = { .type=BTN_TEXT_FN, .label_fn = tx_cq_label_getter, .press = tx_cq_en_dis_cb };
 static button_item_t button_tx_call_en_dis = { .type=BTN_TEXT_FN, .label_fn = tx_call_label_getter, .press = tx_call_en_dis_cb};
 
-static button_item_t button_page_2 = { .type=BTN_TEXT, .label = "(Page: 2:2)", .press = button_next_page_cb, .next=&btn_page_1};
+static button_item_t button_page_2 = { .type=BTN_TEXT, .label = "(Page: 2:3)", .press = button_next_page_cb, .next=&btn_page_3};
 static button_item_t button_hold_freq = { .type=BTN_TEXT_FN, .label_fn = hold_freq_label_getter, .press = hold_tx_freq_cb, .subj=&cfg.ft8_hold_freq.val };
 static button_item_t button_auto_en_dis = { .type=BTN_TEXT_FN, .label_fn = auto_label_getter, .press = mode_auto_cb, .subj=&cfg.ft8_auto.val };
+static button_item_t button_force_save = { .type=BTN_TEXT, .label = "Force QSO\nsave", .press = force_save_qso };
+
+static button_item_t button_page_3 = { .type=BTN_TEXT, .label = "(Page: 3:3)", .press = button_next_page_cb, .next=&btn_page_1};
 static button_item_t button_cq_mod = { .type=BTN_TEXT, .label = "CQ\nModifier", .press = cq_modifier_cb };
 static button_item_t button_time_sync = { .type=BTN_TEXT, .label = "Time\nSync", .press = time_sync };
-
-static button_item_t button_force_save = { .type=BTN_TEXT, .label = "Force save\n QSO", .press = force_save_qso };
 
 static buttons_page_t btn_page_1 = {
     {&button_page_1, &button_show_cq_all, &button_mode_ft4_ft8, &button_tx_cq_en_dis, &button_tx_call_en_dis}
 };
 
 static buttons_page_t btn_page_2 = {
-    {&button_page_2, &button_hold_freq, &button_auto_en_dis, &button_cq_mod, &button_time_sync}
+    {&button_page_2, &button_hold_freq, &button_auto_en_dis, &button_force_save}
+};
+
+static buttons_page_t btn_page_3 = {
+    {&button_page_3, &button_cq_mod, &button_time_sync}
 };
 
 static dialog_t dialog = {
@@ -928,6 +934,8 @@ static void time_sync(struct button_item_t *btn) {
 static void force_save_qso(struct button_item_t *btn) {
     if (ftx_qso_processor_can_save_qso(qso_processor)) {
         ftx_qso_processor_force_save_qso(qso_processor);
+    } else {
+        msg_schedule_text_fmt("Can't save incomplete QSO");
     }
 }
 
@@ -1297,15 +1305,6 @@ static void * decode_thread(void *arg) {
                 tx_worker();
                 if (tx_msg.repeats > 0) {
                     tx_msg.repeats--;
-                }
-                if (subject_get_int(cfg.ft8_max_repeats.val) - tx_msg.repeats >= 2) {
-                    // Allow to force save
-                    if (ftx_qso_processor_can_save_qso(qso_processor)) {
-                        // replace button
-                        btn_page_1.items[3] = &button_force_save;
-                    }
-                } else {
-                    btn_page_1.items[3] = &button_tx_cq_en_dis;
                 }
                 if (tx_msg.repeats == 0){
                     if (strncmp(tx_msg.msg, "CQ", 2) == 0) {
