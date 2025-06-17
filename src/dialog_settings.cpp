@@ -271,17 +271,30 @@ lv_obj_t *slider_with_text(lv_obj_t *cell, T val, T min, T max, T step, size_t w
 /**
  * Update bg opacity for some UI elements to preview changes
  */
-static void change_bg_opa_cb(lv_event_t * e) {
-    lv_obj_t * obj = lv_event_get_target(e);
+static void change_bg_opa_cb(lv_event_t *e) {
+    lv_obj_t       *obj  = lv_event_get_target(e);
     lv_event_code_t code = lv_event_get_code(e);
 
-    if (
-        (lv_obj_check_type(obj, &lv_slider_class) | lv_obj_check_type(obj, &lv_spinbox_class) & lv_obj_has_state(obj, LV_STATE_EDITED)) |
-        (lv_obj_check_type(obj, &lv_switch_class) & (code == LV_EVENT_FOCUSED))
-    ) {
-        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_60, 0);
+    lv_anim_t bg_fade_anim;
+    lv_anim_init(&bg_fade_anim);
+    lv_anim_set_exec_cb(&bg_fade_anim,
+                        [](void *var, int32_t value) { lv_obj_set_style_bg_img_opa((lv_obj_t *)var, value, 0); });
+    lv_anim_set_var(&bg_fade_anim, dialog.obj);
+    lv_anim_set_time(&bg_fade_anim, 500);
+    lv_opa_t cur_opa = lv_obj_get_style_bg_img_opa(dialog.obj, 0);
+
+    if (((lv_obj_check_type(obj, &lv_slider_class) || lv_obj_check_type(obj, &lv_spinbox_class)) &&
+         lv_obj_has_state(obj, LV_STATE_EDITED)) ||
+        (lv_obj_check_type(obj, &lv_switch_class) && (code == LV_EVENT_FOCUSED))) {
+        if (cur_opa != LV_OPA_60) {
+            lv_anim_set_values(&bg_fade_anim, cur_opa, LV_OPA_60);
+            lv_anim_start(&bg_fade_anim);
+        }
     } else {
-        lv_obj_set_style_bg_img_opa(dialog.obj, LV_OPA_COVER, 0);
+        if (cur_opa != LV_OPA_COVER) {
+            lv_anim_set_values(&bg_fade_anim, cur_opa, LV_OPA_COVER);
+            lv_anim_start(&bg_fade_anim);
+        }
     }
 }
 
@@ -1235,7 +1248,7 @@ static void auto_level_offset_update_cb(lv_event_t * e) {
     subject_set_float(subj, val);
 }
 
-static uint8_t make_auto_levels(uint8_t row) {
+static uint8_t make_auto_offset(uint8_t row) {
     lv_obj_t *obj;
 
     obj = lv_label_create(grid);
@@ -1816,7 +1829,7 @@ static void make_ui_page() {
     row = make_mag(row);
     row = make_delimiter(row);
 
-    row = make_auto_levels(row);
+    row = make_auto_offset(row);
     row = make_spectrum_min_max(row);
     row = make_delimiter(row);
 
