@@ -15,6 +15,7 @@
 #include "radio.h"
 #include "params/params.h"
 #include "rtty.h"
+#include "knobs.h"
 
 static lv_obj_t     *obj;
 static char         buf[1024];
@@ -101,6 +102,7 @@ void pannel_add_text(const char * text) {
 
 void pannel_hide() {
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    knobs_display(true);
 }
 
 void pannel_visible() {
@@ -126,8 +128,10 @@ void pannel_visible() {
         last_line = (char *) &buf;
         lv_label_set_text_static(obj, buf);
         lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
+        knobs_display(false);
     } else {
         lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+        knobs_display(true);
     }
 }
 

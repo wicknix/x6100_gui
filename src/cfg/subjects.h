@@ -20,31 +20,31 @@ enum data_type {
 class Subject;
 
 class Observer {
-    protected:
+  protected:
     Subject *subj;
     void (*fn)(Subject *, void *);
     void *user_data;
 
-    public:
-    Observer(Subject *subj, void (*fn)(Subject *, void *), void *user_data): subj(subj), fn(fn), user_data(user_data) {
-    };
+  public:
+    Observer(Subject *subj, void (*fn)(Subject *, void *), void *user_data)
+        : subj(subj), fn(fn), user_data(user_data) {};
     virtual ~Observer();
     virtual void notify();
 };
 
-class ObserverDelayed: public Observer {
-    static std::list<ObserverDelayed*> instances;
-    std::thread::id tid;
-    std::atomic<bool> changed = false;
-    public:
-    ObserverDelayed(Subject *subj, void (*fn)(Subject *, void *), void *user_data): Observer(subj, fn, user_data) {
+class ObserverDelayed : public Observer {
+    static std::list<ObserverDelayed *> instances;
+    std::thread::id                     tid;
+    std::atomic<bool>                   changed = false;
+
+  public:
+    ObserverDelayed(Subject *subj, void (*fn)(Subject *, void *), void *user_data) : Observer(subj, fn, user_data) {
         tid = std::this_thread::get_id();
         instances.push_back(this);
     };
     ~ObserverDelayed();
-    void notify();
-    static void notify_delayed();
-
+    void        notify();
+    static void notify_all_delayed();
 };
 
 class Subject {

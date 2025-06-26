@@ -1481,6 +1481,30 @@ static uint8_t make_waterfall_smooth_scroll(uint8_t row) {
     return row + 1;
 }
 
+static uint8_t make_knob_info(uint8_t row) {
+    lv_obj_t    *obj;
+    uint8_t     col = 0;
+
+    obj = lv_label_create(grid);
+
+    lv_label_set_text(obj, "Knob info");
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, col++, 1, LV_GRID_ALIGN_CENTER, row, 1);
+
+    obj = lv_obj_create(grid);
+
+    lv_obj_set_size(obj, SMALL_3, 56);
+    lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_START, 4, 3, LV_GRID_ALIGN_CENTER, row, 1);
+    lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_clear_flag(obj, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_center(obj);
+
+    obj = switch_bool(obj, cfg.knob_info.val);
+
+    lv_obj_set_width(obj, SMALL_3 - 30);
+
+    return row + 1;
+}
+
 static void sp_mode_update_cb(lv_event_t * e) {
     lv_obj_t *obj = lv_event_get_target(e);
 
@@ -1825,6 +1849,7 @@ static void make_ui_page() {
 
     row = make_waterfall_line_zoom(row);
     row = make_waterfall_smooth_scroll(row);
+    row = make_knob_info(row);
     row = make_delimiter(row);
 
     row = make_freq_accel(row);

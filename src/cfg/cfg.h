@@ -18,7 +18,6 @@ typedef enum {
     VOL_MIC,
     VOL_IMIC,
     VOL_MONI,
-    VOL_SPMODE,
     VOL_FILTER_BW = 15,
 } cfg_vol_mode_t;
 
@@ -68,7 +67,7 @@ typedef enum {
     MFK_RTTY_REVERSE,
 } cfg_mfk_mode_t;
 
-extern cfg_vol_mode_t cfg_encoder_vol_modes[12];
+extern cfg_vol_mode_t cfg_encoder_vol_modes[11];
 
 extern cfg_mfk_mode_t cfg_encoder_mfk_modes[30];
 
@@ -100,6 +99,7 @@ typedef struct {
     /* UI */
     cfg_item_t auto_level_enabled;
     cfg_item_t auto_level_offset;
+    cfg_item_t knob_info;
 
     /* key */
     cfg_item_t key_speed;

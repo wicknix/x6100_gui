@@ -9,13 +9,12 @@
 #pragma once
 
 #define BUTTONS 5
+#define BTN_HEIGHT 62
 
 #ifdef __cplusplus
+
 #include "cfg/subjects.h"
-#endif
 
-
-#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -24,6 +23,7 @@ extern "C" {
 #include "main_screen.h"
 #include "mfk.h"
 #include "vol.h"
+
 
 typedef enum {
     BTN_EMPTY,

@@ -18,7 +18,9 @@
 
 cfg_t cfg;
 
-cfg_cur_t cfg_cur;
+cfg_cur_t cfg_cur = {
+    .band = &cfg_band,
+};
 
 static band_info_t cur_band_info;
 
@@ -61,7 +63,6 @@ cfg_vol_mode_t cfg_encoder_vol_modes[] = {
     VOL_MIC,
     VOL_IMIC,
     VOL_MONI,
-    VOL_SPMODE,
     VOL_FILTER_BW,
 };
 
@@ -124,7 +125,7 @@ int cfg_init(sqlite3 *db) {
     //     return rc;
     // }
     cfg_band_params_init(db);
-    cfg_cur.band = &cfg_band;
+    // cfg_cur.band = &cfg_band;
 
     cfg_mode_params_init(db);
     // rc = init_mode_cfg(db);
@@ -320,6 +321,7 @@ static int init_params_cfg(sqlite3 *db) {
     /* UI */
     fill_cfg_item(&cfg.auto_level_enabled, subject_create_int(true), "auto_level_enabled");
     fill_cfg_item_float(&cfg.auto_level_offset, subject_create_float(0.0f), 0.5f, "auto_level_offset");
+    fill_cfg_item(&cfg.knob_info, subject_create_int(true), "knob_info");
 
     /* Key */
 

@@ -93,6 +93,7 @@ lv_style_t  btn_disabled_style;
 lv_style_t  msg_style;
 lv_style_t  msg_tiny_style;
 lv_style_t  clock_style;
+lv_style_t  knobs_style;
 lv_style_t  info_style;
 lv_style_t  info_row_style;
 lv_style_t  info_item_style;
@@ -182,7 +183,7 @@ void styles_init(themes_t theme) {
     lv_style_set_width(&msg_style, 603);
     // lv_style_set_height(&msg_style, 66);
     lv_style_set_x(&msg_style, 800 / 2 - (603 / 2));
-    lv_style_set_y(&msg_style, 300);
+    lv_style_set_y(&msg_style, 270);
     lv_style_set_radius(&msg_style, 0);
     lv_style_set_bg_img_opa(&msg_style, LV_OPA_COVER);
     lv_style_set_pad_ver(&msg_style, 20);
@@ -245,6 +246,17 @@ void styles_init(themes_t theme) {
     lv_style_set_align(&clock_style, LV_ALIGN_TOP_RIGHT);
     lv_style_set_radius(&clock_style, 0);
     lv_style_set_bg_img_opa(&clock_style, LV_OPA_COVER);
+
+    /* Knobs */
+    lv_style_init(&knobs_style);
+    lv_style_set_text_color(&knobs_style, lv_color_white());
+    lv_style_set_text_font(&knobs_style, &sony_24);
+    lv_style_set_radius(&knobs_style, 8);
+    lv_style_set_bg_opa(&knobs_style, LV_OPA_60);
+    lv_style_set_bg_color(&knobs_style, lv_color_black());
+    lv_style_set_border_width(&knobs_style, 0);
+    lv_style_set_pad_hor(&knobs_style, 5);
+    lv_style_set_pad_ver(&knobs_style, 3);
 
     /* Left info */
     lv_style_init(&info_style);

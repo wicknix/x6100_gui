@@ -32,7 +32,6 @@ typedef struct {
     button_item_t   *item;
 } button_t;
 
-static uint8_t        btn_height = 62;
 static button_t       btn[BUTTONS];
 static lv_obj_t      *parent_obj = NULL;
 static buttons_page_t *cur_page   = NULL;
@@ -163,7 +162,7 @@ static button_item_t btn_vol = {
 };
 
 static button_item_t btn_sql = make_btn(sql_label_getter, VOL_SQL, &cfg.sql.val);
-static button_item_t btn_rfg = make_btn(rfg_label_getter, VOL_RFG);
+static button_item_t btn_rfg = make_btn(rfg_label_getter, VOL_RFG, &cfg_cur.band->rfg.val);
 static button_item_t btn_tx_pwr = make_btn(tx_power_label_getter, VOL_PWR, &cfg.pwr.val);
 static button_item_t btn_flt_low  = make_btn(filter_low_label_getter, VOL_FILTER_LOW, &cfg_cur.filter.low);
 static button_item_t btn_flt_high = make_btn(filter_high_label_getter, VOL_FILTER_HIGH, &cfg_cur.filter.high);
@@ -177,8 +176,8 @@ static button_item_t btn_moni_lvl  = make_btn(moni_level_label_getter, VOL_MONI)
 
 static button_item_t btn_zoom               = make_btn("Spectrum\nZoom", MFK_SPECTRUM_FACTOR);
 static button_item_t btn_ant     = make_btn("Antenna", MFK_ANT);
-static button_item_t btn_rit     = make_btn(rit_label_getter, MFK_RIT);
-static button_item_t btn_xit     = make_btn(xit_label_getter, MFK_XIT);
+static button_item_t btn_rit     = make_btn(rit_label_getter, MFK_RIT, &cfg.rit.val);
+static button_item_t btn_xit     = make_btn(xit_label_getter, MFK_XIT, &cfg.xit.val);
 static button_item_t btn_agc_hang  = {.type     = BTN_TEXT_FN,
                                       .label_fn = agc_hang_label_getter,
                                       .press    = controls_toggle_agc_hang,
@@ -469,8 +468,6 @@ void buttons_init(lv_obj_t *parent) {
         page_dfn_1.items[4] = NULL;
     }
 
-    btn_rfg.subj = &cfg_cur.band->rfg.val;
-
     /* Fill prev/next pointers */
     for (size_t i = 0; i < ARRAY_SIZE(groups); i++) {
         buttons_page_t **group = groups[i].group;
@@ -490,7 +487,7 @@ void buttons_init(lv_obj_t *parent) {
         }
     }
 
-    uint16_t y = 480 - btn_height;
+    uint16_t y = 480 - BTN_HEIGHT;
     uint16_t x = 0;
     uint16_t width = 800 / 5;
 
@@ -503,7 +500,7 @@ void buttons_init(lv_obj_t *parent) {
         lv_obj_add_style(f, &btn_disabled_style, LV_STATE_DISABLED);
 
         lv_obj_set_pos(f, x, y);
-        lv_obj_set_size(f, width, btn_height);
+        lv_obj_set_size(f, width, BTN_HEIGHT);
         x += width;
 
         lv_obj_t *label = lv_label_create(f);

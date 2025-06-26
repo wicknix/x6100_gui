@@ -32,7 +32,7 @@ void ObserverDelayed::notify() {
     }
 }
 
-void ObserverDelayed::notify_delayed() {
+void ObserverDelayed::notify_all_delayed() {
     for (auto item: ObserverDelayed::instances) {
         if (item->changed) {
             item->Observer::notify();
@@ -145,7 +145,7 @@ void observer_delayed_del(ObserverDelayed *observer) {
     delete observer;
 }
 void observer_delayed_notify_all(void) {
-    ObserverDelayed::notify_delayed();
+    ObserverDelayed::notify_all_delayed();
 };
 
 // subject_t subject_init_int(int32_t val) {

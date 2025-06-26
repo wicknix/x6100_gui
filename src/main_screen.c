@@ -49,6 +49,7 @@
 #include "pubsub_ids.h"
 #include "cfg/mode.h"
 #include "cfg/memory.h"
+#include "knobs.h"
 
 #include <unistd.h>
 #include <stdint.h>
@@ -70,6 +71,7 @@ static lv_obj_t     *msg;
 static lv_obj_t     *msg_tiny;
 static lv_obj_t     *meter;
 static lv_obj_t     *tx_info;
+static lv_obj_t     *knobs;
 
 // power off on low battery
 static lv_timer_t *low_power_timer;
@@ -911,11 +913,13 @@ static void spectrum_key_cb(lv_event_t * e) {
                 switch (vol->mode) {
                     case VOL_EDIT:
                         vol->mode = VOL_SELECT;
+                        knobs_set_vol_mode(false);
                         voice_say_text_fmt("Selection mode");
                         break;
 
                     case VOL_SELECT:
                         vol->mode = VOL_EDIT;
+                        knobs_set_vol_mode(true);
                         voice_say_text_fmt("Edit mode");
                         break;
                 }
@@ -963,11 +967,13 @@ static void spectrum_pressed_cb(lv_event_t * e) {
         case MFK_STATE_EDIT:
             mfk_state = MFK_STATE_SELECT;
             voice_say_text_fmt("Selection mode");
+            knobs_set_mfk_mode(false);
             break;
 
         case MFK_STATE_SELECT:
             mfk_state = MFK_STATE_EDIT;
             voice_say_text_fmt("Edit mode");
+            knobs_set_mfk_mode(true);
             break;
     }
     mfk_update(0, false);
@@ -1069,6 +1075,8 @@ lv_obj_t * main_screen() {
     lv_obj_set_y(waterfall, y);
     waterfall_set_height(480 - y);
 
+    knobs_init(obj);
+
     buttons_init(obj);
     buttons_load_page(&buttons_page_vol_1);
 
@@ -1084,7 +1092,7 @@ lv_obj_t * main_screen() {
 
     cw_tune_init(obj);
 
-    msg_schedule_text_fmt("X6100 de R1CBU " VERSION);
+    msg_schedule_text_fmt("X6100 de R1CBU es Others " VERSION);
 
     subject_add_delayed_observer(freq_lock, on_fg_freq_change, NULL);
     subject_add_delayed_observer(cfg_cur.band->split.val, on_fg_freq_change, NULL);
