@@ -103,6 +103,10 @@ bool radio_tick() {
                 low_power_cb(!pack->flag.vext && (pack->vbat <= 60));
             }
         }
+        // printf("%d\n", pack->reserved_3[0]);
+        // printf("%d, %f, %f\n", pack->reserved_3[0],
+        //         *(float*)&pack->reserved_3[1],
+        //         *(float*)&pack->reserved_3[2]);
         cfloat *samples = (cfloat*)((char *)pack + offsetof(x6100_flow_t, samples));
         dsp_samples(samples, RADIO_SAMPLES, pack->flag.tx);
 
@@ -123,6 +127,7 @@ bool radio_tick() {
                         notify_rx_tx(false);
                     }
                 } else {
+                    // printf("%d, %d\n", pack->tx_power, pack->alc_level);
                     tx_info_update(pack->tx_power * 0.1f, pack->vswr * 0.1f, pack->alc_level * 0.1f);
                 }
                 break;

@@ -20,7 +20,7 @@
 #include "keyboard.h"
 #include "params/params.h"
 #include "info.h"
-#include "pannel.h"
+#include "panel.h"
 #include "main_screen.h"
 #include "msg.h"
 

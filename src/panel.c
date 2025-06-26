@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "pannel.h"
+#include "panel.h"
 #include "styles.h"
 #include "util.h"
 #include "scheduler.h"
@@ -57,7 +57,7 @@ static void check_lines() {
     *last_line = '\0';
 }
 
-static void pannel_update_cb(const char *text) {
+static void panel_update_cb(const char *text) {
     lv_point_t line_size;
     lv_point_t text_size;
 
@@ -85,10 +85,10 @@ static void pannel_update_cb(const char *text) {
     lv_label_set_text_static(obj, buf);
 }
 
-lv_obj_t * pannel_init(lv_obj_t *parent) {
+lv_obj_t * panel_init(lv_obj_t *parent) {
     obj = lv_label_create(parent);
 
-    lv_obj_add_style(obj, &pannel_style, 0);
+    lv_obj_add_style(obj, &panel_style, 0);
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
 
     subject_add_delayed_observer(cfg_cur.mode, update_visibility, NULL);
@@ -96,16 +96,16 @@ lv_obj_t * pannel_init(lv_obj_t *parent) {
     return obj;
 }
 
-void pannel_add_text(const char * text) {
-    scheduler_put((void(*)(void*))pannel_update_cb, (void*)text, strlen(text) + 1);
+void panel_add_text(const char * text) {
+    scheduler_put((void(*)(void*))panel_update_cb, (void*)text, strlen(text) + 1);
 }
 
-void pannel_hide() {
+void panel_hide() {
     lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
     knobs_display(true);
 }
 
-void pannel_visible() {
+void panel_visible() {
     x6100_mode_t    mode = subject_get_int(cfg_cur.mode);
     bool            on = false;
 
@@ -136,5 +136,5 @@ void pannel_visible() {
 }
 
 static void update_visibility(Subject *subj, void *user_data) {
-    pannel_visible();
+    panel_visible();
 }

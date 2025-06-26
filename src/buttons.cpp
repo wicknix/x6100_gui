@@ -19,7 +19,7 @@ extern "C" {
     #include "mfk.h"
     #include "vol.h"
     #include "msg.h"
-    #include "pannel.h"
+    #include "panel.h"
     #include "params/params.h"
     #include "voice.h"
     #include "pubsub_ids.h"

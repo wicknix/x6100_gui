@@ -26,7 +26,7 @@
 #include "params/params.h"
 #include "audio.h"
 #include "cw.h"
-#include "pannel.h"
+#include "panel.h"
 #include "cat.h"
 #include "rtty.h"
 #include "backlight.h"
@@ -108,7 +108,7 @@ int main(void) {
     wifi_power_setup();
     backlight_init();
     cat_init();
-    // pannel_visible();
+    // panel_visible();
     gps_init();
     if (!qso_log_init()) {
         LV_LOG_ERROR("Can't init QSO log");

@@ -8,7 +8,7 @@
 #include "rtty.h"
 
 #include "audio.h"
-#include "pannel.h"
+#include "panel.h"
 #include "params/params.h"
 #include "util.h"
 
@@ -224,7 +224,7 @@ static void add_symbol(float pwr) {
                     if (c) {
                         char str[2] = {c, 0};
 
-                        pannel_add_text(str);
+                        panel_add_text(str);
                     }
                 }
                 rx_state = RX_STATE_IDLE;

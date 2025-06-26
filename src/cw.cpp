@@ -20,7 +20,7 @@ extern "C" {
     #include "audio.h"
     #include "params/params.h"
     #include "cw_decoder.h"
-    #include "pannel.h"
+    #include "panel.h"
     #include "meter.h"
     #include "cw_tune_ui.h"
     #include "pubsub_ids.h"
@@ -276,7 +276,7 @@ void cw_put_audio_samples(unsigned int n, cfloat *samples) {
 //     params_unlock(&params.dirty.cw_decoder);
 //     lv_msg_send(MSG_PARAM_CHANGED, NULL);
 
-//     pannel_visible();
+//     panel_visible();
 
 //     return params.cw_decoder;
 // }

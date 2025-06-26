@@ -17,7 +17,7 @@
 #include "params/params.h"
 #include "events.h"
 #include "util.h"
-#include "pannel.h"
+#include "panel.h"
 #include "keyboard.h"
 #include "textarea_window.h"
 #include "cw_encoder.h"

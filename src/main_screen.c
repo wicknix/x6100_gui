@@ -26,7 +26,7 @@
 #include "mfk.h"
 #include "vol.h"
 #include "main.h"
-#include "pannel.h"
+#include "panel.h"
 #include "rtty.h"
 #include "screenshot.h"
 #include "keyboard.h"
@@ -127,7 +127,7 @@ static void apps_disable() {
     dialog_destruct();
 
     rtty_set_state(RTTY_OFF);
-    pannel_visible();
+    panel_visible();
 }
 
 void main_screen_start_app(press_action_t app_action) {
@@ -137,7 +137,7 @@ void main_screen_start_app(press_action_t app_action) {
         case ACTION_APP_RTTY:
             buttons_load_page(&buttons_page_rtty);
             rtty_set_state(RTTY_RX);
-            pannel_visible();
+            panel_visible();
             voice_say_text_fmt("Teletype window");
             break;
 
@@ -561,7 +561,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                             apps_disable();
                         }
 
-                        pannel_hide();
+                        panel_hide();
                         dialog_construct(dialog_msg_cw, obj);
                         voice_say_text_fmt("CW messages window");
                         break;
@@ -574,7 +574,7 @@ static void main_screen_keypad_cb(lv_event_t * e) {
                             apps_disable();
                         }
 
-                        pannel_hide();
+                        panel_hide();
                         dialog_construct(dialog_msg_voice, obj);
                         voice_say_text_fmt("Voice messages window");
                         break;
@@ -1080,7 +1080,7 @@ lv_obj_t * main_screen() {
     buttons_init(obj);
     buttons_load_page(&buttons_page_vol_1);
 
-    pannel_init(obj);
+    panel_init(obj);
     msg = msg_init(obj);
     msg_tiny = msg_tiny_init(obj);
 
