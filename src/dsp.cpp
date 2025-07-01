@@ -446,7 +446,7 @@ static void dsp_update_min_max(float *data_buf, uint16_t size) {
         return;
     }
     int window_size = (WATERFALL_NFFT * 2500) / 100000;
-    float *power_sum = (float *) calloc(sizeof(float), size - window_size);
+    float power_sum[size - window_size];
 
     // Sum with window
     for (size_t i = 0; i < size - window_size; i++) {
