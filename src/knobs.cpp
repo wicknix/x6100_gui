@@ -104,6 +104,10 @@ struct ControlSubjChoices: public ControlSubj {
     }
 };
 
+struct ControlSubjOnOff: public ControlSubjChoices {
+    ControlSubjOnOff(const char *name, Subject **subj): ControlSubjChoices(name, subj, {"Off", "On"}) {};
+};
+
 
 template <typename T> struct ControlInt: public Control {
     T *val;
@@ -221,22 +225,34 @@ static std::map<int, Control*> vol_controls = {
 static std::map<int, Control *> mfk_controls = {
     {MFK_SPECTRUM_FACTOR, new ControlSubjInt("Zoom", &cfg_cur.zoom)},
     {MFK_COMP, new ControlComp("Compressor", &cfg.comp.val)},
+    {MFK_ANT, new ControlSubjInt("Ant", &cfg.ant_id.val)},
+    {MFK_RIT, new ControlSubjInt("RIT", &cfg.rit.val)},
+    {MFK_XIT, new ControlSubjInt("XIT", &cfg.xit.val)},
+
+    {MFK_DNF, new ControlSubjOnOff("Notch filter", &cfg.dnf.val)},
+    {MFK_DNF_CENTER, new ControlSubjInt("DNF center", &cfg.dnf_center.val)},
+    {MFK_DNF_WIDTH, new ControlSubjInt("DNF width", &cfg.dnf_width.val)},
+    {MFK_DNF_AUTO, new ControlSubjOnOff("DNF auto", &cfg.dnf_auto.val)},
+    {MFK_NB, new ControlSubjOnOff("Noise blanker", &cfg.nb.val)},
+    {MFK_NB_LEVEL, new ControlSubjInt("NB level", &cfg.nb_level.val)},
+    {MFK_NB_WIDTH, new ControlSubjInt("NB width", &cfg.nb_width.val)},
+    {MFK_NR, new ControlSubjOnOff("Noise reduction", &cfg.nr.val)},
+    {MFK_NR_LEVEL, new ControlSubjInt("NR level", &cfg.nr_level.val)},
+
+    {MFK_AGC_HANG, new ControlSubjOnOff("AGC hang", &cfg.agc_hang.val)},
+    {MFK_AGC_KNEE, new ControlSubjInt("AGC knee", &cfg.agc_knee.val)},
+    {MFK_AGC_SLOPE, new ControlSubjInt("AGC slope", &cfg.agc_slope.val)},
+
     {MFK_KEY_SPEED, new ControlSubjInt("Key speed", &cfg.key_speed.val)},
+    {MFK_KEY_TRAIN, new ControlSubjOnOff("Key train", &cfg.key_train.val)},
     {MFK_KEY_MODE, new ControlSubjChoices("Key mode", &cfg.key_mode.val, {"Manual", "Auto-L", "Auto-R"})},
+    {MFK_IAMBIC_MODE, new ControlSubjChoices("Iambic mode", &cfg.iambic_mode.val, {"A", "B"})},
     {MFK_KEY_TONE, new ControlSubjInt("Key tone", &cfg.key_tone.val)},
     {MFK_KEY_VOL, new ControlSubjInt("Key vol", &cfg.key_vol.val)},
     {MFK_QSK_TIME, new ControlSubjInt("QSK time", &cfg.qsk_time.val)},
     {MFK_KEY_RATIO, new ControlSubjFloat("Key ratio", &cfg.key_ratio.val)},
-    {MFK_ANT, new ControlSubjInt("Ant", &cfg.ant_id.val)},
-    {MFK_RIT, new ControlSubjInt("RIT", &cfg.rit.val)},
-    {MFK_XIT, new ControlSubjInt("XIT", &cfg.xit.val)},
-    {MFK_DNF_CENTER, new ControlSubjInt("DNF center", &cfg.dnf_center.val)},
-    {MFK_DNF_WIDTH, new ControlSubjInt("DNF width", &cfg.dnf_width.val)},
-    {MFK_NB_LEVEL, new ControlSubjInt("NB level", &cfg.nb_level.val)},
-    {MFK_NB_WIDTH, new ControlSubjInt("NB width", &cfg.nb_width.val)},
-    {MFK_NR_LEVEL, new ControlSubjInt("NR level", &cfg.nr_level.val)},
-    {MFK_AGC_KNEE, new ControlSubjInt("AGC knee", &cfg.agc_knee.val)},
-    {MFK_AGC_SLOPE, new ControlSubjInt("AGC slope", &cfg.agc_slope.val)},
+    {MFK_CW_DECODER, new ControlSubjOnOff("CW decoder", &cfg.cw_decoder.val)},
+    {MFK_CW_TUNE, new ControlSubjOnOff("CW tuner", &cfg.cw_tune.val)},
     {MFK_CW_DECODER_SNR, new ControlSubjFloat("CW decoded snr", &cfg.cw_decoder_snr.val)},
     {MFK_CW_DECODER_PEAK_BETA, new ControlSubjFloat("CW decoder peak beta", &cfg.cw_decoder_peak_beta.val, "%0.2f")},
     {MFK_CW_DECODER_NOISE_BETA,

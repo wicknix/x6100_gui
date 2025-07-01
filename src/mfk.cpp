@@ -307,6 +307,21 @@ void mfk_update(int16_t diff, bool voice) {
             }
             break;
 
+        case MFK_DNF_AUTO:
+            b = subject_get_int(cfg.dnf_auto.val);
+            if (diff) {
+                b = !b;
+                subject_set_int(cfg.dnf_auto.val, b);
+            }
+            text_msg("#%3X DNF auto: %s", color, b ? "On" : "Off");
+
+            if (diff) {
+                voice_say_bool("DNF auto", b);
+            } else if (voice) {
+                voice_say_text_fmt("DNF auto switcher");
+            }
+            break;
+
         case MFK_NB:
             b = subject_get_int(cfg.nb.val);
             if (diff) {
