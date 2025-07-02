@@ -305,6 +305,10 @@ template <typename T> T loop_modes(int16_t dir, T mode, const uint64_t mask, con
     auto cond = [mask, mode](T m) { return ((1LL << m) & mask); };
     std::copy_if(all_modes.begin(), all_modes.end(), std::back_inserter(enabled), cond);
 
+    if (enabled.size() == 0) {
+        return all_modes[0];
+    }
+
     if (dir >= 0) {
         int mode_int = mode;
         if (dir > 0) {

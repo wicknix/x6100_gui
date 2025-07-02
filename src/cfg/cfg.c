@@ -297,7 +297,7 @@ static int init_params_cfg(sqlite3 *db) {
     ), "vol_modes");
     fill_cfg_item(&cfg.mfk_modes, subject_create_uint64(
         (1 << MFK_SPECTRUM_FACTOR) | (1 << MFK_AGC_KNEE) | (1 << MFK_DNF)
-    ), "vol_modes");
+    ), "mfk_modes");
 
     fill_cfg_item(&cfg.vol, subject_create_int(20), "vol");
     fill_cfg_item(&cfg.sql, subject_create_int(0), "sql");
