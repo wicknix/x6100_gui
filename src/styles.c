@@ -381,7 +381,7 @@ static void setup_theme_flat() {
     lv_style_set_width(&meter_style, 380);
     lv_style_set_height(&meter_style, 61);
 
-    lv_style_set_bg_img_src(&pannel_style, PATH "images/panel_dark.bin");
+    lv_style_set_bg_img_src(&panel_style, PATH "images/panel_dark.bin");
     lv_style_set_bg_img_src(&msg_tiny_style, PATH "images/msg_tiny_dark.bin");
     lv_style_set_bg_img_src(&dialog_style, PATH "images/dialog_dark.bin");
     /* TX info */
