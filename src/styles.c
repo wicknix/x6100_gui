@@ -117,6 +117,7 @@ lv_color_t  bg_color;
 
 static void setup_theme_legacy();
 static void setup_theme_simple();
+static void setup_theme_flat();
 
 void styles_init(themes_t theme) {
     /* * */
